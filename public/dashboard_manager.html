@@ -3,192 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кабинет менеджера - ЭнергоАтлант</title>
+    <title>Кабинет Менеджера - ЭнергоАтлант</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">⚡ ЭнергоАтлант</a>
+            <a class="navbar-brand fw-bold" href="#">⚡ ЭнергоАтлант <span class="badge bg-primary ms-2" style="font-size: 0.6em; vertical-align: top;">MANAGER</span></a>
+            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item">
-                        <span class="navbar-text text-white me-3">
-                            <span id="userName"></span> 
-                            <small class="text-white-50">(<span id="userRole"></span>)</small>
+                    <li class="nav-item me-3">
+                        <span class="text-white">
+                            <i class="bi bi-person-circle"></i> <span id="userName">Загрузка...</span>
                         </span>
                     </li>
                     <li class="nav-item">
-                        <button class="btn btn-outline-light" id="logoutBtn">Выход</button>
+                        <a href="/api/logout" class="btn btn-outline-danger btn-sm fw-bold">
+                            <i class="bi bi-box-arrow-right"></i> Выйти
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-4">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-2 bg-light py-3">
-                <div class="list-group">
-                    <a href="#projects" class="list-group-item list-group-item-action active">
-                        📋 Проекты
-                    </a>
-                    <a href="#requests" class="list-group-item list-group-item-action">
-                        📬 Заявки
-                    </a>
-                </div>
-            </div>
+    <div class="container-fluid px-4">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="h3 mb-0 text-dark"><i class="bi bi-speedometer2"></i> Панель управления</h2>
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                <i class="bi bi-plus-lg"></i> Новый проект
+            </button>
+        </div>
 
-            <!-- Main Content -->
-            <div class="col-md-10">
-                <!-- Header -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h1 class="h2">💼 Кабинет менеджера</h1>
-                    <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#createProjectModal">
-                        ➕ Создать проект
-                    </button>
-                </div>
+        <ul class="nav nav-tabs mb-4" id="managerTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active fw-bold" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projectsPanel">
+                    🏗 Активные проекты
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link fw-bold position-relative" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requestsPanel">
+                    📬 Новые заявки 
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="newRequestsBadge" style="display:none">
+                        0
+                    </span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link text-muted" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archivePanel">
+                    🗄 Архив
+                </button>
+            </li>
+        </ul>
 
-                <!-- Tabs -->
-                <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button">
-                            📋 Мои проекты
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button">
-                            📬 Заявки от клиентов
-                        </button>
-                    </li>
-                </ul>
-
-                <div class="tab-content" id="myTabContent">
-                    <!-- Проекты -->
-                    <div class="tab-pane fade show active" id="projects" role="tabpanel">
-                        <div id="projectsTable">
-                            <div class="text-center p-5">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Загрузка...</span>
-                                </div>
-                                <p class="mt-2 text-muted">Загрузка проектов...</p>
+        <div class="tab-content" id="managerTabsContent">
+            
+            <div class="tab-pane fade show active" id="projectsPanel">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-0">
+                        <div id="projectsList" class="table-responsive">
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary"></div>
+                                <p class="text-muted mt-2">Загрузка проектов...</p>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Заявки -->
-                    <div class="tab-pane fade" id="requests" role="tabpanel">
+            <div class="tab-pane fade" id="requestsPanel">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
                         <div id="requestsList">
-                            <div class="text-center p-5">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Загрузка...</span>
-                                </div>
-                                <p class="mt-2 text-muted">Загрузка заявок...</p>
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary"></div>
+                                <p class="text-muted mt-2">Проверка новых заявок...</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="archivePanel">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body text-center py-5 text-muted">
+                        <i class="bi bi-archive" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Здесь будут завершенные проекты и обработанные заявки</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Создание проекта -->
     <div class="modal fade" id="createProjectModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">➕ Создание нового проекта</h5>
+                    <h5 class="modal-title"><i class="bi bi-folder-plus"></i> Новый проект</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
+                
                 <form id="createProjectForm">
                     <div class="modal-body">
-                        <div class="alert alert-info">
-                            💡 После создания проекта будет сгенерирован уникальный код для прораба и заказчика
+                        <div class="alert alert-info d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <div>После создания система сгенерирует <b>Код Доступа</b>.</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="projectTitle" class="form-label">Название проекта *</label>
-                            <input type="text" class="form-control" name="title" id="projectTitle" 
-                                   placeholder="Например: Реконструкция ПС Северная" required>
+                            <label class="form-label fw-bold">Название проекта *</label>
+                            <input type="text" class="form-control" id="p_title" required placeholder="Например: Реконструкция ПС-110">
                         </div>
 
                         <div class="mb-3">
-                            <label for="projectAddress" class="form-label">Адрес объекта</label>
-                            <input type="text" class="form-control" name="address" id="projectAddress" 
-                                   placeholder="г. Москва, ул. Ленина 1">
+                            <label class="form-label">Адрес объекта</label>
+                            <input type="text" class="form-control" id="p_address" placeholder="Адрес проведения работ">
                         </div>
 
                         <div class="mb-3">
-                            <label for="projectDescription" class="form-label">Описание</label>
-                            <textarea class="form-control" name="description" id="projectDescription" rows="3" 
-                                      placeholder="Краткое описание работ"></textarea>
+                            <label class="form-label">Описание</label>
+                            <textarea class="form-control" id="p_description" rows="2"></textarea>
                         </div>
 
-                        <div class="row">
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="clientName" class="form-label">Имя клиента</label>
-                                    <input type="text" class="form-control" name="clientName" id="clientName" 
-                                           placeholder="Иван Иванов">
-                                </div>
+                                <label class="form-label">Заказчик (ФИО)</label>
+                                <input type="text" class="form-control" id="p_clientName">
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="clientOrganization" class="form-label">Организация</label>
-                                    <input type="text" class="form-control" name="clientOrganization" id="clientOrganization" 
-                                           placeholder="ООО Название">
-                                </div>
+                                <label class="form-label">Организация</label>
+                                <input type="text" class="form-control" id="p_clientOrg">
                             </div>
                         </div>
 
-                        <hr>
-                        <h6>Назначение персонала:</h6>
+                        <hr class="my-4">
+                        <h6 class="fw-bold text-primary mb-3">Команда проекта</h6>
 
-                        <div class="row">
+                        <div class="row g-3">
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="foremanId" class="form-label">Прораб</label>
-                                    <select class="form-select" name="foremanId" id="foremanId">
-                                        <option value="">Не назначен</option>
-                                    </select>
-                                </div>
+                                <label class="form-label">Прораб</label>
+                                <select class="form-select" id="sel_foreman">
+                                    <option value="">-- Не назначен --</option>
+                                </select>
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="supplierId" class="form-label">Снабженец</label>
-                                    <select class="form-select" name="supplierId" id="supplierId">
-                                        <option value="">Не назначен</option>
-                                    </select>
-                                </div>
+                                <label class="form-label">Снабженец</label>
+                                <select class="form-select" id="sel_supplier">
+                                    <option value="">-- Не назначен --</option>
+                                </select>
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="ptoId" class="form-label">Инженер ПТО</label>
-                                    <select class="form-select" name="ptoId" id="ptoId">
-                                        <option value="">Не назначен</option>
-                                    </select>
-                                </div>
+                                <label class="form-label">Инженер ПТО</label>
+                                <select class="form-select" id="sel_pto">
+                                    <option value="">-- Не назначен --</option>
+                                </select>
                             </div>
                         </div>
-
-                        <hr>
-
-                        <div class="mb-3">
-                            <label for="projectDocuments" class="form-label">Документы</label>
-                            <input type="file" class="form-control" id="projectDocuments" multiple 
-                                   accept=".pdf,.doc,.docx,.xls,.xlsx">
-                            <small class="text-muted">Можно загрузить до 10 файлов (PDF, DOC, XLS)</small>
+                        
+                        <div class="mt-4">
+                            <label class="form-label"><i class="bi bi-paperclip"></i> Документы (ТЗ, Сметы)</label>
+                            <input type="file" class="form-control" id="p_files" multiple>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                        <button type="submit" class="btn btn-primary">💾 Создать проект</button>
+                    
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold">Создать проект</button>
                     </div>
                 </form>
             </div>
@@ -198,5 +187,17 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/manager.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/user/me');
+                const data = await res.json();
+                if(data.success) {
+                    document.getElementById('userName').innerText = data.user.name || 'Менеджер';
+                }
+            } catch (e) {}
+        });
+    </script>
 </body>
 </html>

@@ -18,27 +18,22 @@
                             <p class="text-muted">Вход в систему</p>
                         </div>
 
+                        <div id="alertBox" class="alert alert-danger d-none"></div>
+
                         <form id="loginForm">
                             <div class="mb-3">
                                 <label for="login" class="form-label">Логин, email или телефон</label>
                                 <input type="text" class="form-control form-control-lg" id="login" 
-                                       placeholder="Введите логин" required autofocus>
+                                       placeholder="Введите логин" required autofocus autocomplete="username">
                             </div>
 
                             <div class="mb-3">
                                 <label for="password" class="form-label">Пароль</label>
                                 <input type="password" class="form-control form-control-lg" id="password" 
-                                       placeholder="Введите пароль" required>
+                                       placeholder="Введите пароль" required autocomplete="current-password">
                             </div>
 
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="rememberMe">
-                                <label class="form-check-label" for="rememberMe">
-                                    Запомнить меня
-                                </label>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="submitBtn">
                                 Войти
                             </button>
 
@@ -54,59 +49,89 @@
 
                         <div class="text-center">
                             <small class="text-muted">
-                                Тестовые учетные данные:<br>
+                                Тестовые данные:<br>
                                 <strong>admin</strong> / <strong>admin123</strong>
                             </small>
                         </div>
                     </div>
                 </div>
-
-                <div class="text-center mt-3">
-                    <a href="/" class="text-muted">← Вернуться на главную</a>
-                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/api.js"></script>
     <script>
-        // Обработчик формы входа
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            // 1. ОТМЕНЯЕМ ПЕРЕЗАГРУЗКУ (Убирает моргание)
             e.preventDefault();
             
-            const login = document.getElementById('login').value.trim();
-            const password = document.getElementById('password').value;
+            const loginInput = document.getElementById('login');
+            const passwordInput = document.getElementById('password');
+            const submitBtn = document.getElementById('submitBtn');
+            const alertBox = document.getElementById('alertBox');
             
+            // Сбрасываем старые ошибки
+            alertBox.classList.add('d-none');
+            alertBox.innerText = '';
+            
+            const login = loginInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            // Валидация на пустоту
             if (!login || !password) {
-                showError('Заполните все поля');
+                showAlert('Заполните все поля');
                 return;
             }
             
-            // Блокируем кнопку
-            const submitBtn = e.target.querySelector('button[type="submit"]');
+            // 2. БЛОКИРУЕМ КНОПКУ (Показываем, что идет загрузка)
             submitBtn.disabled = true;
+            const originalText = submitBtn.innerText;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Вход...';
             
             try {
-                const data = await apiRequest('/api/login', 'POST', { login, password });
-                
+                // 3. ОТПРАВЛЯЕМ ЗАПРОС
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login, password })
+                });
+
+                const data = await response.json();
+
                 if (data.success) {
-                    showSuccess('Вход выполнен! Перенаправление...');
+                    // УСПЕХ: Показываем зеленое сообщение и переходим
+                    alertBox.className = 'alert alert-success';
+                    alertBox.innerText = 'Вход выполнен! Перенаправление...';
+                    alertBox.classList.remove('d-none');
+                    
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1000);
+                        // Перенаправление в зависимости от роли
+                        if (data.role === 'admin') window.location.href = '/dashboard_manager.html';
+                        else if (data.role === 'manager') window.location.href = '/dashboard_manager.html';
+                        else if (data.role === 'foreman') window.location.href = '/dashboard_foreman.html';
+                        else if (data.role === 'supplier') window.location.href = '/dashboard_supplier.html';
+                        else if (data.role === 'pto') window.location.href = '/dashboard_pto.html';
+                        else window.location.href = '/dashboard_customer.html';
+                    }, 500);
                 } else {
-                    showError(data.message || 'Неверный логин или пароль');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Войти';
+                    // ОШИБКА СЕРВЕРА (например, неверный пароль)
+                    throw new Error(data.message || 'Ошибка входа');
                 }
             } catch (error) {
-                showError('Ошибка соединения с сервером');
+                console.error(error);
+                // 4. ЕСЛИ ОШИБКА - ВОЗВРАЩАЕМ КНОПКУ (Убирает вечное зависание)
+                showAlert(error.message || 'Ошибка соединения с сервером');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Войти';
+                submitBtn.innerText = originalText;
             }
         });
+
+        // Функция для показа красной ошибки
+        function showAlert(message) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = 'alert alert-danger';
+            alertBox.innerText = message;
+            alertBox.classList.remove('d-none');
+        }
     </script>
 </body>
 </html>

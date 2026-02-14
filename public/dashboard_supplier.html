@@ -2,81 +2,100 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кабинет снабженца - ЭнергоАтлант</title>
+    <title>Снабжение | ЭнергоАтлант</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">⚡ ЭнергоАтлант</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item">
-                        <span class="navbar-text text-white me-3">
-                            <span id="userName"></span> 
-                            <small class="text-white-50">(<span id="userRole"></span>)</small>
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <button class="btn btn-outline-light" id="logoutBtn">Выход</button>
-                    </li>
-                </ul>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">📦 Снабжение</span>
+            <div class="d-flex align-items-center text-white">
+                <span id="userName" class="me-3">Загрузка...</span>
+                <a href="/api/logout" class="btn btn-outline-light btn-sm">Выйти</a>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-4">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h2">📦 Кабинет снабженца</h1>
+    <div class="container">
+        <div class="card shadow-sm mb-4 border-primary">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="mb-1 text-primary">🔗 Присоединиться к проекту</h5>
+                    <p class="mb-0 text-muted small">Введите код, который дал менеджер</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <input type="text" id="joinCode" class="form-control" placeholder="Например: PRJ-7788">
+                    <button class="btn btn-primary" onclick="joinProject()">Добавить</button>
+                </div>
+            </div>
         </div>
 
-        <!-- Tabs -->
-        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projectsTab" type="button">
-                    📋 Мои проекты
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materialsTab" type="button">
-                    📦 Материалы
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="myTabContent">
-            <!-- Список проектов -->
-            <div class="tab-pane fade show active" id="projectsTab" role="tabpanel">
-                <div id="projectsList">
-                    <div class="text-center p-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Загрузка...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Загрузка проектов...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Материалы -->
-            <div class="tab-pane fade" id="materialsTab" role="tabpanel">
-                <div id="materialsView">
-                    <div class="alert alert-info">
-                        👈 Выберите проект из списка, чтобы увидеть материалы
-                    </div>
-                </div>
-            </div>
+        <h3 class="mb-3">Мои проекты</h3>
+        <div id="projectsList" class="row">
+            <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/supplier.js"></script>
+    <script>
+        // Загрузка проектов
+        async function loadProjects() {
+            try {
+                // Получаем имя юзера
+                const userRes = await fetch('/api/user/me');
+                const userData = await userRes.json();
+                if(userData.success) document.getElementById('userName').innerText = userData.user.name;
+
+                // Получаем проекты
+                const res = await fetch('/api/supplier/projects');
+                const data = await res.json();
+                
+                const container = document.getElementById('projectsList');
+                if(!data.success || data.projects.length === 0) {
+                    container.innerHTML = '<div class="col-12 text-center text-muted">Нет активных проектов</div>';
+                    return;
+                }
+
+                container.innerHTML = data.projects.map(p => `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title">${p.title}</h5>
+                                <p class="card-text text-muted small">${p.address}</p>
+                                <div class="d-flex justify-content-between mt-3">
+                                    <span class="badge bg-info text-dark">${p.status}</span>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="openMaterials(${p.id})">
+                                        📋 Просмотр материалов
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        // Функция ввода кода
+        async function joinProject() {
+            const code = document.getElementById('joinCode').value;
+            if(!code) return alert('Введите код!');
+            
+            const res = await fetch('/api/supplier/join', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({accessCode: code})
+            });
+            const data = await res.json();
+            if(data.success) { alert('Успешно!'); loadProjects(); }
+            else alert('Ошибка: ' + data.message);
+        }
+
+        // Заглушка для открытия материалов (пока просто алерт, позже сделаем модалку)
+        function openMaterials(id) {
+            alert('Здесь откроется таблица материалов для проекта #' + id);
+            // В будущем: window.location.href = '/materials.html?id=' + id;
+        }
+
+        loadProjects();
+    </script>
 </body>
 </html>

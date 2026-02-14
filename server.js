@@ -1209,7 +1209,45 @@ app.use((err, req, res, next) => {
         message: "Внутренняя ошибка сервера" 
     });
 });
+// ==========================================
+// НОВЫЕ API: ПРИСОЕДИНЕНИЕ ПО КОДУ (СНАБЖЕНЕЦ И ПТО)
+// ==========================================
 
+// 1. Снабженец вводит код
+app.post('/api/supplier/join', async (req, res) => { // Добавь middleware requireSupplier если используешь
+    try {
+        if (!req.session.userId) return res.status(401).json({success:false, message:"Нет авторизации"});
+        const { accessCode } = req.body;
+        
+        const project = await dbGet("SELECT * FROM projects WHERE access_code = ?", [accessCode]);
+        if (!project) return res.json({ success: false, message: "Неверный код" });
+
+        if (project.supplier_id && project.supplier_id !== req.session.userId) {
+            return res.json({ success: false, message: "У проекта уже есть снабженец" });
+        }
+
+        await dbRun("UPDATE projects SET supplier_id = ? WHERE id = ?", [req.session.userId, project.id]);
+        res.json({ success: true, message: "Вы добавлены в проект!" });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// 2. ПТО вводит код
+app.post('/api/pto/join', async (req, res) => { // Добавь middleware requirePTO если используешь
+    try {
+        if (!req.session.userId) return res.status(401).json({success:false, message:"Нет авторизации"});
+        const { accessCode } = req.body;
+        
+        const project = await dbGet("SELECT * FROM projects WHERE access_code = ?", [accessCode]);
+        if (!project) return res.json({ success: false, message: "Неверный код" });
+
+        if (project.pto_id && project.pto_id !== req.session.userId) {
+            return res.json({ success: false, message: "У проекта уже есть инженер ПТО" });
+        }
+
+        await dbRun("UPDATE projects SET pto_id = ? WHERE id = ?", [req.session.userId, project.id]);
+        res.json({ success: true, message: "Вы добавлены в проект!" });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
 app.listen(PORT, () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);

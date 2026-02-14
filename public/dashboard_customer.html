@@ -7,37 +7,40 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">⚡ ЭнергоАтлант</a>
+            <a class="navbar-brand fw-bold" href="#">⚡ ЭнергоАтлант</a>
+            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    <li class="nav-item">
-                        <span class="navbar-text text-white me-3">
-                            <span id="userName"></span> 
-                            <small class="text-white-50">(<span id="userRole"></span>)</small>
+                    <li class="nav-item me-3">
+                        <span class="text-white">
+                            <i class="bi bi-person-circle"></i> <span id="userName">Загрузка...</span>
                         </span>
                     </li>
                     <li class="nav-item">
-                        <button class="btn btn-outline-light" id="logoutBtn">Выход</button>
+                        <a href="/api/logout" class="btn btn-danger btn-sm text-white fw-bold">
+                            Выйти
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-4">
-        <!-- Header -->
+    <div class="container">
+        
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h2">👤 Личный кабинет</h1>
-            <div>
-                <button class="btn btn-primary me-2" onclick="showCreateRequestModal()">
-                    📝 Создать заявку
+            <h2 class="text-primary">👤 Личный кабинет</h2>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary" onclick="showCreateRequestModal()">
+                    📝 Новая заявка
                 </button>
                 <button class="btn btn-success" onclick="showJoinProjectModal()">
                     🔑 Ввести код проекта
@@ -45,55 +48,35 @@
             </div>
         </div>
 
-        <!-- Tabs -->
         <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projectsTab" type="button">
-                    📋 Мои проекты
+                <button class="nav-link active fw-bold" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projectsTab" type="button">
+                    🏗 Мои проекты
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#detailsTab" type="button">
-                    🔍 Детали проекта
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requestsTab" type="button">
-                    📬 Мои заявки
+                <button class="nav-link fw-bold" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requestsTab" type="button">
+                    📬 История заявок
                 </button>
             </li>
         </ul>
 
-        <div class="tab-content" id="myTabContent">
-            <!-- Проекты -->
+        <div class="tab-content bg-white p-4 rounded shadow-sm border" id="myTabContent">
+            
             <div class="tab-pane fade show active" id="projectsTab" role="tabpanel">
-                <div id="projectsList">
-                    <div class="text-center p-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Загрузка...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Загрузка проектов...</p>
+                <div id="projectsList" class="row g-3">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Загружаем ваши проекты...</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Детали проекта -->
-            <div class="tab-pane fade" id="detailsTab" role="tabpanel">
-                <div id="projectDetails">
-                    <div class="alert alert-info">
-                        👈 Выберите проект из списка, чтобы увидеть детали и прогресс работ
-                    </div>
-                </div>
-            </div>
-
-            <!-- Заявки -->
             <div class="tab-pane fade" id="requestsTab" role="tabpanel">
                 <div id="requestsStatus">
-                    <div class="text-center p-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Загрузка...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Загрузка заявок...</p>
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Проверяем историю заявок...</p>
                     </div>
                 </div>
             </div>
@@ -103,5 +86,17 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/customer.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/user/me');
+                const data = await res.json();
+                if(data.success) {
+                    document.getElementById('userName').innerText = data.user.name || data.user.login;
+                }
+            } catch (e) { console.error(e); }
+        });
+    </script>
 </body>
 </html>
