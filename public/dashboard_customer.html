@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Личный кабинет</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { background: #0d1117; color: white; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .box { background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px; }
+        h2 { color: #ff9800; margin-top: 0; }
+        input { width: 70%; padding: 10px; background: #0d1117; border: 1px solid #555; color: white; }
+        button { padding: 10px 20px; background: #ff9800; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between;">
+            <h1>Мои Проекты</h1>
+            <a href="/api/logout" style="color: red; align-self: center;">Выйти</a>
+        </div>
+
+        <div class="box">
+            <h2>➕ Добавить проект</h2>
+            <p>Если менеджер передал вам код доступа, введите его здесь:</p>
+            <input type="text" id="access_code" placeholder="Например: PRJ-7788">
+            <button onclick="claimProject()">Добавить</button>
+        </div>
+
+        <div id="my_projects">Loading...</div>
+    </div>
+
+    <script>
+        async function claimProject() {
+            const code = document.getElementById('access_code').value;
+            if(!code) return alert("Введите код!");
+
+            const res = await fetch('/api/customer/claim', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({code})
+            });
+            const json = await res.json();
+            if(json.success) {
+                alert("✅ Проект успешно добавлен!");
+                loadProjects();
+            } else {
+                alert("Ошибка: " + json.message);
+            }
+        }
+
+        async function loadProjects() {
+            const res = await fetch('/api/customer/my-projects');
+            const json = await res.json();
+            const container = document.getElementById('my_projects');
+            
+            if (json.projects.length === 0) {
+                container.innerHTML = "<p>У вас пока нет активных проектов.</p>";
+                return;
+            }
+
+            container.innerHTML = json.projects.map(p => `
+                <div class="box" style="border-left: 5px solid #ff9800;">
+                    <h2>${p.title}</h2>
+                    <p>📍 Адрес: ${p.address}</p>
+                    <p>📄 Статус: <b>${p.status}</b></p>
+                    ${p.doc_link ? `<a href="${p.doc_link}" target="_blank" style="color:#58a6ff">Скачать документы</a>` : ''}
+                </div>
+            `).join('');
+        }
+        loadProjects();
+    </script>
+</body>
+</html>

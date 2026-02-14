@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <h2>Регистрация</h2>
+        <form id="regForm">
+            <input type="text" id="fullName" placeholder="ФИО / Организация" required>
+            <input type="text" id="login" placeholder="Логин" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="text" id="phone" placeholder="Телефон" required>
+            <input type="password" id="password" placeholder="Пароль" required>
+            
+            <button type="submit" class="btn-main">Зарегистрироваться</button>
+        </form>
+        <p><a href="login.html">Войти</a></p>
+    </div>
+
+    <script>
+        document.getElementById('regForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); // ОСТАНАВЛИВАЕМ перезагрузку страницы
+            console.log("Отправка формы...");
+
+            const data = {
+                fullName: document.getElementById('fullName').value,
+                login: document.getElementById('login').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await res.json();
+                console.log("Ответ сервера:", result);
+
+                if(result.success) {
+                    alert('Регистрация успешна! Теперь войдите.');
+                    window.location.href = 'login.html';
+                } else {
+                    alert('Ошибка: ' + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Ошибка соединения с сервером');
+            }
+        });
+    </script>
+</body>
+</html>

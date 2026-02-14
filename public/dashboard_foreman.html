@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Кабинет Прораба</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { background: #0d1117; color: white; padding: 20px; font-family: sans-serif; }
+        .project-block { background: #161b22; padding: 20px; border: 1px solid #30363d; margin-bottom: 20px; border-radius: 8px; }
+        h2 { color: #ff9800; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
+        .stage-item { background: #21262d; padding: 15px; margin: 10px 0; border-left: 4px solid #58a6ff; border-radius: 4px; }
+        input { background: #0d1117; border: 1px solid #555; color: white; padding: 5px; }
+        button { background: #238636; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; }
+        .warning { color: #ff6b6b; font-weight: bold; background: rgba(255,0,0,0.1); padding: 10px; }
+        .add-box { background: rgba(35, 134, 54, 0.1); padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>👷 Кабинет Прораба</h1>
+        <a href="/api/logout" style="color: #ff6b6b; text-decoration: none; border: 1px solid #ff6b6b; padding: 5px 15px; border-radius: 4px;">Выйти</a>
+    </div>
+    
+    <div id="projects_container">Загрузка проектов...</div>
+
+    <script>
+        async function loadForemanData() {
+            const res = await fetch('/api/foreman/projects');
+            const json = await res.json();
+            const cont = document.getElementById('projects_container');
+            
+            if(json.projects.length === 0) {
+                cont.innerHTML = "<p>Вам пока не назначили ни одного проекта.</p>";
+                return;
+            }
+
+            cont.innerHTML = json.projects.map(p => {
+                // Расчет 72 часов
+                const created = new Date(p.created_at);
+                const now = new Date();
+                const diffHours = (now - created) / (1000 * 60 * 60);
+                const hoursLeft = 72 - diffHours;
+                const canEdit = hoursLeft > 0;
+
+                return `
+                <div class="project-block">
+                    <h2>${p.title} <span style="font-size:0.6em; color:#888">(${p.address})</span></h2>
+                    <p>📂 Документация: ${p.doc_link ? `<a href="${p.doc_link}" target="_blank" style="color:#58a6ff">Открыть ссылку</a>` : 'Нет ссылки'}</p>
+                    
+                    ${canEdit 
+                        ? `<div class="add-box">
+                             <b>⚡ Добавление этапов (Осталось: ${hoursLeft.toFixed(1)} ч.)</b><br>
+                             <div style="display:flex; gap:10px; margin-top:10px;">
+                                <input id="stage_name_${p.id}" placeholder="Название этапа" style="flex:1">
+                                <input id="stage_mat_${p.id}" placeholder="План материалов" style="flex:1">
+                                <button onclick="addStage(${p.id})">Добавить</button>
+                             </div>
+                           </div>`
+                        : `<p class="warning">🔒 Время на планирование (72ч) истекло. Новые этапы добавлять нельзя.</p>`
+                    }
+
+                    <h3>Этапы работ:</h3>
+                    <div id="stages_list_${p.id}">Загрузка этапов...</div>
+                </div>`;
+            }).join('');
+
+            // Подгружаем этапы
+            json.projects.forEach(p => loadStages(p.id));
+        }
+
+        async function addStage(pid) {
+            const name = document.getElementById(`stage_name_${pid}`).value;
+            const mats = document.getElementById(`stage_mat_${pid}`).value;
+            
+            if(!name) return alert("Введите название этапа");
+
+            const res = await fetch('/api/stages', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({project_id: pid, name, materials: mats})
+            });
+            const data = await res.json();
+            if(data.success) { 
+                document.getElementById(`stage_name_${pid}`).value = '';
+                document.getElementById(`stage_mat_${pid}`).value = '';
+                loadStages(pid); 
+            } 
+            else { alert(data.message); }
+        }
+
+        async function loadStages(pid) {
+            const res = await fetch(`/api/stages/${pid}`);
+            const data = await res.json();
+            const list = document.getElementById(`stages_list_${pid}`);
+            
+            if(data.stages.length === 0) {
+                list.innerHTML = "<p style='color:#666'>Этапов пока нет</p>";
+                return;
+            }
+
+            list.innerHTML = data.stages.map(s => `
+                <div class="stage-item">
+                    <div style="display:flex; justify-content:space-between;">
+                        <strong>${s.name}</strong>
+                        <label><input type="checkbox" ${s.is_completed ? 'checked' : ''} id="check_${s.id}"> Выполнено</label>
+                    </div>
+                    <div style="margin-top:5px; font-size:0.9em; color:#aaa;">План материалов: ${s.materials_planned}</div>
+                    <div style="margin-top:10px;">
+                        Факт расхода: <input value="${s.materials_used || ''}" id="used_${s.id}" placeholder="Сколько потрачено?">
+                        <button onclick="updateStage(${s.id})" style="background:#1f6feb; font-size:0.8em;">Сохранить факт</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function updateStage(sid) {
+            const used = document.getElementById(`used_${sid}`).value;
+            const completed = document.getElementById(`check_${sid}`).checked;
+            await fetch('/api/stages/update', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({id: sid, used, completed})
+            });
+            alert('Данные обновлены');
+        }
+
+        loadForemanData();
+    </script>
+</body>
+</html>

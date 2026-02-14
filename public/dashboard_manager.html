@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Кабинет Менеджера</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { background: #0d1117; color: white; display: flex; font-family: sans-serif; margin: 0; }
+        .sidebar { width: 250px; background: #161b22; padding: 20px; height: 100vh; box-sizing: border-box; }
+        .main { padding: 30px; flex: 1; overflow-y: auto; }
+        .card { background: #21262d; padding: 20px; margin-bottom: 20px; border: 1px solid #30363d; border-radius: 8px; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 10px; background: #0d1117; border: 1px solid #30363d; color: white; box-sizing: border-box; }
+        .btn { background: #ff9800; color: white; padding: 10px 20px; border: none; cursor: pointer; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        td, th { border-bottom: 1px solid #30363d; padding: 10px; text-align: left; }
+        a { color: white; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3 style="color: #ff9800;">ЭНЕРГО<span style="color:white">АТЛАНТ</span></h3>
+        <p>Роль: Менеджер</p>
+        <hr style="border-color: #333;">
+        <a href="/api/logout" style="color: #ff6b6b;">Выйти</a>
+    </div>
+
+    <div class="main">
+        <h1>Панель управления</h1>
+
+        <div class="card">
+            <h3>🛠 Создать новый проект</h3>
+            <form id="createProjectForm">
+                <input type="text" id="p_title" placeholder="Название проекта (напр. ПС Северная)" required>
+                <input type="text" id="p_addr" placeholder="Адрес объекта" required>
+                <input type="text" id="p_doc" placeholder="Ссылка на Google/Yandex Диск">
+                
+                <label>Назначить Прораба:</label>
+                <select id="sel_foreman"><option value="">-- Выберите сотрудника --</option></select>
+                
+                <label>Назначить Снабженца:</label>
+                <select id="sel_supplier"><option value="">-- Выберите сотрудника --</option></select>
+
+                <button type="submit" class="btn">Создать проект</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>📋 Активные проекты</h3>
+            <table id="proj_table">
+                </table>
+        </div>
+    </div>
+
+    <script>
+        // 1. При загрузке страницы получаем списки сотрудников и проекты
+        async function init() {
+            // Грузим персонал
+            try {
+                const sRes = await fetch('/api/staff');
+                const sData = await sRes.json();
+                
+                if(sData.success) {
+                    const fSel = document.getElementById('sel_foreman');
+                    const sSel = document.getElementById('sel_supplier');
+                    
+                    sData.staff.forEach(u => {
+                        const opt = `<option value="${u.id}">${u.full_name} (${u.role})</option>`;
+                        if(u.role === 'foreman') fSel.innerHTML += opt;
+                        if(u.role === 'supplier') sSel.innerHTML += opt;
+                    });
+                }
+                loadProjects();
+            } catch (e) { console.error(e); }
+        }
+
+        // 2. Функция загрузки проектов
+        async function loadProjects() {
+            const res = await fetch('/api/manager/projects');
+            const data = await res.json();
+            const table = document.getElementById('proj_table');
+            
+            if (data.projects.length === 0) {
+                table.innerHTML = "<p>Нет активных проектов</p>";
+                return;
+            }
+
+            table.innerHTML = `<tr><th>Название</th><th>Прораб</th><th>КОД (для Заказчика)</th><th>Статус</th></tr>` + 
+                data.projects.map(p => `
+                    <tr>
+                        <td><b>${p.title}</b><br><small style="color:#888">${p.address}</small></td>
+                        <td>${p.foreman_name || '<span style="color:red">Не назначен</span>'}</td>
+                        <td style="color:#ff9800; font-family: monospace; font-size: 1.2em; font-weight: bold;">${p.access_code}</td>
+                        <td>${p.status}</td>
+                    </tr>
+                `).join('');
+        }
+
+        // 3. Обработка кнопки "Создать"
+        document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            const payload = {
+                title: document.getElementById('p_title').value,
+                address: document.getElementById('p_addr').value,
+                doc_link: document.getElementById('p_doc').value,
+                foreman_id: document.getElementById('sel_foreman').value,
+                supplier_id: document.getElementById('sel_supplier').value
+            };
+
+            const res = await fetch('/api/projects/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+
+            if(json.success) {
+                alert('✅ Проект создан! \nКод для заказчика: ' + json.code);
+                document.getElementById('createProjectForm').reset();
+                loadProjects();
+            } else {
+                alert('Ошибка: ' + json.message);
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

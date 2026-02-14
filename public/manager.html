@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель | ЭнергоАтлант</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --accent: #ff9800;
+            --text: #c9d1d9;
+            --border: #30363d;
+            --success: #238636;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            display: flex;
+        }
+        /* Сайдбар */
+        .sidebar {
+            width: 260px;
+            background: var(--card);
+            height: 100vh;
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            position: fixed;
+            top: 0; left: 0;
+            overflow-y: auto;
+        }
+        .sidebar h2 { color: var(--accent); font-size: 1.2rem; margin-bottom: 30px; }
+        .sidebar a {
+            display: block;
+            color: var(--text);
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: 0.2s;
+        }
+        .sidebar a:hover { background: rgba(255,255,255,0.05); }
+        .sidebar a.active { background: var(--accent); color: white; }
+        
+        /* Контент */
+        .main {
+            margin-left: 300px;
+            padding: 40px;
+            width: 100%;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        h3 { margin-top: 0; color: white; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+
+        /* Элементы форм */
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+        label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #8b949e; }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-del { background: none; border: 1px solid #f85149; color: #f85149; padding: 5px 10px; font-size: 0.85rem; }
+        .btn-del:hover { background: #f85149; color: white; }
+
+        /* Таблицы */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; color: #8b949e; padding: 10px; font-size: 0.9rem; }
+        td { padding: 12px 10px; border-top: 1px solid var(--border); }
+        
+        /* Генератор */
+        .code-display {
+            font-family: monospace;
+            font-size: 1.4rem;
+            color: var(--success);
+            background: rgba(35, 134, 54, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-right: 15px;
+            border: 1px dashed var(--success);
+        }
+
+        /* Сетка для формы проекта */
+        .project-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .full-width { grid-column: span 2; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h2>ЭНЕРГО<span>АТЛАНТ</span></h2>
+        <nav>
+            <a href="#" class="active"><i class="fas fa-tools"></i> Управление</a>
+            <a href="cabinet.html"><i class="fas fa-chart-pie"></i> Мой Кабинет</a>
+            <a href="/api/logout" style="color: #f85149; margin-top: 50px;"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <h1>Панель Менеджера</h1>
+
+        <div class="card">
+            <h3><i class="fas fa-key"></i> Приглашения</h3>
+            <div style="display: flex; align-items: center;">
+                <div id="codeDisplay" class="code-display">----</div>
+                <button class="btn" onclick="generateNewCode()"><i class="fas fa-sync-alt"></i> Создать код</button>
+            </div>
+            <p style="margin-top: 10px; font-size: 0.9rem; color: #8b949e;">Отправьте этот код клиенту для регистрации.</p>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-hard-hat"></i> Создать новый объект</h3>
+            <form id="createProjectForm" onsubmit="createProject(event)">
+                <div class="project-form-grid">
+                    <div>
+                        <label>Название объекта</label>
+                        <input type="text" id="p-title" placeholder="Напр: ПС Северная-2" required>
+                    </div>
+                    <div>
+                        <label>Клиент (Владелец)</label>
+                        <select id="p-user" required>
+                            <option value="">Загрузка клиентов...</option>
+                        </select>
+                    </div>
+                    <div class="full-width">
+                        <label>Адрес проведения работ</label>
+                        <input type="text" id="p-address" placeholder="г. Москва, ул..." required>
+                    </div>
+                    <div class="full-width">
+                        <label>Описание работ</label>
+                        <textarea id="p-desc" rows="2" placeholder="Краткое описание задачи..."></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn"><i class="fas fa-plus"></i> Запустить в работу</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-list"></i> Активные проекты</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Название</th>
+                        <th>Клиент</th>
+                        <th>Статус</th>
+                        <th>Прогресс</th>
+                        <th>Управление</th>
+                    </tr>
+                </thead>
+                <tbody id="projectsList">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-users"></i> База клиентов</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Логин</th>
+                        <th>Контакты</th>
+                        <th>Роль</th>
+                        <th>Удалить</th>
+                    </tr>
+                </thead>
+                <tbody id="usersList">
+                    </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. ГЕНЕРАТОР ---
+        async function generateNewCode() {
+            const res = await fetch('/api/admin/generate-code');
+            const data = await res.json();
+            if(data.success) document.getElementById('codeDisplay').innerText = data.code;
+        }
+
+        // --- 2. ЗАГРУЗКА ДАННЫХ ---
+        async function loadAll() {
+            loadUsers();
+            loadProjects();
+        }
+
+        async function loadUsers() {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+            if(!data.success) return;
+
+            // Заполняем таблицу пользователей
+            const userTable = document.getElementById('usersList');
+            userTable.innerHTML = data.users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td><b>${u.login}</b></td>
+                    <td>${u.email}<br><small>${u.phone}</small></td>
+                    <td>${u.role}</td>
+                    <td>${u.role !== 'admin' ? `<button class="btn-del" onclick="deleteUser(${u.id})">Удалить</button>` : '-'}</td>
+                </tr>
+            `).join('');
+
+            // Заполняем выпадающий список (SELECT) в форме проекта
+            const select = document.getElementById('p-user');
+            select.innerHTML = '<option value="">Выберите клиента...</option>' + 
+                data.users
+                    .filter(u => u.role !== 'admin') // Админам проекты не назначаем
+                    .map(u => `<option value="${u.id}">${u.login} (${u.email})</option>`)
+                    .join('');
+        }
+
+        async function loadProjects() {
+            const res = await fetch('/api/projects');
+            const data = await res.json();
+            if(!data.success) return;
+
+            const table = document.getElementById('projectsList');
+            if(data.projects.length === 0) {
+                table.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Проектов пока нет</td></tr>';
+                return;
+            }
+
+            table.innerHTML = data.projects.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.title}<br><small style="color:#8b949e">${p.address}</small></td>
+                    <td><span style="color:var(--accent)">${p.owner_name}</span></td>
+                    <td>${p.status}</td>
+                    <td>
+                        <div style="background:#30363d; height:6px; width:100px; border-radius:3px;">
+                            <div style="background:var(--success); height:100%; width:${p.progress}%"></div>
+                        </div>
+                        <small>${p.progress}%</small>
+                    </td>
+                    <td><button class="btn-del" onclick="deleteProject(${p.id})"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        // --- 3. ДЕЙСТВИЯ ---
+        async function createProject(e) {
+            e.preventDefault();
+            const user_id = document.getElementById('p-user').value;
+            const title = document.getElementById('p-title').value;
+            const address = document.getElementById('p-address').value;
+            const description = document.getElementById('p-desc').value;
+
+            if(!user_id) return alert("Выберите клиента из списка!");
+
+            const res = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id, title, address, description,
+                    status: 'working',
+                    progress: 0
+                })
+            });
+
+            if(res.ok) {
+                // Очистка формы и обновление таблицы
+                e.target.reset();
+                loadProjects();
+            } else {
+                alert("Ошибка при создании");
+            }
+        }
+
+        async function deleteUser(id) {
+            if(confirm('Удалить пользователя?')) {
+                await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+                loadAll();
+            }
+        }
+
+        async function deleteProject(id) {
+            if(confirm('Удалить этот проект?')) {
+                await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+                loadProjects();
+            }
+        }
+
+        // Старт
+        loadAll();
+    </script>
+</body>
+</html>

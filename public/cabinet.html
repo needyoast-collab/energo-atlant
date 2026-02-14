@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет | ЭнергоАтлант</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="dashboard-body">
+
+    <div class="dashboard-container">
+        
+        <aside class="sidebar">
+            <div class="sidebar-logo">ЭНЕРГО<span>АТЛАНТ</span></div>
+            
+            <div class="user-profile">
+                <div class="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                <p>Иван Петров</p>
+                <span>Главный инженер</span>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i> Обзор</a>
+                <a href="#"><i class="fa-solid fa-city"></i> Мои объекты</a>
+                <a href="#"><i class="fa-solid fa-file-contract"></i> Документы</a>
+                <a href="#"><i class="fa-solid fa-gear"></i> Настройки</a>
+            </nav>
+
+            <button id="logoutBtn" class="logout-btn" onclick="if(confirm('Выйти?')) window.location.href='index.html'"><i class="fa-solid fa-right-from-bracket"></i> Выход</button>
+        </aside>
+
+        <main class="main-content">
+            
+            <header class="top-bar">
+                <h2>Панель управления</h2>
+                <div class="date-display">Сегодня: 12 Октября 2025</div>
+            </header>
+
+            <div class="stats-row">
+                <div class="card stat-card">
+                    <h3>Активных проектов</h3>
+                    <div class="number">3</div>
+                    <div class="indicator green"></div>
+                </div>
+                <div class="card stat-card">
+                    <h3>Текущий баланс</h3>
+                    <div class="number">1.2 млн ₽</div>
+                    <div class="indicator orange"></div>
+                </div>
+                <div class="card stat-card">
+                    <h3>Документов на подпись</h3>
+                    <div class="number warning">2</div>
+                    <div class="indicator red"></div>
+                </div>
+            </div>
+
+            <div class="projects-section">
+                <h3>Статус объектов</h3>
+                <div class="projects-section">
+    <h3>Статус объектов</h3> <div class="card claim-box" style="margin-bottom: 25px; padding: 20px; background: rgba(255,152,0, 0.15); border: 1px dashed #ff9800; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <h4 style="margin: 0 0 5px 0; color: #ff9800;">🔗 Добавить проект</h4>
+            <p style="margin: 0; font-size: 0.9rem; color: #ccc;">Если менеджер передал вам код доступа</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="projectCodeInput" placeholder="Код (напр. PRJ-7788)" style="padding: 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: white; width: 180px;">
+            <button onclick="claimProject()" style="background: #ff9800; color: white; border: none; padding: 0 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">ОК</button>
+        </div>
+    </div>
+    <div id="projects-container">
+        </div>
+
+</div>
+                <div class="project-card">
+                    <div class="project-info">
+                        <h4>ПС "Северная-2"</h4>
+                        <p>Монтаж трансформаторов</p>
+                    </div>
+                    <div class="project-progress">
+                        <span>Готовность: 75%</span>
+                        <div class="progress-bar"><div class="fill" style="width: 75%"></div></div>
+                    </div>
+                    <div class="status-badge working">В работе</div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-info">
+                        <h4>ЛЭП 110 кВ "Восток"</h4>
+                        <p>Согласование проекта</p>
+                    </div>
+                    <div class="project-progress">
+                        <span>Готовность: 30%</span>
+                        <div class="progress-bar"><div class="fill" style="width: 30%"></div></div>
+                    </div>
+                    <div class="status-badge waiting">Ожидание</div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+    // Функция чтобы забрать проект себе
+    async function claimProject() {
+        const codeInput = document.getElementById('projectCodeInput');
+        const code = codeInput.value.trim();
+        
+        if (!code) return alert("Введите код проекта!");
+
+        try {
+            const res = await fetch('/api/projects/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                alert("✅ Проект успешно добавлен!");
+                window.location.reload(); // Перезагружаем страницу, чтобы увидеть проект
+            } else {
+                alert("❌ Ошибка: " + data.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка соединения с сервером");
+        }
+    }
+</script>
+</body>
+</html>
