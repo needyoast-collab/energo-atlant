@@ -2,61 +2,145 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Кабинет Менеджера</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Панель Менеджера | ЭнергоАтлант</title>
+    <link rel="stylesheet" href="css/style.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #0d1117; color: white; display: flex; font-family: sans-serif; margin: 0; }
-        .sidebar { width: 250px; background: #161b22; padding: 20px; height: 100vh; box-sizing: border-box; }
-        .main { padding: 30px; flex: 1; overflow-y: auto; }
-        .card { background: #21262d; padding: 20px; margin-bottom: 20px; border: 1px solid #30363d; border-radius: 8px; }
-        input, select { width: 100%; padding: 10px; margin-bottom: 10px; background: #0d1117; border: 1px solid #30363d; color: white; box-sizing: border-box; }
-        .btn { background: #ff9800; color: white; padding: 10px 20px; border: none; cursor: pointer; width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        td, th { border-bottom: 1px solid #30363d; padding: 10px; text-align: left; }
-        a { color: white; text-decoration: none; }
+        /* Специфичные стили для админки */
+        body { background: #0d1117; color: #e6edf3; display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar {
+            width: 260px;
+            background: #161b22;
+            border-right: 1px solid #30363d;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar h2 { color: #ff9800; font-size: 1.2rem; margin-bottom: 30px; text-align: center; }
+        
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: #8b949e;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .menu-item:hover, .menu-item.active { background: rgba(255,152,0, 0.1); color: #ff9800; }
+        .menu-item i { margin-right: 10px; width: 20px; text-align: center; }
+        
+        .logout-btn {
+            margin-top: auto;
+            color: #ff6b6b;
+            border: 1px solid rgba(255,107,107, 0.3);
+            text-align: center;
+            justify-content: center;
+        }
+        .logout-btn:hover { background: #ff6b6b; color: white; }
+
+        .content { flex: 1; padding: 30px; overflow-y: auto; }
+        
+        .card {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        /* Таблицы и формы */
+        input, select { 
+            width: 100%; 
+            padding: 10px; 
+            margin-bottom: 15px; 
+            background: #0d1117; 
+            border: 1px solid #30363d; 
+            color: white; 
+            border-radius: 5px; 
+            box-sizing: border-box;
+        }
+        .btn-submit {
+            background: #ff9800; color: white; border: none; padding: 12px 20px; 
+            border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; color: #8b949e; padding: 10px; border-bottom: 1px solid #30363d; }
+        td { padding: 12px 10px; border-bottom: 1px solid #30363d; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h3 style="color: #ff9800;">ЭНЕРГО<span style="color:white">АТЛАНТ</span></h3>
-        <p>Роль: Менеджер</p>
-        <hr style="border-color: #333;">
-        <a href="/api/logout" style="color: #ff6b6b;">Выйти</a>
-    </div>
+    <aside class="sidebar">
+        <h2>ЭНЕРГО<span>АТЛАНТ</span></h2>
+        
+        <a href="#" class="menu-item active" onclick="showSection('create')">
+            <i class="fas fa-plus-circle"></i> Новый проект
+        </a>
+        <a href="#" class="menu-item" onclick="showSection('list')">
+            <i class="fas fa-list"></i> Список проектов
+        </a>
+        <a href="index.html" class="menu-item">
+            <i class="fas fa-home"></i> На сайт
+        </a>
 
-    <div class="main">
-        <h1>Панель управления</h1>
+        <a href="/api/logout" class="menu-item logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Выход
+        </a>
+    </aside>
 
-        <div class="card">
-            <h3>🛠 Создать новый проект</h3>
+    <main class="content">
+        <h1>Кабинет Менеджера</h1>
+
+        <div id="section-create" class="card">
+            <h3 style="margin-top:0; color:#ff9800"><i class="fas fa-hard-hat"></i> Запуск нового объекта</h3>
             <form id="createProjectForm">
-                <input type="text" id="p_title" placeholder="Название проекта (напр. ПС Северная)" required>
-                <input type="text" id="p_addr" placeholder="Адрес объекта" required>
-                <input type="text" id="p_doc" placeholder="Ссылка на Google/Yandex Диск">
+                <label>Название проекта</label>
+                <input type="text" id="p_title" placeholder="Пример: Реконструкция ПС-500" required>
                 
-                <label>Назначить Прораба:</label>
-                <select id="sel_foreman"><option value="">-- Выберите сотрудника --</option></select>
+                <label>Адрес</label>
+                <input type="text" id="p_addr" placeholder="г. Москва, ул..." required>
                 
-                <label>Назначить Снабженца:</label>
-                <select id="sel_supplier"><option value="">-- Выберите сотрудника --</option></select>
+                <label>Ссылка на документацию (Облако)</label>
+                <input type="text" id="p_doc" placeholder="https://disk.yandex.ru/...">
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <div>
+                        <label>Назначить Прораба</label>
+                        <select id="sel_foreman"><option value="">-- Выберите --</option></select>
+                    </div>
+                    <div>
+                        <label>Назначить Снабженца</label>
+                        <select id="sel_supplier"><option value="">-- Выберите --</option></select>
+                    </div>
+                </div>
 
-                <button type="submit" class="btn">Создать проект</button>
+                <button type="submit" class="btn-submit">Создать проект и получить Код</button>
             </form>
         </div>
 
-        <div class="card">
-            <h3>📋 Активные проекты</h3>
+        <div id="section-list" class="card">
+            <h3 style="margin-top:0; color:#ff9800"><i class="fas fa-tasks"></i> Активные проекты</h3>
             <table id="proj_table">
                 </table>
         </div>
-    </div>
+    </main>
 
     <script>
-        // 1. При загрузке страницы получаем списки сотрудников и проекты
+        // Переключение вкладок (Простая логика для удобства)
+        function showSection(name) {
+            // Можно скроллить к секции
+            if(name === 'create') document.getElementById('section-create').scrollIntoView({behavior: 'smooth'});
+            if(name === 'list') document.getElementById('section-list').scrollIntoView({behavior: 'smooth'});
+        }
+
         async function init() {
-            // Грузим персонал
             try {
+                // Грузим список сотрудников
                 const sRes = await fetch('/api/staff');
                 const sData = await sRes.json();
                 
@@ -65,41 +149,38 @@
                     const sSel = document.getElementById('sel_supplier');
                     
                     sData.staff.forEach(u => {
-                        const opt = `<option value="${u.id}">${u.full_name} (${u.role})</option>`;
+                        const opt = `<option value="${u.id}">${u.full_name}</option>`;
                         if(u.role === 'foreman') fSel.innerHTML += opt;
                         if(u.role === 'supplier') sSel.innerHTML += opt;
                     });
                 }
                 loadProjects();
-            } catch (e) { console.error(e); }
+            } catch(e) { console.error(e); }
         }
 
-        // 2. Функция загрузки проектов
         async function loadProjects() {
             const res = await fetch('/api/manager/projects');
             const data = await res.json();
             const table = document.getElementById('proj_table');
             
-            if (data.projects.length === 0) {
-                table.innerHTML = "<p>Нет активных проектов</p>";
+            if(data.projects.length === 0) {
+                table.innerHTML = "<p style='padding:10px; color:#777'>Проектов пока нет</p>";
                 return;
             }
 
-            table.innerHTML = `<tr><th>Название</th><th>Прораб</th><th>КОД (для Заказчика)</th><th>Статус</th></tr>` + 
+            table.innerHTML = `<tr><th>Название</th><th>Прораб</th><th>КОД ДОСТУПА</th><th>Статус</th></tr>` + 
                 data.projects.map(p => `
                     <tr>
                         <td><b>${p.title}</b><br><small style="color:#888">${p.address}</small></td>
-                        <td>${p.foreman_name || '<span style="color:red">Не назначен</span>'}</td>
-                        <td style="color:#ff9800; font-family: monospace; font-size: 1.2em; font-weight: bold;">${p.access_code}</td>
+                        <td>${p.foreman_name || '<span style="color:#555">Не назначен</span>'}</td>
+                        <td style="color:#ff9800; font-family:monospace; font-size:1.1em; letter-spacing:1px;">${p.access_code}</td>
                         <td>${p.status}</td>
                     </tr>
                 `).join('');
         }
 
-        // 3. Обработка кнопки "Создать"
         document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            
+            e.preventDefault();
             const payload = {
                 title: document.getElementById('p_title').value,
                 address: document.getElementById('p_addr').value,
@@ -109,15 +190,13 @@
             };
 
             const res = await fetch('/api/projects/create', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
             const json = await res.json();
 
             if(json.success) {
-                alert('✅ Проект создан! \nКод для заказчика: ' + json.code);
-                document.getElementById('createProjectForm').reset();
+                alert('✅ Проект создан!\n\nКод для Заказчика: ' + json.code);
                 loadProjects();
             } else {
                 alert('Ошибка: ' + json.message);
