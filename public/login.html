@@ -2,38 +2,101 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход в кабинет | ЭнергоАтлант</title>
+    <title>Вход в систему | ЭнергоАтлант</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Быстрые стили для центровки */
+        body.login-body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #0d1117;
+            margin: 0;
+            font-family: sans-serif;
+        }
+        .login-container {
+            background: #161b22;
+            padding: 40px;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            text-align: center;
+            width: 300px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { color: #ff9800; margin-bottom: 20px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: white;
+            border-radius: 5px;
+            box-sizing: border-box; /* Чтобы padding не ломал ширину */
+        }
+        .btn-main {
+            width: 100%;
+            padding: 12px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .btn-main:hover { background: #e68900; }
+        .error-msg { color: #ff6b6b; margin-top: 10px; display: none; }
+    </style>
 </head>
-<body class="login-page">
-
+<body class="login-body">
     <div class="login-container">
-        <form class="login-form">
-            <h2>Портал заказчика</h2>
-            <p>Введите данные для доступа к объектам</p>
-            
-            <div class="input-group">
-                <input type="text" id="username" placeholder="Логин / Email / Телефон">
-            </div>
-            
-            <div class="input-group">
-                <input type="password" id="password" placeholder="Пароль">
-            </div>
-
-            <a href="#" style="font-size: 0.8rem; color: #ff9800; float: right; margin-bottom: 15px;" onclick="alert('Обратитесь к администратору для сброса')">Забыли пароль?</a>
-            
-            <button type="button" id="loginBtn" class="btn-login-submit">Войти в кабинет</button>
-            
-            <div class="register-link-box">
-                <p>Нет аккаунта?</p>
-                <a href="register.html" class="btn-register">Стать партнером</a>
-            </div>
-
-            <a href="index.html" class="back-link">← На главную</a>
+        <h2>ЭНЕРГО<span>АТЛАНТ</span></h2>
+        <form id="loginForm">
+            <input type="text" id="login" placeholder="Логин" required>
+            <input type="password" id="password" placeholder="Пароль" required>
+            <button type="submit" class="btn-main">Войти</button>
         </form>
+        <div id="errorDisplay" class="error-msg">Ошибка входа</div>
+        
+        <p style="margin-top: 20px; font-size: 0.9em; color: #888;">
+            Нет аккаунта? <a href="register.html" style="color: #58a6ff;">Регистрация</a>
+        </p>
     </div>
 
-    <script src="js/script.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Останавливаем перезагрузку страницы
+            
+            const loginInput = document.getElementById('login').value;
+            const passwordInput = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorDisplay');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login: loginInput, password: passwordInput })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    // УСПЕХ!
+                    // Переходим на /dashboard - сервер сам направит куда надо
+                    window.location.href = '/dashboard';
+                } else {
+                    // ОШИБКА
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerText = data.message || "Неверный логин или пароль";
+                }
+            } catch (err) {
+                console.error(err);
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = "Ошибка соединения с сервером";
+            }
+        });
+    </script>
 </body>
 </html>
