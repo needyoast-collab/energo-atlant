@@ -1,11 +1,22 @@
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
+
+// Создаем папку uploads если её нет
+const uploadsDir = './uploads';
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.log('✅ Папка uploads создана');
+}
+
 const db = new sqlite3.Database('./energo.db');
 
 db.serialize(() => {
     console.log("🔄 Удаление старых таблиц...");
     
     // 1. Очистка старых таблиц
+    db.run("DROP TABLE IF EXISTS material_requests");
     db.run("DROP TABLE IF EXISTS project_materials");
     db.run("DROP TABLE IF EXISTS project_stage_photos");
     db.run("DROP TABLE IF EXISTS project_stages");
@@ -57,7 +68,7 @@ db.serialize(() => {
     )`);
     console.log("✅ Таблица projects создана");
 
-    // 4. Таблица ЗАЯВКИ ОТ КЛИЕНТОВ (новые проекты)
+    // 4. Таблица ЗАЯВКИ ОТ КЛИЕНТОВ
     db.run(`CREATE TABLE project_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         customer_id INTEGER NOT NULL,
@@ -70,8 +81,10 @@ db.serialize(() => {
         reviewed_at DATETIME,
         reviewer_id INTEGER,
         notes TEXT,
+        project_id INTEGER,
         FOREIGN KEY(customer_id) REFERENCES users(id),
-        FOREIGN KEY(reviewer_id) REFERENCES users(id)
+        FOREIGN KEY(reviewer_id) REFERENCES users(id),
+        FOREIGN KEY(project_id) REFERENCES projects(id)
     )`);
     console.log("✅ Таблица project_requests создана");
 
@@ -85,6 +98,7 @@ db.serialize(() => {
         uploaded_by INTEGER NOT NULL,
         uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         description TEXT,
+        document_date DATE,
         FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
         FOREIGN KEY(uploaded_by) REFERENCES users(id)
     )`);
@@ -122,7 +136,28 @@ db.serialize(() => {
     )`);
     console.log("✅ Таблица project_materials создана");
 
-    // 8. Таблица ФОТО К ЭТАПАМ
+    // 8. Таблица ЗАЯВКИ НА МАТЕРИАЛЫ (НОВАЯ!)
+    db.run(`CREATE TABLE material_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        foreman_id INTEGER NOT NULL,
+        supplier_id INTEGER,
+        material_name TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit TEXT,
+        reason TEXT,
+        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'delivered')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        reviewed_at DATETIME,
+        delivered_at DATETIME,
+        notes TEXT,
+        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY(foreman_id) REFERENCES users(id),
+        FOREIGN KEY(supplier_id) REFERENCES users(id)
+    )`);
+    console.log("✅ Таблица material_requests создана");
+
+    // 9. Таблица ФОТО К ЭТАПАМ
     db.run(`CREATE TABLE project_stage_photos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         stage_id INTEGER NOT NULL,
@@ -136,16 +171,18 @@ db.serialize(() => {
     )`);
     console.log("✅ Таблица project_stage_photos создана");
 
-    // 9. Индексы для оптимизации
+    // 10. Индексы для оптимизации
     db.run("CREATE INDEX idx_projects_manager ON projects(manager_id)");
     db.run("CREATE INDEX idx_projects_foreman ON projects(foreman_id)");
     db.run("CREATE INDEX idx_projects_customer ON projects(customer_id)");
     db.run("CREATE INDEX idx_projects_status ON projects(status)");
     db.run("CREATE INDEX idx_stages_project ON project_stages(project_id)");
     db.run("CREATE INDEX idx_materials_stage ON project_materials(stage_id)");
+    db.run("CREATE INDEX idx_material_requests_project ON material_requests(project_id)");
+    db.run("CREATE INDEX idx_material_requests_supplier ON material_requests(supplier_id)");
     console.log("✅ Индексы созданы");
 
-    // 10. СОЗДАНИЕ БАЗОВЫХ ПОЛЬЗОВАТЕЛЕЙ
+    // 11. СОЗДАНИЕ БАЗОВЫХ ПОЛЬЗОВАТЕЛЕЙ
     console.log("🔄 Создание пользователей...");
     
     const users = [

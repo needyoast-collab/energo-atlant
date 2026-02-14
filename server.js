@@ -1,4 +1,5 @@
 require('dotenv').config();
+const fs = require('fs');
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
@@ -83,24 +84,39 @@ app.use(session({
 // Rate limiting для защиты от брутфорса
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 минут
-    max: 5, // 5 попыток
+    max: 1000, // Много попыток для разработки
+    skipSuccessfulRequests: true, // НЕ считать успешные попытки
     message: { success: false, message: "Слишком много попыток входа. Попробуйте позже." }
 });
 
 // === НАСТРОЙКА ЗАГРУЗКИ ФАЙЛОВ ===
+// Создаем папку uploads если её нет
+const uploadDir = process.env.UPLOAD_PATH || './uploads';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log('📁 Создана папка uploads');
+}
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, process.env.UPLOAD_PATH || './uploads');
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.originalname}`;
-        cb(null, uniqueName);
+        const safeName = `${Date.now()}-${file.originalname}`;
+        cb(null, safeName);
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage,
-    limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760 } // 10MB
+    limits: {
+        fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760,
+        files: 20 // Максимум 20 файлов
+    },
+    fileFilter: (req, file, cb) => {
+        console.log(`📎 Загружается файл: ${file.originalname}`);
+        cb(null, true);
+    }
 });
 
 // Раздача статики
@@ -127,7 +143,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
 // АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ
 // ============================================================
 
-// Вход в систему
+// Вход в систему (С ИСПРАВЛЕНИЕМ ПАРОЛЕЙ)
 app.post('/api/login', loginLimiter, async (req, res) => {
     try {
         const { login, password } = req.body;
@@ -148,12 +164,22 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         if (!user) {
             return res.status(401).json({ 
                 success: false, 
-                message: "Неверный логин или пароль" 
+                message: "Пользователь не найден" 
             });
         }
 
-        // Проверка пароля
-        const passwordMatch = await bcrypt.compare(password, user.password);
+        // === НАЧАЛО ИЗМЕНЕНИЙ: ГИБРИДНАЯ ПРОВЕРКА ===
+        let passwordMatch = false;
+
+        // 1. Проверяем, совпадает ли пароль как обычный текст (для тестовых юзеров)
+        if (user.password === password) {
+            passwordMatch = true;
+        } 
+        // 2. Если нет, проверяем как хеш (bcrypt)
+        else {
+            passwordMatch = await bcrypt.compare(password, user.password);
+        }
+        // === КОНЕЦ ИЗМЕНЕНИЙ ===
         
         if (!passwordMatch) {
             return res.status(401).json({ 
@@ -168,7 +194,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         req.session.userName = user.full_name;
         req.session.userLogin = user.login;
 
-        console.log(`✅ Вход: ${user.login} (${user.role})`);
+        console.log(`✅ Вход выполнен: ${user.login} (${user.role})`);
 
         res.json({ 
             success: true, 
