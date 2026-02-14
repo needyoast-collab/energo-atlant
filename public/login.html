@@ -2,99 +2,109 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Вход в систему | ЭнергоАтлант</title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        /* Быстрые стили для центровки */
-        body.login-body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: #0d1117;
-            margin: 0;
-            font-family: sans-serif;
-        }
-        .login-container {
-            background: #161b22;
-            padding: 40px;
-            border-radius: 10px;
-            border: 1px solid #30363d;
-            text-align: center;
-            width: 300px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        h2 { color: #ff9800; margin-bottom: 20px; }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            color: white;
-            border-radius: 5px;
-            box-sizing: border-box; /* Чтобы padding не ломал ширину */
-        }
-        .btn-main {
-            width: 100%;
-            padding: 12px;
-            background: #ff9800;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-        }
-        .btn-main:hover { background: #e68900; }
-        .error-msg { color: #ff6b6b; margin-top: 10px; display: none; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход - ЭнергоАтлант</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
 </head>
-<body class="login-body">
-    <div class="login-container">
-        <h2>ЭНЕРГО<span>АТЛАНТ</span></h2>
-        <form id="loginForm">
-            <input type="text" id="login" placeholder="Логин" required>
-            <input type="password" id="password" placeholder="Пароль" required>
-            <button type="submit" class="btn-main">Войти</button>
-        </form>
-        <div id="errorDisplay" class="error-msg">Ошибка входа</div>
-        
-        <p style="margin-top: 20px; font-size: 0.9em; color: #888;">
-            Нет аккаунта? <a href="register.html" style="color: #58a6ff;">Регистрация</a>
-        </p>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-5">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <h2 class="text-primary">⚡ ЭнергоАтлант</h2>
+                            <p class="text-muted">Вход в систему</p>
+                        </div>
+
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="login" class="form-label">Логин, email или телефон</label>
+                                <input type="text" class="form-control form-control-lg" id="login" 
+                                       placeholder="Введите логин" required autofocus>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Пароль</label>
+                                <input type="password" class="form-control form-control-lg" id="password" 
+                                       placeholder="Введите пароль" required>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">
+                                    Запомнить меня
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                                Войти
+                            </button>
+
+                            <div class="text-center">
+                                <p class="mb-0">
+                                    Нет аккаунта? 
+                                    <a href="/register.html" class="text-primary">Зарегистрироваться</a>
+                                </p>
+                            </div>
+                        </form>
+
+                        <hr class="my-4">
+
+                        <div class="text-center">
+                            <small class="text-muted">
+                                Тестовые учетные данные:<br>
+                                <strong>admin</strong> / <strong>admin123</strong>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="/" class="text-muted">← Вернуться на главную</a>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/api.js"></script>
     <script>
+        // Обработчик формы входа
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Останавливаем перезагрузку страницы
+            e.preventDefault();
             
-            const loginInput = document.getElementById('login').value;
-            const passwordInput = document.getElementById('password').value;
-            const errorDiv = document.getElementById('errorDisplay');
-
+            const login = document.getElementById('login').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!login || !password) {
+                showError('Заполните все поля');
+                return;
+            }
+            
+            // Блокируем кнопку
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Вход...';
+            
             try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ login: loginInput, password: passwordInput })
-                });
-
-                const data = await res.json();
-
+                const data = await apiRequest('/api/login', 'POST', { login, password });
+                
                 if (data.success) {
-                    // УСПЕХ!
-                    // Переходим на /dashboard - сервер сам направит куда надо
-                    window.location.href = '/dashboard';
+                    showSuccess('Вход выполнен! Перенаправление...');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
                 } else {
-                    // ОШИБКА
-                    errorDiv.style.display = 'block';
-                    errorDiv.innerText = data.message || "Неверный логин или пароль";
+                    showError(data.message || 'Неверный логин или пароль');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Войти';
                 }
-            } catch (err) {
-                console.error(err);
-                errorDiv.style.display = 'block';
-                errorDiv.innerText = "Ошибка соединения с сервером";
+            } catch (error) {
+                showError('Ошибка соединения с сервером');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Войти';
             }
         });
     </script>

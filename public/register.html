@@ -2,56 +2,109 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Регистрация</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход - ЭнергоАтлант</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
 </head>
-<body class="login-body">
-    <div class="login-container">
-        <h2>Регистрация</h2>
-        <form id="regForm">
-            <input type="text" id="fullName" placeholder="ФИО / Организация" required>
-            <input type="text" id="login" placeholder="Логин" required>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="text" id="phone" placeholder="Телефон" required>
-            <input type="password" id="password" placeholder="Пароль" required>
-            
-            <button type="submit" class="btn-main">Зарегистрироваться</button>
-        </form>
-        <p><a href="login.html">Войти</a></p>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-5">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <h2 class="text-primary">⚡ ЭнергоАтлант</h2>
+                            <p class="text-muted">Вход в систему</p>
+                        </div>
+
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="login" class="form-label">Логин, email или телефон</label>
+                                <input type="text" class="form-control form-control-lg" id="login" 
+                                       placeholder="Введите логин" required autofocus>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Пароль</label>
+                                <input type="password" class="form-control form-control-lg" id="password" 
+                                       placeholder="Введите пароль" required>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">
+                                    Запомнить меня
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                                Войти
+                            </button>
+
+                            <div class="text-center">
+                                <p class="mb-0">
+                                    Нет аккаунта? 
+                                    <a href="/register.html" class="text-primary">Зарегистрироваться</a>
+                                </p>
+                            </div>
+                        </form>
+
+                        <hr class="my-4">
+
+                        <div class="text-center">
+                            <small class="text-muted">
+                                Тестовые учетные данные:<br>
+                                <strong>admin</strong> / <strong>admin123</strong>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="/" class="text-muted">← Вернуться на главную</a>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/api.js"></script>
     <script>
-        document.getElementById('regForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); // ОСТАНАВЛИВАЕМ перезагрузку страницы
-            console.log("Отправка формы...");
-
-            const data = {
-                fullName: document.getElementById('fullName').value,
-                login: document.getElementById('login').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                password: document.getElementById('password').value
-            };
-
+        // Обработчик формы входа
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const login = document.getElementById('login').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!login || !password) {
+                showError('Заполните все поля');
+                return;
+            }
+            
+            // Блокируем кнопку
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Вход...';
+            
             try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
+                const data = await apiRequest('/api/login', 'POST', { login, password });
                 
-                const result = await res.json();
-                console.log("Ответ сервера:", result);
-
-                if(result.success) {
-                    alert('Регистрация успешна! Теперь войдите.');
-                    window.location.href = 'login.html';
+                if (data.success) {
+                    showSuccess('Вход выполнен! Перенаправление...');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
                 } else {
-                    alert('Ошибка: ' + result.message);
+                    showError(data.message || 'Неверный логин или пароль');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Войти';
                 }
-            } catch (err) {
-                console.error(err);
-                alert('Ошибка соединения с сервером');
+            } catch (error) {
+                showError('Ошибка соединения с сервером');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Войти';
             }
         });
     </script>

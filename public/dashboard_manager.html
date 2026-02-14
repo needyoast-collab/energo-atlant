@@ -2,208 +2,201 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Панель Менеджера | ЭнергоАтлант</title>
-    <link rel="stylesheet" href="css/style.css"> 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        /* Специфичные стили для админки */
-        body { background: #0d1117; color: #e6edf3; display: flex; height: 100vh; overflow: hidden; }
-        
-        .sidebar {
-            width: 260px;
-            background: #161b22;
-            border-right: 1px solid #30363d;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .sidebar h2 { color: #ff9800; font-size: 1.2rem; margin-bottom: 30px; text-align: center; }
-        
-        .menu-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            color: #8b949e;
-            text-decoration: none;
-            border-radius: 6px;
-            margin-bottom: 5px;
-            transition: 0.2s;
-            cursor: pointer;
-        }
-        .menu-item:hover, .menu-item.active { background: rgba(255,152,0, 0.1); color: #ff9800; }
-        .menu-item i { margin-right: 10px; width: 20px; text-align: center; }
-        
-        .logout-btn {
-            margin-top: auto;
-            color: #ff6b6b;
-            border: 1px solid rgba(255,107,107, 0.3);
-            text-align: center;
-            justify-content: center;
-        }
-        .logout-btn:hover { background: #ff6b6b; color: white; }
-
-        .content { flex: 1; padding: 30px; overflow-y: auto; }
-        
-        .card {
-            background: #21262d;
-            border: 1px solid #30363d;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 25px;
-        }
-        
-        /* Таблицы и формы */
-        input, select { 
-            width: 100%; 
-            padding: 10px; 
-            margin-bottom: 15px; 
-            background: #0d1117; 
-            border: 1px solid #30363d; 
-            color: white; 
-            border-radius: 5px; 
-            box-sizing: border-box;
-        }
-        .btn-submit {
-            background: #ff9800; color: white; border: none; padding: 12px 20px; 
-            border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;
-        }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { text-align: left; color: #8b949e; padding: 10px; border-bottom: 1px solid #30363d; }
-        td { padding: 12px 10px; border-bottom: 1px solid #30363d; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабинет менеджера - ЭнергоАтлант</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
 </head>
 <body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">⚡ ЭнергоАтлант</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <span class="navbar-text text-white me-3">
+                            <span id="userName"></span> 
+                            <small class="text-white-50">(<span id="userRole"></span>)</small>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" id="logoutBtn">Выход</button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <aside class="sidebar">
-        <h2>ЭНЕРГО<span>АТЛАНТ</span></h2>
-        
-        <a href="#" class="menu-item active" onclick="showSection('create')">
-            <i class="fas fa-plus-circle"></i> Новый проект
-        </a>
-        <a href="#" class="menu-item" onclick="showSection('list')">
-            <i class="fas fa-list"></i> Список проектов
-        </a>
-        <a href="index.html" class="menu-item">
-            <i class="fas fa-home"></i> На сайт
-        </a>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 bg-light py-3">
+                <div class="list-group">
+                    <a href="#projects" class="list-group-item list-group-item-action active">
+                        📋 Проекты
+                    </a>
+                    <a href="#requests" class="list-group-item list-group-item-action">
+                        📬 Заявки
+                    </a>
+                </div>
+            </div>
 
-        <a href="/api/logout" class="menu-item logout-btn">
-            <i class="fas fa-sign-out-alt"></i> Выход
-        </a>
-    </aside>
-
-    <main class="content">
-        <h1>Кабинет Менеджера</h1>
-
-        <div id="section-create" class="card">
-            <h3 style="margin-top:0; color:#ff9800"><i class="fas fa-hard-hat"></i> Запуск нового объекта</h3>
-            <form id="createProjectForm">
-                <label>Название проекта</label>
-                <input type="text" id="p_title" placeholder="Пример: Реконструкция ПС-500" required>
-                
-                <label>Адрес</label>
-                <input type="text" id="p_addr" placeholder="г. Москва, ул..." required>
-                
-                <label>Ссылка на документацию (Облако)</label>
-                <input type="text" id="p_doc" placeholder="https://disk.yandex.ru/...">
-                
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                    <div>
-                        <label>Назначить Прораба</label>
-                        <select id="sel_foreman"><option value="">-- Выберите --</option></select>
-                    </div>
-                    <div>
-                        <label>Назначить Снабженца</label>
-                        <select id="sel_supplier"><option value="">-- Выберите --</option></select>
-                    </div>
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h2">💼 Кабинет менеджера</h1>
+                    <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                        ➕ Создать проект
+                    </button>
                 </div>
 
-                <button type="submit" class="btn-submit">Создать проект и получить Код</button>
-            </form>
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button">
+                            📋 Мои проекты
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button">
+                            📬 Заявки от клиентов
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="myTabContent">
+                    <!-- Проекты -->
+                    <div class="tab-pane fade show active" id="projects" role="tabpanel">
+                        <div id="projectsTable">
+                            <div class="text-center p-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Загрузка проектов...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Заявки -->
+                    <div class="tab-pane fade" id="requests" role="tabpanel">
+                        <div id="requestsList">
+                            <div class="text-center p-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Загрузка заявок...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div id="section-list" class="card">
-            <h3 style="margin-top:0; color:#ff9800"><i class="fas fa-tasks"></i> Активные проекты</h3>
-            <table id="proj_table">
-                </table>
+    <!-- Modal: Создание проекта -->
+    <div class="modal fade" id="createProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">➕ Создание нового проекта</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createProjectForm">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            💡 После создания проекта будет сгенерирован уникальный код для прораба и заказчика
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="projectTitle" class="form-label">Название проекта *</label>
+                            <input type="text" class="form-control" name="title" id="projectTitle" 
+                                   placeholder="Например: Реконструкция ПС Северная" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="projectAddress" class="form-label">Адрес объекта</label>
+                            <input type="text" class="form-control" name="address" id="projectAddress" 
+                                   placeholder="г. Москва, ул. Ленина 1">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="projectDescription" class="form-label">Описание</label>
+                            <textarea class="form-control" name="description" id="projectDescription" rows="3" 
+                                      placeholder="Краткое описание работ"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="clientName" class="form-label">Имя клиента</label>
+                                    <input type="text" class="form-control" name="clientName" id="clientName" 
+                                           placeholder="Иван Иванов">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="clientOrganization" class="form-label">Организация</label>
+                                    <input type="text" class="form-control" name="clientOrganization" id="clientOrganization" 
+                                           placeholder="ООО Название">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6>Назначение персонала:</h6>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="foremanId" class="form-label">Прораб</label>
+                                    <select class="form-select" name="foremanId" id="foremanId">
+                                        <option value="">Не назначен</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="supplierId" class="form-label">Снабженец</label>
+                                    <select class="form-select" name="supplierId" id="supplierId">
+                                        <option value="">Не назначен</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="ptoId" class="form-label">Инженер ПТО</label>
+                                    <select class="form-select" name="ptoId" id="ptoId">
+                                        <option value="">Не назначен</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label for="projectDocuments" class="form-label">Документы</label>
+                            <input type="file" class="form-control" id="projectDocuments" multiple 
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx">
+                            <small class="text-muted">Можно загрузить до 10 файлов (PDF, DOC, XLS)</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">💾 Создать проект</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </main>
+    </div>
 
-    <script>
-        // Переключение вкладок (Простая логика для удобства)
-        function showSection(name) {
-            // Можно скроллить к секции
-            if(name === 'create') document.getElementById('section-create').scrollIntoView({behavior: 'smooth'});
-            if(name === 'list') document.getElementById('section-list').scrollIntoView({behavior: 'smooth'});
-        }
-
-        async function init() {
-            try {
-                // Грузим список сотрудников
-                const sRes = await fetch('/api/staff');
-                const sData = await sRes.json();
-                
-                if(sData.success) {
-                    const fSel = document.getElementById('sel_foreman');
-                    const sSel = document.getElementById('sel_supplier');
-                    
-                    sData.staff.forEach(u => {
-                        const opt = `<option value="${u.id}">${u.full_name}</option>`;
-                        if(u.role === 'foreman') fSel.innerHTML += opt;
-                        if(u.role === 'supplier') sSel.innerHTML += opt;
-                    });
-                }
-                loadProjects();
-            } catch(e) { console.error(e); }
-        }
-
-        async function loadProjects() {
-            const res = await fetch('/api/manager/projects');
-            const data = await res.json();
-            const table = document.getElementById('proj_table');
-            
-            if(data.projects.length === 0) {
-                table.innerHTML = "<p style='padding:10px; color:#777'>Проектов пока нет</p>";
-                return;
-            }
-
-            table.innerHTML = `<tr><th>Название</th><th>Прораб</th><th>КОД ДОСТУПА</th><th>Статус</th></tr>` + 
-                data.projects.map(p => `
-                    <tr>
-                        <td><b>${p.title}</b><br><small style="color:#888">${p.address}</small></td>
-                        <td>${p.foreman_name || '<span style="color:#555">Не назначен</span>'}</td>
-                        <td style="color:#ff9800; font-family:monospace; font-size:1.1em; letter-spacing:1px;">${p.access_code}</td>
-                        <td>${p.status}</td>
-                    </tr>
-                `).join('');
-        }
-
-        document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const payload = {
-                title: document.getElementById('p_title').value,
-                address: document.getElementById('p_addr').value,
-                doc_link: document.getElementById('p_doc').value,
-                foreman_id: document.getElementById('sel_foreman').value,
-                supplier_id: document.getElementById('sel_supplier').value
-            };
-
-            const res = await fetch('/api/projects/create', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            const json = await res.json();
-
-            if(json.success) {
-                alert('✅ Проект создан!\n\nКод для Заказчика: ' + json.code);
-                loadProjects();
-            } else {
-                alert('Ошибка: ' + json.message);
-            }
-        });
-
-        init();
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/manager.js"></script>
 </body>
 </html>
