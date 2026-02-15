@@ -3,61 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход - ЭнергоАтлант</title>
+    <title>Регистрация - ЭнергоАтлант</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
 <body class="bg-light">
     <div class="container">
-        <div class="row justify-content-center align-items-center min-vh-100">
-            <div class="col-md-5">
+        <div class="row justify-content-center align-items-center min-vh-100 py-5">
+            <div class="col-md-6">
                 <div class="card shadow-lg border-0">
                     <div class="card-body p-5">
                         <div class="text-center mb-4">
                             <h2 class="text-primary">⚡ ЭнергоАтлант</h2>
-                            <p class="text-muted">Вход в систему</p>
+                            <p class="text-muted">Регистрация заказчика</p>
                         </div>
 
-                        <form id="loginForm">
+                        <div id="alertBox" class="alert alert-danger d-none"></div>
+
+                        <form id="registerForm" class="needs-validation" novalidate>
                             <div class="mb-3">
-                                <label for="login" class="form-label">Логин, email или телефон</label>
-                                <input type="text" class="form-control form-control-lg" id="login" 
-                                       placeholder="Введите логин" required autofocus>
+                                <label for="login" class="form-label">Логин *</label>
+                                <input type="text" class="form-control" id="login" 
+                                       placeholder="Придумайте логин" required minlength="3">
+                                <div class="invalid-feedback">
+                                    Минимум 3 символа
+                                </div>
                             </div>
 
                             <div class="mb-3">
-                                <label for="password" class="form-label">Пароль</label>
-                                <input type="password" class="form-control form-control-lg" id="password" 
-                                       placeholder="Введите пароль" required>
+                                <label for="password" class="form-label">Пароль *</label>
+                                <input type="password" class="form-control" id="password" 
+                                       placeholder="Минимум 6 символов" minlength="6" required>
+                                <div class="invalid-feedback">
+                                    Минимум 6 символов
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" 
+                                       placeholder="example@mail.ru">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Телефон *</label>
+                                <input type="tel" class="form-control" id="phone" 
+                                       placeholder="+79991234567"
+                                       pattern="^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$"
+                                       title="Формат: +79991234567 или 89991234567"
+                                       required>
+                                <div class="invalid-feedback">
+                                    Введите корректный номер телефона
+                                </div>
+                                <small class="text-muted">Формат: +79991234567 или 89991234567</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="fullName" class="form-label">ФИО *</label>
+                                <input type="text" class="form-control" id="fullName" 
+                                       placeholder="Иванов Иван Иванович" required>
+                                <div class="invalid-feedback">
+                                    Введите ФИО
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="organization" class="form-label">Организация</label>
+                                <input type="text" class="form-control" id="organization" 
+                                       placeholder="ООО Название (необязательно)">
                             </div>
 
                             <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="rememberMe">
-                                <label class="form-check-label" for="rememberMe">
-                                    Запомнить меня
+                                <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+                                <label class="form-check-label" for="agreeTerms">
+                                    Я согласен с условиями использования
                                 </label>
+                                <div class="invalid-feedback">
+                                    Необходимо согласие с условиями
+                                </div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
-                                Войти
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="submitBtn">
+                                Зарегистрироваться
                             </button>
 
                             <div class="text-center">
                                 <p class="mb-0">
-                                    Нет аккаунта? 
-                                    <a href="/register.html" class="text-primary">Зарегистрироваться</a>
+                                    Уже есть аккаунт? 
+                                    <a href="/login.html" class="text-primary">Войти</a>
                                 </p>
                             </div>
                         </form>
-
-                        <hr class="my-4">
-
-                        <div class="text-center">
-                            <small class="text-muted">
-                                Тестовые учетные данные:<br>
-                                <strong>admin</strong> / <strong>admin123</strong>
-                            </small>
-                        </div>
                     </div>
                 </div>
 
@@ -68,43 +104,69 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/api.js"></script>
     <script>
-        // Обработчик формы входа
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        // РЕГИСТРАЦИЯ
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const login = document.getElementById('login').value.trim();
-            const password = document.getElementById('password').value;
+            const form = e.target;
+            const alertBox = document.getElementById('alertBox');
+            const submitBtn = document.getElementById('submitBtn');
             
-            if (!login || !password) {
-                showError('Заполните все поля');
+            // Сброс ошибок
+            alertBox.classList.add('d-none');
+            
+            // Валидация формы
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
                 return;
             }
             
+            // Собираем данные
+            const formData = {
+                login: document.getElementById('login').value.trim(),
+                password: document.getElementById('password').value,
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                fullName: document.getElementById('fullName').value.trim(),
+                organization: document.getElementById('organization').value.trim()
+            };
+            
             // Блокируем кнопку
-            const submitBtn = e.target.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Вход...';
+            const originalText = submitBtn.innerText;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Регистрация...';
             
             try {
-                const data = await apiRequest('/api/login', 'POST', { login, password });
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
                 
                 if (data.success) {
-                    showSuccess('Вход выполнен! Перенаправление...');
+                    // УСПЕХ
+                    alertBox.className = 'alert alert-success';
+                    alertBox.innerText = '✅ Регистрация успешна! Сейчас вы будете перенаправлены на страницу входа';
+                    alertBox.classList.remove('d-none');
+                    
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1000);
+                        window.location.href = '/login.html';
+                    }, 2000);
                 } else {
-                    showError(data.message || 'Неверный логин или пароль');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Войти';
+                    // ОШИБКА
+                    throw new Error(data.message || 'Ошибка регистрации');
                 }
             } catch (error) {
-                showError('Ошибка соединения с сервером');
+                console.error(error);
+                alertBox.className = 'alert alert-danger';
+                alertBox.innerText = error.message || 'Ошибка соединения с сервером';
+                alertBox.classList.remove('d-none');
+                
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Войти';
+                submitBtn.innerText = originalText;
             }
         });
     </script>

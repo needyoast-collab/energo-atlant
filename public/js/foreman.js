@@ -584,4 +584,40 @@ function showUploadPhotosModal(stageId) {
     document.getElementById('uploadPhotosModal').addEventListener('hidden.bs.modal', function() {
         this.remove();
     });
+    // =============================================================================
+// ГЛОБАЛЬНАЯ ФУНКЦИЯ ДЛЯ КНОПКИ joinProject() в HTML
+// =============================================================================
+
+async function joinProject() {
+    const code = document.getElementById('joinCode').value.trim();
+    
+    if (!code) {
+        alert('Введите код проекта!');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/foreman/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessCode: code })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            alert('✅ Вы добавлены в проект: ' + data.project.title);
+            document.getElementById('joinCode').value = '';
+            loadProjects();
+        } else {
+            alert('❌ Ошибка: ' + (data.message || 'Проект не найден'));
+        }
+    } catch (error) {
+        console.error(error);
+        alert('❌ Ошибка соединения с сервером');
+    }
+}
+
+// Делаем функцию глобальной для onclick в HTML
+window.joinProject = joinProject;
 }
