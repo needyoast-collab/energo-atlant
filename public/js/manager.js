@@ -1,193 +1,84 @@
 // =============================================================================
-// MANAGER.JS - Логика для кабинета менеджера
+// MANAGER.JS - Логика для кабинета менеджера (ИСПРАВЛЕННЫЙ)
 // =============================================================================
 
 let currentProjects = [];
-let staffList = [];
+let currentRequests = []; // Храним заявки глобально
+let staffList = [];       // Храним список сотрудников глобально
 
 // =============================================================================
-// ИНИЦИАЛИЗАЦИЯ
+// 1. ИНИЦИАЛИЗАЦИЯ
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadStaff();
+    // 1. Сначала грузим справочники
+    await loadStaff(); 
+    
+    // 2. Потом данные
     await loadProjects();
     await loadRequests();
     
-    // Обработчик формы создания проекта
-    const createProjectForm = document.getElementById('createProjectForm');
-    if (createProjectForm) {
-        createProjectForm.addEventListener('submit', handleCreateProject);
+    // 3. Вешаем обработчик на создание проекта
+    const createForm = document.getElementById('createProjectForm');
+    if (createForm) {
+        // Удаляем старые обработчики (на всякий случай)
+        const newForm = createForm.cloneNode(true);
+        createForm.parentNode.replaceChild(newForm, createForm);
+        newForm.addEventListener('submit', handleCreateProject);
     }
+
+    // Автообновление раз в 30 секунд
+    setInterval(() => {
+        loadProjects();
+        loadRequests();
+    }, 30000);
 });
 
 // =============================================================================
-// ЗАГРУЗКА ПЕРСОНАЛА
+// 2. РАБОТА С ПЕРСОНАЛОМ
 // =============================================================================
 
-async function loadRequests() {
-    showLoading('requestsList');
-    
-    const data = await apiRequest('/api/manager/requests');  // ← ПРОВЕРЬ ЧТО ТАК!
-    
-    if (data.success) {
-        renderRequests(data.requests);
-    } else {
-        document.getElementById('requestsList').innerHTML = '<div class="alert alert-danger">Ошибка загрузки</div>';
+async function loadStaff() {
+    try {
+        const data = await apiRequest('/api/manager/staff');
+        
+        if (data.success) {
+            staffList = data.staff; // Сохраняем в глобальную переменную
+            populateStaffSelects(); // Заполняем селекты в модальном окне создания
+        }
+    } catch (e) {
+        console.error("Ошибка загрузки персонала:", e);
     }
-    // Автообновление заявок каждые 30 секунд
-setTimeout(loadRequests, 30000);
 }
 
+function populateStaffSelects() {
+    // ID селектов из твоего HTML (sel_foreman, sel_supplier, sel_pto)
+    const selects = {
+        'sel_foreman': 'foreman',
+        'sel_supplier': 'supplier',
+        'sel_pto': 'pto'
+    };
 
-// В функции showCreateProjectModal или при открытии модалки ДОБАВЬ:
-async function loadStaffSelects() {
-    const data = await apiRequest('/api/manager/staff');
-    
-    if (data.success) {
-        const foreman = document.getElementById('foremanId') || document.getElementById('sel_foreman');
-        const supplier = document.getElementById('supplierId') || document.getElementById('sel_supplier');
-        const pto = document.getElementById('ptoId') || document.getElementById('sel_pto');
-        
-        if (foreman) {
-            foreman.innerHTML = '<option value="">-- Не назначен --</option>';
-            data.staff.filter(s => s.role === 'foreman').forEach(s => {
-                foreman.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
-            });
-        }
-        
-        if (supplier) {
-            supplier.innerHTML = '<option value="">-- Не назначен --</option>';
-            data.staff.filter(s => s.role === 'supplier').forEach(s => {
-                supplier.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
-            });
-        }
-        
-        if (pto) {
-            pto.innerHTML = '<option value="">-- Не назначен --</option>';
-            data.staff.filter(s => s.role === 'pto').forEach(s => {
-                pto.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
+    for (const [id, role] of Object.entries(selects)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = '<option value="">-- Не назначен --</option>';
+            // Фильтруем сотрудников по роли и добавляем в список
+            staffList.filter(s => s.role === role).forEach(s => {
+                el.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
             });
         }
     }
 }
 
 // =============================================================================
-// СОЗДАНИЕ ПРОЕКТА
-// =============================================================================
-
-async function handleCreateProject(e) {
-    e.preventDefault();
-    
-    if (!validateForm('createProjectForm')) {
-        showError('Заполните обязательные поля');
-        return;
-    }
-    
-    const formData = new FormData(e.target);
-    
-    // Добавляем файлы если есть
-    const documentsInput = document.getElementById('projectDocuments');
-    if (documentsInput && documentsInput.files.length > 0) {
-        Array.from(documentsInput.files).forEach(file => {
-            formData.append('documents', file);
-        });
-    }
-    
-    showLoading('projectsTable');
-    
-    const result = await apiRequest('/api/manager/projects', 'POST', formData);
-
-    if (result.success) {
-        // ПОКАЗЫВАЕМ КОД ПРОЕКТА
-        alert(`✅ Проект создан!\n\nКод доступа: ${result.accessCode}\n\nОтправьте этот код прорабу и заказчику.`);
-        
-        // Или создай красивое модальное окно:
-        showAccessCodeModal(result.accessCode, result.projectId);
-        
-        hideModal('createProjectModal');
-        await loadProjects();
-    } else {
-        showError(result.message || 'Ошибка создания проекта');
-    }
-}
-function showAccessCodeModal(code, projectId) {
-    const modal = `
-        <div class="modal fade" id="accessCodeModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title">✅ Проект создан!</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body text-center py-4">
-                        <p class="lead">Код доступа к проекту:</p>
-                        <div class="bg-light p-4 rounded">
-                            <h2 class="mb-0" style="font-family: monospace; letter-spacing: 3px;">${code}</h2>
-                        </div>
-                        <p class="mt-3 text-muted">Отправьте этот код прорабу и заказчику</p>
-                        <button class="btn btn-outline-primary" onclick="navigator.clipboard.writeText('${code}'); showSuccess('Код скопирован!');">
-                            📋 Скопировать код
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('accessCodeModal');
-    
-    document.getElementById('accessCodeModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
-}
-
-function showAccessCode(code) {
-    const modal = `
-        <div class="modal fade" id="accessCodeModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title">✅ Проект создан!</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body text-center">
-                        <p class="mb-3">Код доступа к проекту:</p>
-                        <h2 class="display-4 text-primary mb-3">${code}</h2>
-                        <button class="btn btn-outline-primary" onclick="copyToClipboard('${code}')">
-                            📋 Скопировать код
-                        </button>
-                        <p class="mt-3 text-muted small">
-                            Отправьте этот код прорабу и заказчику для доступа к проекту
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('accessCodeModal');
-    
-    // Удаляем модалку после закрытия
-    document.getElementById('accessCodeModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
-}
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showSuccess('Код скопирован в буфер обмена');
-    });
-}
-
-// =============================================================================
-// ЗАГРУЗКА ПРОЕКТОВ
+// 3. ПРОЕКТЫ (CRUD)
 // =============================================================================
 
 async function loadProjects() {
-    showLoading('projectsTable');
+    // Не показываем спиннер при автообновлении, если данные уже есть
+    const container = document.getElementById('projectsList');
+    if (!container.innerHTML.includes('table')) showLoading('projectsList');
     
     const data = await apiRequest('/api/manager/projects');
     
@@ -195,342 +86,315 @@ async function loadProjects() {
         currentProjects = data.projects;
         renderProjects(data.projects);
     } else {
-        document.getElementById('projectsTable').innerHTML = `
-            <div class="alert alert-danger">Ошибка загрузки проектов</div>
-        `;
+        container.innerHTML = `<div class="alert alert-danger">Ошибка: ${data.message}</div>`;
     }
 }
 
 function renderProjects(projects) {
-    const container = document.getElementById('projectsTable');
-    
+    const container = document.getElementById('projectsList');
     if (!projects || projects.length === 0) {
-        container.innerHTML = `
-            <div class="alert alert-info">
-                📋 У вас пока нет проектов. Создайте первый проект!
-            </div>
-        `;
+        container.innerHTML = '<div class="alert alert-info">Нет активных проектов</div>';
         return;
     }
-    
+
     let html = `
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Название</th>
-                        <th>Адрес</th>
-                        <th>Код доступа</th>
-                        <th>Прораб</th>
-                        <th>Статус</th>
-                        <th>Создан</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Название</th>
+                    <th>Адрес</th>
+                    <th>Код</th>
+                    <th>Прораб</th>
+                    <th>Статус</th>
+                    <th class="text-end">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
-    
-    projects.forEach(project => {
+
+    projects.forEach(p => {
         html += `
             <tr>
-                <td>${project.id}</td>
-                <td><strong>${project.title}</strong></td>
-                <td>${project.address || '-'}</td>
-                <td>
-                    <code>${project.access_code}</code>
-                    <button class="btn btn-sm btn-outline-secondary ms-1" 
-                            onclick="copyToClipboard('${project.access_code}')" 
-                            title="Скопировать">
-                        📋
+                <td>${p.id}</td>
+                <td class="fw-bold">${p.title}</td>
+                <td class="small text-muted">${p.address || '-'}</td>
+                <td><code class="user-select-all">${p.access_code}</code></td>
+                <td>${p.foreman_name || '<span class="text-muted">–</span>'}</td>
+                <td>${getStatusBadge(p.status)}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewProject(${p.id})">
+                        <i class="bi bi-eye"></i>
                     </button>
-                </td>
-                <td>${project.foreman_name || '<span class="text-muted">Не назначен</span>'}</td>
-                <td>${getStatusBadge(project.status)}</td>
-                <td>${formatDateShort(project.created_at)}</td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="viewProject(${project.id})">
-                        👁️ Просмотр
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="editProject(${project.id})">
-                        ✏️ Изменить
+                    <button class="btn btn-sm btn-outline-warning" onclick="editProject(${p.id})">
+                        <i class="bi bi-pencil"></i>
                     </button>
                 </td>
             </tr>
         `;
     });
-    
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-    
+
+    html += '</tbody></table>';
     container.innerHTML = html;
 }
 
-// =============================================================================
-// ПРОСМОТР ПРОЕКТА
-// =============================================================================
+// СОЗДАНИЕ ПРОЕКТА
+async function handleCreateProject(e) {
+    e.preventDefault();
+    
+    // Собираем данные вручную, так как ID в HTML (p_title) отличаются от API (title)
+    const payload = new FormData();
+    payload.append('title', document.getElementById('p_title').value);
+    payload.append('address', document.getElementById('p_address').value);
+    payload.append('description', document.getElementById('p_description').value);
+    payload.append('clientName', document.getElementById('p_clientName').value);
+    payload.append('clientOrganization', document.getElementById('p_clientOrg').value);
+    
+    payload.append('foremanId', document.getElementById('sel_foreman').value);
+    payload.append('supplierId', document.getElementById('sel_supplier').value);
+    payload.append('ptoId', document.getElementById('sel_pto').value);
 
-async function viewProject(projectId) {
-    const project = currentProjects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    const modal = `
-        <div class="modal fade" id="viewProjectModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">📋 ${project.title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>ID:</strong> ${project.id}</p>
-                                <p><strong>Адрес:</strong> ${project.address || '-'}</p>
-                                <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
-                                <p><strong>Код доступа:</strong> <code>${project.access_code}</code></p>
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>Прораб:</strong> ${project.foreman_name || '-'}</p>
-                                <p><strong>Снабженец:</strong> ${project.supplier_name || '-'}</p>
-                                <p><strong>ПТО:</strong> ${project.pto_name || '-'}</p>
-                                <p><strong>Заказчик:</strong> ${project.customer_name || '-'}</p>
-                            </div>
-                        </div>
-                        <hr>
-                        <p><strong>Описание:</strong></p>
-                        <p>${project.description || 'Нет описания'}</p>
-                        <hr>
-                        <p><strong>Клиент:</strong> ${project.client_name || '-'}</p>
-                        <p><strong>Организация:</strong> ${project.client_organization || '-'}</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('viewProjectModal');
-    
-    document.getElementById('viewProjectModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
+    // Файлы
+    const fileInput = document.getElementById('p_files');
+    if (fileInput.files.length > 0) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+            payload.append('documents', fileInput.files[i]);
+        }
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Создание...";
+
+    try {
+        const res = await apiRequest('/api/manager/projects', 'POST', payload);
+        
+        if (res.success) {
+            hideModal('createProjectModal');
+            e.target.reset(); // Очистить форму
+            showAccessCodeModal(res.accessCode); // Показать код
+            await loadProjects();
+        } else {
+            showError(res.message);
+        }
+    } catch (err) {
+        showError(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
 }
 
-// =============================================================================
 // РЕДАКТИРОВАНИЕ ПРОЕКТА
-// =============================================================================
+async function editProject(id) {
+    const p = currentProjects.find(x => x.id === id);
+    if (!p) return;
 
-async function editProject(projectId) {
-    const project = currentProjects.find(p => p.id === projectId);
-    if (!project) return;
-    
-    const modal = `
-        <div class="modal fade" id="editProjectModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
+    // Генерируем модалку динамически (чтобы избежать дублей событий)
+    const modalHtml = `
+        <div class="modal fade" id="editModal" tabindex="-1">
+            <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">✏️ Редактирование проекта</h5>
+                        <h5 class="modal-title">Редактирование: ${p.title}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <form id="editProjectForm">
+                    <form id="editForm">
                         <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">Название *</label>
-                                <input type="text" class="form-control" id="editTitle" value="${project.title}" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Адрес</label>
-                                <input type="text" class="form-control" id="editAddress" value="${project.address || ''}">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Описание</label>
-                                <textarea class="form-control" id="editDescription" rows="3">${project.description || ''}</textarea>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Прораб</label>
-                                        <select class="form-select" id="editForemanId">
-                                            <option value="">Не назначен</option>
-                                            ${staffList.filter(s => s.role === 'foreman').map(s => 
-                                                `<option value="${s.id}" ${s.id === project.foreman_id ? 'selected' : ''}>${s.full_name}</option>`
-                                            ).join('')}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Снабженец</label>
-                                        <select class="form-select" id="editSupplierId">
-                                            <option value="">Не назначен</option>
-                                            ${staffList.filter(s => s.role === 'supplier').map(s => 
-                                                `<option value="${s.id}" ${s.id === project.supplier_id ? 'selected' : ''}>${s.full_name}</option>`
-                                            ).join('')}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Статус</label>
-                                <select class="form-select" id="editStatus">
-                                    <option value="new" ${project.status === 'new' ? 'selected' : ''}>Новый</option>
-                                    <option value="stages_pending" ${project.status === 'stages_pending' ? 'selected' : ''}>Ожидание этапов</option>
-                                    <option value="in_progress" ${project.status === 'in_progress' ? 'selected' : ''}>В работе</option>
-                                    <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Завершен</option>
-                                    <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Отменен</option>
+                            <div class="mb-3"><label>Название</label><input class="form-control" id="e_title" value="${p.title}" required></div>
+                            <div class="mb-3"><label>Адрес</label><input class="form-control" id="e_address" value="${p.address || ''}"></div>
+                            <div class="mb-3"><label>Статус</label>
+                                <select class="form-select" id="e_status">
+                                    <option value="new" ${p.status==='new'?'selected':''}>Новый</option>
+                                    <option value="stages_pending" ${p.status==='stages_pending'?'selected':''}>Ожидание этапов</option>
+                                    <option value="in_progress" ${p.status==='in_progress'?'selected':''}>В работе</option>
+                                    <option value="completed" ${p.status==='completed'?'selected':''}>Завершен</option>
                                 </select>
                             </div>
-                        </div>
+                            </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('editProjectModal');
-    
-    document.getElementById('editProjectForm').addEventListener('submit', async (e) => {
+
+    // Удаляем старую модалку если была
+    const oldModal = document.getElementById('editModal');
+    if (oldModal) oldModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalEl = document.getElementById('editModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    // Обработчик сохранения
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        const updateData = {
-            title: document.getElementById('editTitle').value,
-            address: document.getElementById('editAddress').value,
-            description: document.getElementById('editDescription').value,
-            clientName: project.client_name,
-            clientOrganization: project.client_organization,
-            foremanId: document.getElementById('editForemanId').value || null,
-            supplierId: document.getElementById('editSupplierId').value || null,
-            ptoId: project.pto_id,
-            status: document.getElementById('editStatus').value
+        const payload = {
+            title: document.getElementById('e_title').value,
+            address: document.getElementById('e_address').value,
+            status: document.getElementById('e_status').value,
+            // Передаем старые значения, чтобы не затереть их, если API требует полный объект
+            description: p.description,
+            clientName: p.client_name,
+            clientOrganization: p.client_organization
         };
-        
-        const result = await apiRequest(`/api/manager/projects/${projectId}`, 'PUT', updateData);
-        
-        if (result.success) {
+
+        const res = await apiRequest(`/api/manager/projects/${id}`, 'PUT', payload);
+        if (res.success) {
+            modal.hide();
+            modalEl.remove(); // Чистим DOM
             showSuccess('Проект обновлен');
-            hideModal('editProjectModal');
-            await loadProjects();
+            loadProjects();
         } else {
-            showError(result.message || 'Ошибка обновления');
+            showError(res.message);
         }
-    });
-    
-    document.getElementById('editProjectModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
     });
 }
 
 // =============================================================================
-// ЗАЯВКИ ОТ КЛИЕНТОВ
+// 4. ЗАЯВКИ (REQUESTS)
 // =============================================================================
 
 async function loadRequests() {
     const data = await apiRequest('/api/manager/requests');
-    
     if (data.success) {
+        currentRequests = data.requests;
         renderRequests(data.requests);
+        updateBadge(data.requests.length);
     }
-    // Автообновление заявок каждые 30 секунд
-setTimeout(loadRequests, 30000);
 }
 
 function renderRequests(requests) {
     const container = document.getElementById('requestsList');
-    if (!container) return;
-    
     if (!requests || requests.length === 0) {
-        container.innerHTML = '<div class="alert alert-info">📭 Новых заявок нет</div>';
+        container.innerHTML = '<p class="text-center text-muted my-5">Нет новых заявок</p>';
         return;
     }
-    
+
     let html = '';
-    requests.forEach(request => {
+    requests.forEach(r => {
         html += `
-            <div class="card mb-3">
+            <div class="card mb-3 shadow-sm border-start border-4 border-primary">
                 <div class="card-body">
-                    <h5 class="card-title">${request.title || 'Заявка от клиента'}</h5>
-                    <p class="card-text">${request.description}</p>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Заказчик:</strong> ${request.customer_name}</p>
-                            <p><strong>Email:</strong> ${request.email || '-'}</p>
-                            <p><strong>Телефон:</strong> ${request.phone || '-'}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Дата:</strong> ${formatDate(request.created_at)}</p>
-                            <p><strong>Контакты:</strong> ${request.contact_info || '-'}</p>
-                        </div>
+                    <div class="d-flex justify-content-between">
+                        <h5 class="card-title text-primary">${r.title || 'Без названия'}</h5>
+                        <span class="text-muted small">${formatDateShort(r.created_at)}</span>
                     </div>
-                    <hr>
-                    <button class="btn btn-success" onclick="acceptRequest(${request.id})">✅ Принять</button>
-                    <button class="btn btn-danger" onclick="rejectRequest(${request.id})">❌ Отклонить</button>
-                    <button class="btn btn-secondary" onclick="markAsReviewed(${request.id})">👁️ Отметить как рассмотренное</button>
+                    <p class="card-text">${r.description}</p>
+                    
+                    <div class="bg-light p-2 rounded mb-3 small">
+                        <strong>От:</strong> ${r.customer_name} (${r.phone || 'нет тел.'})<br>
+                        <strong>Контакты:</strong> ${r.contact_info || '-'}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm" onclick="createProjectFromRequest(${r.id})">
+                            <i class="bi bi-magic"></i> Создать проект
+                        </button>
+                        
+                        <button class="btn btn-outline-success btn-sm" onclick="acceptRequest(${r.id})">
+                            Принять
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="rejectRequest(${r.id})">
+                            Отклонить
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
     });
-    
     container.innerHTML = html;
 }
 
-async function acceptRequest(requestId) {
-    const notes = prompt('Комментарий (необязательно):');
-    
-    const data = await apiRequest(`/api/manager/requests/${requestId}`, 'PUT', {
-        status: 'accepted',
-        notes: notes || 'Заявка принята'
-    });
-    
-    if (data.success) {
-        showSuccess('Заявка принята');
-        await loadRequests();
-    } else {
-        showError('Ошибка обработки заявки');
+// ЛОГИКА: ПЕРЕНОС ДАННЫХ ИЗ ЗАЯВКИ В МОДАЛКУ ПРОЕКТА
+function createProjectFromRequest(reqId) {
+    const req = currentRequests.find(r => r.id === reqId);
+    if (!req) return;
+
+    // 1. Открываем модалку создания
+    const modal = new bootstrap.Modal(document.getElementById('createProjectModal'));
+    modal.show();
+
+    // 2. Заполняем поля данными из заявки
+    document.getElementById('p_title').value = req.title;
+    document.getElementById('p_description').value = req.description;
+    document.getElementById('p_clientName').value = req.customer_name;
+    // document.getElementById('p_clientOrg').value = ... (если есть в заявке)
+
+    // Можно добавить пометку, что проект по заявке (опционально)
+}
+
+async function acceptRequest(id) {
+    if(!confirm('Принять заявку в архив?')) return;
+    const res = await apiRequest(`/api/manager/requests/${id}`, 'PUT', { status: 'accepted', notes: 'Принято менеджером' });
+    if(res.success) { showSuccess('Принято'); loadRequests(); }
+}
+
+async function rejectRequest(id) {
+    const reason = prompt('Причина отказа:');
+    if(!reason) return;
+    const res = await apiRequest(`/api/manager/requests/${id}`, 'PUT', { status: 'rejected', notes: reason });
+    if(res.success) { showSuccess('Отклонено'); loadRequests(); }
+}
+
+function updateBadge(count) {
+    const badge = document.getElementById('newRequestsBadge');
+    if (badge) {
+        badge.innerText = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
     }
 }
 
-async function rejectRequest(requestId) {
-    const notes = prompt('Причина отклонения (обязательно):');
-    if (!notes) {
-        showError('Укажите причину отклонения');
-        return;
-    }
-    
-    const data = await apiRequest(`/api/manager/requests/${requestId}`, 'PUT', {
-        status: 'rejected',
-        notes: notes
-    });
-    
-    if (data.success) {
-        showSuccess('Заявка отклонена');
-        await loadRequests();
-    } else {
-        showError('Ошибка обработки заявки');
-    }
+// =============================================================================
+// 5. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// =============================================================================
+
+function showAccessCodeModal(code) {
+    const modalHtml = `
+        <div class="modal fade" id="codeModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content text-center">
+                    <div class="modal-header bg-success text-white justify-content-center">
+                        <h5 class="modal-title">Проект создан!</h5>
+                    </div>
+                    <div class="modal-body py-4">
+                        <p>Код доступа:</p>
+                        <h2 class="display-4 fw-bold user-select-all">${code}</h2>
+                        <p class="text-muted small mt-3">Передайте этот код прорабу и заказчику</p>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('codeModal'));
+    modal.show();
 }
 
-async function markAsReviewed(requestId) {
-    const data = await apiRequest(`/api/manager/requests/${requestId}`, 'PUT', {
-        status: 'reviewed',
-        notes: 'Рассмотрено'
-    });
-    
-    if (data.success) {
-        showSuccess('Заявка отмечена как рассмотренная');
-        await loadRequests();
-    } else {
-        showError('Ошибка обработки заявки');
-    }
+function showLoading(id) {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+}
+
+function getStatusBadge(status) {
+    const map = {
+        'new': '<span class="badge bg-secondary">Новый</span>',
+        'stages_pending': '<span class="badge bg-warning text-dark">Ждет этапов</span>',
+        'in_progress': '<span class="badge bg-primary">В работе</span>',
+        'completed': '<span class="badge bg-success">Завершен</span>'
+    };
+    return map[status] || status;
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('ru-RU');
 }
