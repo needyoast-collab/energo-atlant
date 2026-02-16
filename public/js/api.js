@@ -44,15 +44,20 @@ async function checkAuth() {
     return data.user;
 }
 
-// Выход из системы
-async function logout() {
-    const confirmed = confirm('Вы уверены, что хотите выйти?');
-    if (!confirmed) return;
-    
-    await fetch('/api/logout', { method: 'POST' });
-    window.location.href = '/login.html';
-}
-
+const requireAuth = (req, res, next) => {
+    if (!req.session.userId) {
+        // если это API — JSON
+        if (req.originalUrl.startsWith('/api')) {
+            return res.status(401).json({
+                success: false,
+                message: "Требуется авторизация"
+            });
+        }
+        // если страница — редирект
+        return res.redirect('/login.html');
+    }
+    next();
+};
 // =============================================================================
 // УВЕДОМЛЕНИЯ
 // =============================================================================

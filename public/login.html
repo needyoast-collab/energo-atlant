@@ -104,13 +104,12 @@
                     alertBox.classList.remove('d-none');
                     
                     setTimeout(() => {
-                        // Перенаправление в зависимости от роли
-                        if (data.role === 'admin') window.location.href = '/dashboard_manager.html';
-                        else if (data.role === 'manager') window.location.href = '/dashboard_manager.html';
-                        else if (data.role === 'foreman') window.location.href = '/dashboard_foreman.html';
-                        else if (data.role === 'supplier') window.location.href = '/dashboard_supplier.html';
-                        else if (data.role === 'pto') window.location.href = '/dashboard_pto.html';
-                        else window.location.href = '/dashboard_customer.html';
+                        // Перенаправление в зависимости от роли (используем replace чтобы убрать из истории)
+                        if (data.role === 'admin' || data.role === 'manager') window.location.replace('/dashboard_manager.html');
+                        else if (data.role === 'foreman') window.location.replace('/dashboard_foreman.html');
+                        else if (data.role === 'supplier') window.location.replace('/dashboard_supplier.html');
+                        else if (data.role === 'pto') window.location.replace('/dashboard_pto.html');
+                        else window.location.replace('/dashboard_customer.html');
                     }, 500);
                 } else {
                     // ОШИБКА СЕРВЕРА (например, неверный пароль)

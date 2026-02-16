@@ -210,7 +210,12 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         });
     }
 });
-
+// Выход (GET для совместимости)
+app.get('/api/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/login.html');
+    });
+});
 // Регистрация (только для заказчиков)
 app.post('/api/register', async (req, res) => {
     try {

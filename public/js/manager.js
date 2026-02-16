@@ -25,38 +25,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ЗАГРУЗКА ПЕРСОНАЛА
 // =============================================================================
 
-async function loadStaff() {
-    const data = await apiRequest('/api/manager/staff');
+async function loadRequests() {
+    showLoading('requestsList');
+    
+    const data = await apiRequest('/api/manager/requests');  // ← ПРОВЕРЬ ЧТО ТАК!
+    
     if (data.success) {
-        staffList = data.staff;
-        populateStaffSelects();
+        renderRequests(data.requests);
+    } else {
+        document.getElementById('requestsList').innerHTML = '<div class="alert alert-danger">Ошибка загрузки</div>';
     }
+    // Автообновление заявок каждые 30 секунд
+setTimeout(loadRequests, 30000);
 }
 
-function populateStaffSelects() {
-    const foremanSelect = document.getElementById('foremanId');
-    const supplierSelect = document.getElementById('supplierId');
-    const ptoSelect = document.getElementById('ptoId');
+
+// В функции showCreateProjectModal или при открытии модалки ДОБАВЬ:
+async function loadStaffSelects() {
+    const data = await apiRequest('/api/manager/staff');
     
-    if (foremanSelect) {
-        foremanSelect.innerHTML = '<option value="">Не назначен</option>';
-        staffList.filter(s => s.role === 'foreman').forEach(staff => {
-            foremanSelect.innerHTML += `<option value="${staff.id}">${staff.full_name}</option>`;
-        });
-    }
-    
-    if (supplierSelect) {
-        supplierSelect.innerHTML = '<option value="">Не назначен</option>';
-        staffList.filter(s => s.role === 'supplier').forEach(staff => {
-            supplierSelect.innerHTML += `<option value="${staff.id}">${staff.full_name}</option>`;
-        });
-    }
-    
-    if (ptoSelect) {
-        ptoSelect.innerHTML = '<option value="">Не назначен</option>';
-        staffList.filter(s => s.role === 'pto').forEach(staff => {
-            ptoSelect.innerHTML += `<option value="${staff.id}">${staff.full_name}</option>`;
-        });
+    if (data.success) {
+        const foreman = document.getElementById('foremanId') || document.getElementById('sel_foreman');
+        const supplier = document.getElementById('supplierId') || document.getElementById('sel_supplier');
+        const pto = document.getElementById('ptoId') || document.getElementById('sel_pto');
+        
+        if (foreman) {
+            foreman.innerHTML = '<option value="">-- Не назначен --</option>';
+            data.staff.filter(s => s.role === 'foreman').forEach(s => {
+                foreman.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
+            });
+        }
+        
+        if (supplier) {
+            supplier.innerHTML = '<option value="">-- Не назначен --</option>';
+            data.staff.filter(s => s.role === 'supplier').forEach(s => {
+                supplier.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
+            });
+        }
+        
+        if (pto) {
+            pto.innerHTML = '<option value="">-- Не назначен --</option>';
+            data.staff.filter(s => s.role === 'pto').forEach(s => {
+                pto.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
+            });
+        }
     }
 }
 
@@ -84,21 +96,51 @@ async function handleCreateProject(e) {
     
     showLoading('projectsTable');
     
-    const data = await apiRequest('/api/manager/projects', 'POST', formData);
-    
-    if (data.success) {
-        showSuccess(`Проект создан! Код доступа: ${data.accessCode}`);
+    const result = await apiRequest('/api/manager/projects', 'POST', formData);
+
+    if (result.success) {
+        // ПОКАЗЫВАЕМ КОД ПРОЕКТА
+        alert(`✅ Проект создан!\n\nКод доступа: ${result.accessCode}\n\nОтправьте этот код прорабу и заказчику.`);
+        
+        // Или создай красивое модальное окно:
+        showAccessCodeModal(result.accessCode, result.projectId);
+        
         hideModal('createProjectModal');
-        e.target.reset();
-        
-        // Показываем код в модальном окне
-        showAccessCode(data.accessCode);
-        
         await loadProjects();
     } else {
-        showError(data.message || 'Ошибка создания проекта');
-        await loadProjects();
+        showError(result.message || 'Ошибка создания проекта');
     }
+}
+function showAccessCodeModal(code, projectId) {
+    const modal = `
+        <div class="modal fade" id="accessCodeModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">✅ Проект создан!</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <p class="lead">Код доступа к проекту:</p>
+                        <div class="bg-light p-4 rounded">
+                            <h2 class="mb-0" style="font-family: monospace; letter-spacing: 3px;">${code}</h2>
+                        </div>
+                        <p class="mt-3 text-muted">Отправьте этот код прорабу и заказчику</p>
+                        <button class="btn btn-outline-primary" onclick="navigator.clipboard.writeText('${code}'); showSuccess('Код скопирован!');">
+                            📋 Скопировать код
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modal);
+    showModal('accessCodeModal');
+    
+    document.getElementById('accessCodeModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
 }
 
 function showAccessCode(code) {
@@ -400,6 +442,8 @@ async function loadRequests() {
     if (data.success) {
         renderRequests(data.requests);
     }
+    // Автообновление заявок каждые 30 секунд
+setTimeout(loadRequests, 30000);
 }
 
 function renderRequests(requests) {

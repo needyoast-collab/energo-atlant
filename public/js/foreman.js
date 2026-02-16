@@ -1,5 +1,5 @@
 // =============================================================================
-// FOREMAN.JS - Логика для кабинета прораба
+// FOREMAN.JS - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 // =============================================================================
 
 let currentProjects = [];
@@ -11,51 +11,22 @@ let currentProject = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadProjects();
-    
-    // Обработчик формы присоединения по коду
-    const joinForm = document.getElementById('joinProjectForm');
-    if (joinForm) {
-        joinForm.addEventListener('submit', handleJoinProject);
-    }
-    
-    // Обработчик формы создания этапа
-    const createStageForm = document.getElementById('createStageForm');
-    if (createStageForm) {
-        createStageForm.addEventListener('submit', handleCreateStage);
-    }
 });
-
-// =============================================================================
-// ПРИСОЕДИНЕНИЕ К ПРОЕКТУ
-// =============================================================================
-
-async function handleJoinProject(e) {
-    e.preventDefault();
-    
-    const accessCode = document.getElementById('accessCode').value.trim();
-    
-    if (!accessCode) {
-        showError('Введите код проекта');
-        return;
-    }
-    
-    const data = await apiRequest('/api/foreman/join', 'POST', { accessCode });
-    
-    if (data.success) {
-        showSuccess(`Вы присоединились к проекту: ${data.project.title}`);
-        document.getElementById('accessCode').value = '';
-        await loadProjects();
-    } else {
-        showError(data.message || 'Проект не найден');
-    }
-}
 
 // =============================================================================
 // ЗАГРУЗКА ПРОЕКТОВ
 // =============================================================================
 
 async function loadProjects() {
-    showLoading('projectsList');
+    const container = document.getElementById('projectsList');
+    
+    // Показываем загрузку
+    container.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-warning"></div>
+            <p class="mt-2 text-muted">Загружаем список объектов...</p>
+        </div>
+    `;
     
     const data = await apiRequest('/api/foreman/projects');
     
@@ -63,25 +34,27 @@ async function loadProjects() {
         currentProjects = data.projects;
         renderProjects(data.projects);
     } else {
-        document.getElementById('projectsList').innerHTML = `
-            <div class="alert alert-danger">Ошибка загрузки проектов</div>
-        `;
+        container.innerHTML = '<div class="col-12"><div class="alert alert-danger">Ошибка загрузки проектов</div></div>';
     }
 }
 
 function renderProjects(projects) {
     const container = document.getElementById('projectsList');
     
+    // ИСПРАВЛЕНО: Если нет проектов - показываем сообщение
     if (!projects || projects.length === 0) {
         container.innerHTML = `
-            <div class="alert alert-info">
-                📋 У вас пока нет проектов. Используйте код доступа от менеджера чтобы присоединиться.
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h5>📋 Проекты отсутствуют</h5>
+                    <p class="mb-0">У вас пока нет проектов. Введите код доступа от менеджера чтобы присоединиться.</p>
+                </div>
             </div>
         `;
         return;
     }
     
-    let html = '<div class="row">';
+    let html = '';
     
     projects.forEach(project => {
         // Проверяем дедлайн для этапов
@@ -110,7 +83,7 @@ function renderProjects(projects) {
                         ` : ''}
                         
                         <button class="btn btn-primary w-100" onclick="viewProjectDetails(${project.id})">
-                            👁️ Открыть проект
+                            🔍 Детали проекта
                         </button>
                     </div>
                 </div>
@@ -118,7 +91,6 @@ function renderProjects(projects) {
         `;
     });
     
-    html += '</div>';
     container.innerHTML = html;
 }
 
@@ -127,7 +99,15 @@ function renderProjects(projects) {
 // =============================================================================
 
 async function viewProjectDetails(projectId) {
-    showLoading('projectDetails');
+    const container = document.getElementById('projectsList');
+    
+    // Показываем загрузку
+    container.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2 text-muted">Загрузка проекта...</p>
+        </div>
+    `;
     
     const data = await apiRequest(`/api/foreman/projects/${projectId}`);
     
@@ -136,12 +116,12 @@ async function viewProjectDetails(projectId) {
         renderProjectDetails(data.project, data.stages, data.documents);
     } else {
         showError('Ошибка загрузки проекта');
+        await loadProjects(); // Вернуться к списку
     }
 }
 
 function renderProjectDetails(project, stages, documents) {
-    const container = document.getElementById('projectDetails');
-    if (!container) return;
+    const container = document.getElementById('projectsList');
     
     // Проверка дедлайна
     const deadline = new Date(project.stages_deadline);
@@ -149,32 +129,37 @@ function renderProjectDetails(project, stages, documents) {
     const canCreateStages = deadline > now && project.status === 'stages_pending';
     
     let html = `
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">📋 ${project.title}</h4>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Адрес:</strong> ${project.address || '-'}</p>
-                        <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
-                        <p><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Описание:</strong></p>
-                        <p>${project.description || 'Нет описания'}</p>
-                    </div>
+        <div class="col-12">
+            <button class="btn btn-secondary mb-3" onclick="loadProjects()">
+                ← Назад к списку проектов
+            </button>
+            
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📋 ${project.title}</h4>
                 </div>
-                
-                ${canCreateStages ? `
-                    <button class="btn btn-success mt-2" onclick="showCreateStageModal()">
-                        ➕ Создать этап работ
-                    </button>
-                ` : ''}
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Адрес:</strong> ${project.address || '-'}</p>
+                            <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
+                            <p><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Описание:</strong></p>
+                            <p>${project.description || 'Нет описания'}</p>
+                        </div>
+                    </div>
+                    
+                    ${canCreateStages ? `
+                        <button class="btn btn-success mt-2" onclick="showCreateStageModal()">
+                            ➕ Создать этап работ
+                        </button>
+                    ` : ''}
+                </div>
             </div>
-        </div>
-        
-        <h5 class="mt-4 mb-3">Этапы работ</h5>
+            
+            <h5 class="mt-4 mb-3">Этапы работ</h5>
     `;
     
     if (!stages || stages.length === 0) {
@@ -207,6 +192,7 @@ function renderProjectDetails(project, stages, documents) {
         html += '</div>';
     }
     
+    html += '</div>';
     container.innerHTML = html;
 }
 
@@ -453,11 +439,6 @@ function removeMaterialRow(btn) {
     btn.closest('.material-row').remove();
 }
 
-async function handleCreateStage(e) {
-    e.preventDefault();
-    // Эта функция для формы на главной странице, если она есть
-}
-
 // =============================================================================
 // ОБНОВЛЕНИЕ МАТЕРИАЛОВ
 // =============================================================================
@@ -584,11 +565,15 @@ function showUploadPhotosModal(stageId) {
     document.getElementById('uploadPhotosModal').addEventListener('hidden.bs.modal', function() {
         this.remove();
     });
-    // =============================================================================
-// ГЛОБАЛЬНАЯ ФУНКЦИЯ ДЛЯ КНОПКИ joinProject() в HTML
+}
+
+// =============================================================================
+// ГЛОБАЛЬНАЯ ФУНКЦИЯ ДЛЯ КНОПКИ joinProject() В HTML
 // =============================================================================
 
-async function joinProject() {
+// Эта функция вызывается из dashboard_foreman.html (onclick="joinProject()")
+// НЕ УДАЛЯЙ ЭТУ ФУНКЦИЮ!
+window.joinProject = async function() {
     const code = document.getElementById('joinCode').value.trim();
     
     if (!code) {
@@ -608,7 +593,7 @@ async function joinProject() {
         if (data.success) {
             alert('✅ Вы добавлены в проект: ' + data.project.title);
             document.getElementById('joinCode').value = '';
-            loadProjects();
+            if (typeof loadProjects === 'function') loadProjects();
         } else {
             alert('❌ Ошибка: ' + (data.message || 'Проект не найден'));
         }
@@ -616,8 +601,4 @@ async function joinProject() {
         console.error(error);
         alert('❌ Ошибка соединения с сервером');
     }
-}
-
-// Делаем функцию глобальной для onclick в HTML
-window.joinProject = joinProject;
-}
+};
