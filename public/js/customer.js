@@ -1,413 +1,319 @@
 // =============================================================================
-// CUSTOMER.JS - ИСПРАВЛЕННАЯ ВЕРСИЯ
-// =============================================================================
-
-let currentProjects = [];
-let currentRequests = [];
-
-// =============================================================================
-// ИНИЦИАЛИЗАЦИЯ
+// CUSTOMER.JS - Логика кабинета заказчика
 // =============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadProjects();
     await loadRequests();
-    
-    // Приветственное модальное окно при первом посещении
-    const hasVisited = localStorage.getItem('hasVisitedCustomer');
-    if (!hasVisited) {
-        setTimeout(() => showWelcomeModal(), 500);
-        localStorage.setItem('hasVisitedCustomer', 'true');
-    }
+
+    // Форма создания заявки
+    document.getElementById('createRequestForm').addEventListener('submit', submitRequest);
+
+    // Подгружаем заявки при переключении на вкладку
+    document.getElementById('requests-tab').addEventListener('shown.bs.tab', loadRequests);
 });
 
 // =============================================================================
-// ЗАГРУЗКА ПРОЕКТОВ
+// ПРОЕКТЫ
 // =============================================================================
 
 async function loadProjects() {
     const container = document.getElementById('projectsList');
-    
-    // Показываем загрузку
     container.innerHTML = `
         <div class="col-12 text-center py-5">
             <div class="spinner-border text-primary"></div>
             <p class="mt-2 text-muted">Загрузка проектов...</p>
-        </div>
-    `;
-    
-    const data = await apiRequest('/api/customer/projects');
-    
-    if (data.success) {
-        currentProjects = data.projects;
-        renderProjects(data.projects);
-    } else {
-        container.innerHTML = '<div class="col-12"><div class="alert alert-danger">Ошибка загрузки проектов</div></div>';
-    }
-}
+        </div>`;
 
-function renderProjects(projects) {
-    const container = document.getElementById('projectsList');
-    
-    // ИСПРАВЛЕНИЕ: Если нет проектов - показываем сообщение, а не загрузку
-    if (!projects || projects.length === 0) {
-        container.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-info">
-                    <h5>📋 Проекты отсутствуют</h5>
-                    <p class="mb-0">У вас пока нет активных проектов. Создайте заявку или введите код доступа от менеджера.</p>
-                </div>
-            </div>
-        `;
+    const data = await apiRequest('/api/customer/projects');
+
+    if (!data.success) {
+        container.innerHTML = '<div class="col-12"><div class="alert alert-danger">Ошибка загрузки проектов</div></div>';
         return;
     }
-    
-    let html = '';
-    
-    projects.forEach(project => {
-        // Рассчитываем прогресс
-        const totalStages = project.total_stages || 0;
-        const completedStages = project.completed_stages || 0;
-        const progress = totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0;
-        
-        html += `
-            <div class="col-md-6 mb-3">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">${project.title}</h5>
-                        <p class="text-muted small">${project.address || 'Адрес не указан'}</p>
-                        <hr>
-                        <p class="mb-2"><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
-                        <p class="mb-2"><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
-                        <p class="mb-2"><strong>Прораб:</strong> ${project.foreman_name || 'Не назначен'}</p>
-                        
-                        <div class="mb-2">
-                            <small class="text-muted">Прогресс работ</small>
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar bg-success" style="width: ${progress}%">
-                                    ${progress}%
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button class="btn btn-primary w-100 mt-2" onclick="viewProjectDetails(${project.id})">
-                            🔍 Подробнее
-                        </button>
+
+    if (!data.projects || data.projects.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="bi bi-folder-x" style="font-size:3rem"></i>
+                <p class="mt-3">У вас пока нет проектов.<br>
+                    Введите код от менеджера или создайте заявку.
+                </p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRequestModal">
+                        + Создать заявку
+                    </button>
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#joinProjectModal">
+                        🔗 Ввести код проекта
+                    </button>
+                </div>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = data.projects.map(p => `
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm project-card" style="cursor:pointer;" onclick="viewProject(${p.id})">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold">${p.title}</h5>
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-geo-alt"></i> ${p.address || 'Адрес не указан'}
+                    </p>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        ${getStatusBadge(p.status)}
+                        <small class="text-muted">${formatDateShort(p.created_at)}</small>
                     </div>
+                    ${p.manager_name ? `<p class="mt-2 mb-0 small"><strong>Менеджер:</strong> ${p.manager_name}</p>` : ''}
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <small class="text-primary"><i class="bi bi-eye"></i> Нажмите для просмотра</small>
                 </div>
             </div>
-        `;
-    });
-    
-    container.innerHTML = html;
+        </div>
+    `).join('');
+}
+
+async function viewProject(projectId) {
+    document.getElementById('projectDetailTitle').textContent = 'Загрузка...';
+    document.getElementById('projectDetailBody').innerHTML = `
+        <div class="text-center py-4"><div class="spinner-border text-primary"></div></div>`;
+    new bootstrap.Modal(document.getElementById('projectDetailModal')).show();
+
+    const data = await apiRequest(`/api/customer/projects/${projectId}`);
+
+    if (!data.success) {
+        document.getElementById('projectDetailBody').innerHTML =
+            '<div class="alert alert-danger">Ошибка загрузки проекта</div>';
+        return;
+    }
+
+    const { project, stages, documents } = data;
+    document.getElementById('projectDetailTitle').textContent = project.title;
+
+    let html = `
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <p><strong>Адрес:</strong> ${project.address || '-'}</p>
+                <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
+                <p><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
+                ${project.foreman_name ? `<p><strong>Прораб:</strong> ${project.foreman_name}</p>` : ''}
+            </div>
+            <div class="col-md-6">
+                <p><strong>Описание:</strong></p>
+                <p class="text-muted">${project.description || 'Нет описания'}</p>
+            </div>
+        </div>
+        <h5 class="border-bottom pb-2">🛠 Этапы работ</h5>
+    `;
+
+    if (!stages || stages.length === 0) {
+        html += '<p class="text-muted">Этапы ещё не созданы</p>';
+    } else {
+        stages.forEach(stage => {
+            const done = stage.is_completed === 1;
+            html += `
+                <div class="card mb-3 ${done ? 'border-success' : ''}">
+                    <div class="card-header d-flex justify-content-between align-items-center
+                                ${done ? 'bg-success text-white' : 'bg-light'}">
+                        <span>${done ? '✅' : '🔨'} Этап ${stage.stage_number}: ${stage.name}</span>
+                        ${done
+                            ? `<small>Завершён ${formatDateShort(stage.completed_at)}</small>`
+                            : '<span class="badge bg-warning text-dark">В работе</span>'}
+                    </div>
+                    <div class="card-body">
+                        ${stage.description ? `<p class="text-muted">${stage.description}</p>` : ''}
+                        ${stage.photos && stage.photos.length > 0
+                            ? `<div class="photo-grid">
+                                ${stage.photos.map(ph => `
+                                    <a href="/${ph.file_path}" target="_blank">
+                                        <img src="/${ph.file_path}" class="img-thumbnail"
+                                             style="height:100px;object-fit:cover;">
+                                    </a>`).join('')}
+                               </div>`
+                            : '<small class="text-muted">Фото ещё не загружены</small>'}
+                    </div>
+                </div>`;
+        });
+    }
+
+    if (documents && documents.length > 0) {
+        html += '<h5 class="border-bottom pb-2 mt-4">📄 Документы</h5><div class="list-group">';
+        documents.forEach(doc => {
+            html += `
+                <a href="/${doc.file_path}" target="_blank" class="list-group-item list-group-item-action">
+                    <i class="bi bi-paperclip"></i> ${doc.file_name}
+                    <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
+                </a>`;
+        });
+        html += '</div>';
+    }
+
+    document.getElementById('projectDetailBody').innerHTML = html;
 }
 
 // =============================================================================
-// ЗАГРУЗКА ЗАЯВОК
+// ЗАЯВКИ
 // =============================================================================
 
 async function loadRequests() {
-    const container = document.getElementById('requestsStatus');
-    
+    const container = document.getElementById('requestsList');
     container.innerHTML = `
         <div class="text-center py-5">
             <div class="spinner-border text-primary"></div>
             <p class="mt-2 text-muted">Загрузка заявок...</p>
-        </div>
-    `;
-    
-    const data = await apiRequest('/api/customer/requests');
-    
-    if (data.success) {
-        currentRequests = data.requests;
-        renderRequests(data.requests);
-    } else {
-        container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки заявок</div>';
-    }
-}
+        </div>`;
 
-function renderRequests(requests) {
-    const container = document.getElementById('requestsStatus');
-    
-    // ИСПРАВЛЕНИЕ: Если нет заявок
-    if (!requests || requests.length === 0) {
-        container.innerHTML = `
-            <div class="alert alert-info">
-                <h5>📬 Заявки отсутствуют</h5>
-                <p class="mb-0">Вы ещё не создавали заявок. Нажмите "Новая заявка" чтобы отправить запрос менеджеру.</p>
-            </div>
-        `;
+    const data = await apiRequest('/api/customer/requests');
+
+    if (!data.success) {
+        container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки заявок</div>';
         return;
     }
-    
-    let html = '<div class="list-group">';
-    
-    requests.forEach(req => {
-        html += `
-            <div class="list-group-item">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">${req.title || 'Заявка без названия'}</h6>
-                        <p class="mb-1 small text-muted">${req.description || ''}</p>
-                        <small class="text-muted">Создано: ${formatDate(req.created_at)}</small>
-                    </div>
-                    <div>
-                        ${getStatusBadge(req.status)}
-                    </div>
-                </div>
-                ${req.notes ? `
-                    <div class="alert alert-info mt-2 mb-0 small">
-                        <strong>Комментарий менеджера:</strong> ${req.notes}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    });
-    
-    html += '</div>';
-    container.innerHTML = html;
-}
 
-// =============================================================================
-// СОЗДАНИЕ ЗАЯВКИ С ВАЛИДАЦИЕЙ ТЕЛЕФОНА
-// =============================================================================
-
-function showCreateRequestModal() {
-    const modal = `
-        <div class="modal fade" id="createRequestModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">📝 Новая заявка</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form id="createRequestForm">
-                        <div class="modal-body">
-                            <div class="alert alert-info">
-                                💡 Заполните форму и менеджер свяжется с вами для обсуждения проекта
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Название проекта</label>
-                                <input type="text" class="form-control" id="requestTitle" 
-                                       placeholder="Например: Электромонтаж офиса" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Описание работ</label>
-                                <textarea class="form-control" id="requestDescription" rows="4" 
-                                          placeholder="Опишите что нужно сделать..." required></textarea>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Контактный телефон *</label>
-                                <input type="tel" class="form-control" id="requestContact" 
-                                       placeholder="+79991234567"
-                                       pattern="^[\\+]?[78][-\\s\\(]?\\d{3}[-\\s\\)]?\\d{3}[-\\s]?\\d{2}[-\\s]?\\d{2}$"
-                                       required>
-                                <small class="text-muted">Формат: +79991234567 или 89991234567</small>
-                                <div class="invalid-feedback">
-                                    Введите корректный номер телефона в формате +79991234567
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Документы (необязательно)</label>
-                                <input type="file" class="form-control" id="requestFiles" multiple 
-                                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                                <small class="text-muted">Можно загрузить до 5 файлов</small>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            <button type="submit" class="btn btn-primary">📤 Отправить заявку</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('createRequestModal');
-    
-    document.getElementById('createRequestForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const form = e.target;
-        
-        // ИСПРАВЛЕНИЕ: Валидация формы (включая телефон)
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            showError('Проверьте правильность заполнения полей!');
-            return;
-        }
-        
-        const phone = document.getElementById('requestContact').value.trim();
-        
-        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА ТЕЛЕФОНА
-        const phoneRegex = /^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/;
-        if (!phoneRegex.test(phone)) {
-            showError('Введите корректный номер телефона в формате +79991234567');
-            document.getElementById('requestContact').focus();
-            return;
-        }
-        
-        const formData = new FormData();
-        formData.append('title', document.getElementById('requestTitle').value);
-        formData.append('description', document.getElementById('requestDescription').value);
-        formData.append('contactInfo', phone);
-        
-        const files = document.getElementById('requestFiles').files;
-        if (files.length > 5) {
-            showError('Максимум 5 файлов!');
-            return;
-        }
-        
-        Array.from(files).forEach(file => {
-            formData.append('documents', file);
-        });
-        
-        const result = await apiRequest('/api/customer/requests', 'POST', formData);
-        
-        if (result.success) {
-            showSuccess('Заявка отправлена! Менеджер свяжется с вами в ближайшее время');
-            hideModal('createRequestModal');
-            await loadRequests();
-        } else {
-            showError(result.message || 'Ошибка отправки заявки');
-        }
-    });
-    
-    document.getElementById('createRequestModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
-}
-
-// =============================================================================
-// ПРИСОЕДИНЕНИЕ ПО КОДУ
-// =============================================================================
-
-function showJoinProjectModal() {
-    const modal = `
-        <div class="modal fade" id="joinProjectModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title">🔑 Ввести код проекта</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form id="joinProjectForm">
-                        <div class="modal-body">
-                            <p>Введите код доступа который вам предоставил менеджер</p>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Код проекта</label>
-                                <input type="text" class="form-control form-control-lg text-center" 
-                                       id="accessCodeInput" 
-                                       placeholder="PRJ-XXXXXX" 
-                                       style="font-family: monospace; letter-spacing: 2px;"
-                                       required>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            <button type="submit" class="btn btn-success">✔️ Присоединиться</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('joinProjectModal');
-    
-    document.getElementById('joinProjectForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const code = document.getElementById('accessCodeInput').value.trim().toUpperCase();
-        
-        if (!code) {
-            showError('Введите код проекта!');
-            return;
-        }
-        
-        const result = await apiRequest('/api/customer/join', 'POST', { accessCode: code });
-        
-        if (result.success) {
-            showSuccess(`Вы присоединились к проекту: ${result.project.title}`);
-            hideModal('joinProjectModal');
-            await loadProjects();
-        } else {
-            showError(result.message || 'Проект с таким кодом не найден');
-        }
-    });
-    
-    document.getElementById('joinProjectModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
-}
-
-// =============================================================================
-// ПРОСМОТР ДЕТАЛЕЙ ПРОЕКТА
-// =============================================================================
-
-async function viewProjectDetails(projectId) {
-    showLoading('projectDetails');
-    
-    const data = await apiRequest(`/api/customer/projects/${projectId}`);
-    
-    if (data.success) {
-        renderProjectDetails(data.project, data.stages);
-    } else {
-        showError('Ошибка загрузки проекта');
+    if (!data.requests || data.requests.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox" style="font-size:3rem"></i>
+                <p class="mt-3">У вас пока нет заявок</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRequestModal">
+                    + Создать первую заявку
+                </button>
+            </div>`;
+        return;
     }
-}
 
-function renderProjectDetails(project, stages) {
-    // Детальная информация о проекте
-    // (можно добавить позже)
-}
+    const statusMap = {
+        pending:  { label: 'На рассмотрении', cls: 'warning text-dark' },
+        reviewed: { label: 'Рассмотрено',     cls: 'info text-dark' },
+        accepted: { label: 'Принято',          cls: 'success' },
+        rejected: { label: 'Отклонено',        cls: 'danger' }
+    };
 
-// =============================================================================
-// ПРИВЕТСТВЕННОЕ МОДАЛЬНОЕ ОКНО
-// =============================================================================
-
-function showWelcomeModal() {
-    const modal = `
-        <div class="modal fade" id="welcomeModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">👋 Добро пожаловать!</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body text-center py-4">
-                        <h4>Как начать работу?</h4>
-                        <p class="text-muted">Выберите один из вариантов:</p>
-                        
-                        <div class="d-grid gap-3 mt-4">
-                            <button class="btn btn-primary btn-lg" onclick="hideModal('welcomeModal'); showCreateRequestModal();">
-                                📝 Создать заявку
-                                <br><small>Опишите свой проект</small>
-                            </button>
-                            
-                            <button class="btn btn-success btn-lg" onclick="hideModal('welcomeModal'); showJoinProjectModal();">
-                                🔑 Ввести код проекта
-                                <br><small>Если код уже есть</small>
-                            </button>
-                        </div>
-                    </div>
+    container.innerHTML = `<div class="list-group">${data.requests.map(r => {
+        const st = statusMap[r.status] || { label: r.status, cls: 'secondary' };
+        return `
+            <div class="list-group-item list-group-item-action" style="cursor:pointer;"
+                 onclick='viewRequest(${JSON.stringify(r)})'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-1 fw-bold">${r.title || 'Заявка #' + r.id}</h6>
+                    <span class="badge bg-${st.cls}">${st.label}</span>
                 </div>
-            </div>
+                <small class="text-muted">${formatDate(r.created_at)}</small>
+                ${r.notes
+                    ? `<p class="mt-1 mb-0 small text-muted">
+                            <strong>Ответ:</strong> ${r.notes}</p>`
+                    : ''}
+            </div>`;
+    }).join('')}</div>`;
+}
+
+function viewRequest(request) {
+    const statusMap = {
+        pending:  { label: 'На рассмотрении', cls: 'warning text-dark' },
+        reviewed: { label: 'Рассмотрено',     cls: 'info text-dark' },
+        accepted: { label: 'Принято',          cls: 'success' },
+        rejected: { label: 'Отклонено',        cls: 'danger' }
+    };
+    const st = statusMap[request.status] || { label: request.status, cls: 'secondary' };
+
+    document.getElementById('requestDetailTitle').textContent = request.title || 'Заявка #' + request.id;
+    document.getElementById('requestDetailBody').innerHTML = `
+        <div class="mb-3">
+            <span class="badge bg-${st.cls} fs-6 px-3 py-2">${st.label}</span>
         </div>
+        <p><strong>Дата подачи:</strong> ${formatDate(request.created_at)}</p>
+        ${request.reviewed_at ? `<p><strong>Дата рассмотрения:</strong> ${formatDate(request.reviewed_at)}</p>` : ''}
+        <hr>
+        <p><strong>Описание:</strong></p>
+        <p class="text-muted">${request.description || '-'}</p>
+        ${request.contact_info ? `<p><strong>Контакт:</strong> ${request.contact_info}</p>` : ''}
+        ${request.notes ? `
+            <div class="alert alert-info mt-3">
+                <strong><i class="bi bi-chat-left-text"></i> Ответ менеджера:</strong><br>
+                ${request.notes}
+            </div>` : ''}
+        ${request.status === 'accepted' && request.project_id ? `
+            <div class="alert alert-success mt-3">
+                ✅ <strong>Заявка принята!</strong> По вашей заявке создан проект.
+            </div>` : ''}
     `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('welcomeModal');
-    
-    document.getElementById('welcomeModal').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
+
+    new bootstrap.Modal(document.getElementById('requestDetailModal')).show();
+}
+
+async function submitRequest(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('submitRequestBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Отправка...';
+
+    const phone = document.getElementById('req_contact').value.trim();
+    const phoneRegex = /^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/;
+    if (!phoneRegex.test(phone)) {
+        showError('Введите корректный номер телефона (+79991234567)');
+        btn.disabled = false;
+        btn.innerHTML = '📤 Отправить заявку';
+        return;
+    }
+
+    const files = document.getElementById('req_files').files;
+    if (files.length > 5) {
+        showError('Максимум 5 файлов');
+        btn.disabled = false;
+        btn.innerHTML = '📤 Отправить заявку';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('title', document.getElementById('req_title').value);
+    formData.append('description', document.getElementById('req_description').value);
+    formData.append('contactInfo', phone);
+    Array.from(files).forEach(f => formData.append('documents', f));
+
+    const data = await apiRequest('/api/customer/requests', 'POST', formData);
+
+    if (data.success) {
+        showSuccess('Заявка отправлена! Менеджер свяжется с вами.');
+        bootstrap.Modal.getInstance(document.getElementById('createRequestModal')).hide();
+        e.target.reset();
+        await loadRequests();
+        document.getElementById('requests-tab').click();
+    } else {
+        showError(data.message || 'Ошибка отправки заявки');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '📤 Отправить заявку';
+}
+
+// =============================================================================
+// ПРИСОЕДИНЕНИЕ К ПРОЕКТУ
+// =============================================================================
+
+async function joinProject() {
+    const code = document.getElementById('joinProjectCode').value.trim().toUpperCase();
+    const resultDiv = document.getElementById('joinProjectResult');
+
+    if (!code) {
+        resultDiv.innerHTML = '<div class="alert alert-warning mb-0">Введите код проекта</div>';
+        return;
+    }
+
+    const data = await apiRequest('/api/customer/join', 'POST', { accessCode: code });
+
+    if (data.success) {
+        resultDiv.innerHTML = `<div class="alert alert-success mb-0">
+            ✅ Вы добавлены в проект: <strong>${data.project.title}</strong>
+        </div>`;
+        document.getElementById('joinProjectCode').value = '';
+        await loadProjects();
+        setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById('joinProjectModal')).hide();
+            resultDiv.innerHTML = '';
+        }, 2000);
+    } else {
+        resultDiv.innerHTML = `<div class="alert alert-danger mb-0">❌ ${data.message}</div>`;
+    }
 }

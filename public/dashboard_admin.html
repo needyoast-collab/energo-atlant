@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
+
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
@@ -19,7 +21,7 @@
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item">
                         <span class="navbar-text text-white me-3">
-                            👑 <span id="userName"></span> 
+                            👑 <span id="userName"></span>
                             <small class="text-white-50">(<span id="userRole"></span>)</small>
                         </span>
                     </li>
@@ -100,17 +102,20 @@
                 <!-- Tabs -->
                 <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button">
+                        <button class="nav-link active" id="projects-tab" data-bs-toggle="tab"
+                            data-bs-target="#projects" type="button">
                             📋 Все проекты
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button">
+                        <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests"
+                            type="button">
                             📬 Заявки от клиентов
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button">
+                        <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users"
+                            type="button">
                             👥 Пользователи
                         </button>
                     </li>
@@ -188,35 +193,35 @@
 
                         <div class="mb-3">
                             <label for="projectTitle" class="form-label">Название проекта *</label>
-                            <input type="text" class="form-control" name="title" id="projectTitle" 
-                                   placeholder="Например: Реконструкция ПС Северная" required>
+                            <input type="text" class="form-control" name="title" id="projectTitle"
+                                placeholder="Например: Реконструкция ПС Северная" required>
                         </div>
 
                         <div class="mb-3">
                             <label for="projectAddress" class="form-label">Адрес объекта</label>
-                            <input type="text" class="form-control" name="address" id="projectAddress" 
-                                   placeholder="г. Москва, ул. Ленина 1">
+                            <input type="text" class="form-control" name="address" id="projectAddress"
+                                placeholder="г. Москва, ул. Ленина 1">
                         </div>
 
                         <div class="mb-3">
                             <label for="projectDescription" class="form-label">Описание</label>
-                            <textarea class="form-control" name="description" id="projectDescription" rows="3" 
-                                      placeholder="Краткое описание работ"></textarea>
+                            <textarea class="form-control" name="description" id="projectDescription" rows="3"
+                                placeholder="Краткое описание работ"></textarea>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="clientName" class="form-label">Имя клиента</label>
-                                    <input type="text" class="form-control" name="clientName" id="clientName" 
-                                           placeholder="Иван Иванов">
+                                    <input type="text" class="form-control" name="clientName" id="clientName"
+                                        placeholder="Иван Иванов">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="clientOrganization" class="form-label">Организация</label>
-                                    <input type="text" class="form-control" name="clientOrganization" id="clientOrganization" 
-                                           placeholder="ООО Название">
+                                    <input type="text" class="form-control" name="clientOrganization"
+                                        id="clientOrganization" placeholder="ООО Название">
                                 </div>
                             </div>
                         </div>
@@ -255,8 +260,8 @@
 
                         <div class="mb-3">
                             <label for="projectDocuments" class="form-label">Документы</label>
-                            <input type="file" class="form-control" id="projectDocuments" multiple 
-                                   accept=".pdf,.doc,.docx,.xls,.xlsx">
+                            <input type="file" class="form-control" id="projectDocuments" multiple
+                                accept=".pdf,.doc,.docx,.xls,.xlsx">
                             <small class="text-muted">Можно загрузить до 10 файлов (PDF, DOC, XLS)</small>
                         </div>
                     </div>
@@ -271,108 +276,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js"></script>
-    <script src="/js/manager.js"></script>
-    <script>
-        // Дополнительный функционал для админа
-        
-        // Загрузка статистики
-        async function loadStats() {
-            try {
-                const projects = await apiRequest('/api/manager/projects');
-                const requests = await apiRequest('/api/manager/requests');
-                
-                if (projects.success) {
-                    document.getElementById('totalProjects').textContent = projects.projects.length;
-                    const active = projects.projects.filter(p => p.status === 'in_progress').length;
-                    document.getElementById('activeProjects').textContent = active;
-                }
-                
-                if (requests.success) {
-                    const pending = requests.requests.filter(r => r.status === 'pending').length;
-                    document.getElementById('pendingRequests').textContent = pending;
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки статистики:', error);
-            }
-        }
-        
-        // Загрузка пользователей
-        async function loadUsers() {
-            const container = document.getElementById('usersTable');
-            showLoading('usersTable');
-            
-            try {
-                const data = await apiRequest('/api/manager/staff');
-                
-                if (data.success) {
-                    let html = `
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>ФИО</th>
-                                        <th>Роль</th>
-                                        <th>Действия</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    data.staff.forEach(user => {
-                        const roleNames = {
-                            'admin': 'Администратор',
-                            'manager': 'Менеджер',
-                            'foreman': 'Прораб',
-                            'supplier': 'Снабженец',
-                            'pto': 'Инженер ПТО',
-                            'customer': 'Заказчик'
-                        };
-                        
-                        html += `
-                            <tr>
-                                <td>${user.id}</td>
-                                <td>${user.full_name}</td>
-                                <td>${roleNames[user.role] || user.role}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})">
-                                        ✏️ Изменить
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    
-                    html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                    
-                    container.innerHTML = html;
-                }
-            } catch (error) {
-                container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки пользователей</div>';
-            }
-        }
-        
-        function showAddUserModal() {
-            showInfo('Функция в разработке');
-        }
-        
-        function editUser(userId) {
-            showInfo('Функция в разработке');
-        }
-        
-        // Загружаем статистику при загрузке страницы
-        document.addEventListener('DOMContentLoaded', () => {
-            loadStats();
-        });
-        
-        // Загружаем пользователей при переключении на вкладку
-        document.getElementById('users-tab').addEventListener('click', () => {
-            loadUsers();
-        });
-    </script>
+    <script src="/js/admin.js"></script>
 </body>
+
 </html>

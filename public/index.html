@@ -1,152 +1,276 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ЭнергоАтлант - Главная</title>
+    <title>ЭнергоАтлант - Проектирование и Строительство Энергообъектов</title>
+    <meta name="description"
+        content="ЭнергоАтлант: профессиональные услуги по проектированию, строительству и реконструкции энергетических объектов любой сложности.">
+    <!-- Bootstrap 5 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS (Industrial Dark Design System) -->
     <link href="/css/style.css" rel="stylesheet">
+    <style>
+        /* Локальные утилиты для Landing Page Aterenergo Style */
+        .navbar-custom {
+            background-color: transparent;
+            border-bottom: 1px solid transparent;
+            padding: 1rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--text-main) !important;
+            letter-spacing: 0.05em;
+        }
+
+        .navbar-brand span {
+            color: var(--text-muted);
+        }
+
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            background-color: var(--bg-dark);
+            /* Индустриальный фон */
+            background-image: linear-gradient(to right, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.7) 100%), url('https://images.unsplash.com/photo-1541888086026-6f8c2b73ee34?q=80&w=2669&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            padding-top: 80px;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            font-weight: 400;
+        }
+
+        .service-card {
+            height: 100%;
+            padding: 2.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-info {
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* Стилизация скроллбара */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--secondary-color);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
 </head>
+
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <h3 class="mb-0">⚡ ЭнергоАтлант</h3>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+            <a class="navbar-brand text-uppercase" href="/index.html">Энерго<span>Атлант</span></a>
+            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav">
+                <i class="bi bi-list fs-2 text-white"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
                     <li class="nav-item">
                         <a class="nav-link" href="#services">Услуги</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#about">О нас</a>
+                        <a class="nav-link" href="#projects">Проекты</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/login.html">Вход</a>
+                        <a class="nav-link" href="#about">О компании</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link btn btn-light text-primary ms-2" href="/register.html">Регистрация</a>
+                        <a class="nav-link" href="#contacts">Контакты</a>
                     </li>
                 </ul>
+                <div class="d-flex align-items-center gap-4">
+                    <div class="contact-info d-none d-xl-block">
+                        <a href="tel:+74950000000" class="text-white text-decoration-none">+7 (921) 000-00-00</a>
+                    </div>
+                    <a href="/login.html" class="btn btn-primary text-black fw-bold">ЛИЧНЫЙ КАБИНЕТ</a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="bg-light py-5">
+    <!-- Главный экран (Hero) -->
+    <section class="hero-section">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <h1 class="display-4 fw-bold">Профессиональные электромонтажные работы</h1>
-                    <p class="lead text-muted mt-3">
-                        Система управления проектами для контроля качества и прозрачности выполнения работ
+            <div class="row min-vh-100 align-items-center pb-5">
+                <div class="col-lg-8">
+                    <h1 class="hero-title text-uppercase">СТРОИТЕЛЬСТВО ЛЭП И ПОДСТАНЦИЙ</h1>
+                    <p class="hero-subtitle">
+                        От проектирования до ввода в эксплуатацию. Профессиональный монтаж и реконструкция
+                        энергетических объектов с прозрачной отчетностью.
                     </p>
-                    <div class="mt-4">
-                        <a href="/register.html" class="btn btn-primary btn-lg me-2">Начать работу</a>
-                        <a href="#services" class="btn btn-outline-primary btn-lg">Узнать больше</a>
+                    <div class="d-flex gap-3 flex-column flex-sm-row mt-4">
+                        <a href="#contacts" class="btn btn-primary btn-lg">ОСТАВИТЬ ЗАЯВКУ</a>
+                        <a href="#services" class="btn btn-outline-light btn-lg">УСЛУГИ И ЦЕНЫ</a>
                     </div>
+
+                    <div class="row mt-5 pt-4 border-top" style="border-color: rgba(255,255,255,0.1) !important;">
+                        <div class="col-sm-4 mb-3 mb-sm-0">
+                            <h3 class="fw-bold mb-1">15+</h3>
+                            <div class="text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.1em;">
+                                Лет на рынке</div>
+                        </div>
+                        <div class="col-sm-4 mb-3 mb-sm-0">
+                            <h3 class="fw-bold mb-1">100+</h3>
+                            <div class="text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.1em;">
+                                Успешных проектов</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <h3 class="fw-bold mb-1">100%</h3>
+                            <div class="text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.1em;">
+                                Контроль в кабинете</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Услуги -->
+    <section id="services" class="py-5 bg-surface">
+        <div class="container py-5">
+            <h2 class="mb-5 text-center fw-bold">НАШИ УСЛУГИ</h2>
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card service-card">
+                        <i class="bi bi-bezier2 service-icon"></i>
+                        <h4 class="mb-4">СТРОИТЕЛЬСТВО ЛЭП</h4>
+                        <ul class="check-list mb-4">
+                            <li>Воздушные и кабельные линии 0.4–10 кВ</li>
+                            <li>Установка опор СВ-95, СВ-110</li>
+                            <li>Монтаж провода СИП</li>
+                        </ul>
+                        <a href="#contacts" class="text-white text-decoration-none fw-bold mt-auto text-uppercase"
+                            style="font-size: 0.85rem; letter-spacing: 0.05em;">РАССЧИТАТЬ СТОИМОСТЬ <i
+                                class="bi bi-arrow-right ms-2"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card service-card">
+                        <i class="bi bi-lightning-charge service-icon"></i>
+                        <h4 class="mb-4">МОНТАЖ КТП И РТП</h4>
+                        <ul class="check-list mb-4">
+                            <li>Установка трансформаторных подстанций</li>
+                            <li>Пусконаладочные работы</li>
+                            <li>Техническое обслуживание</li>
+                        </ul>
+                        <a href="#contacts" class="text-white text-decoration-none fw-bold mt-auto text-uppercase"
+                            style="font-size: 0.85rem; letter-spacing: 0.05em;">РАССЧИТАТЬ СТОИМОСТЬ <i
+                                class="bi bi-arrow-right ms-2"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card service-card">
+                        <i class="bi bi-cone-striped service-icon"></i>
+                        <h4 class="mb-4">ГНБ И ПРОКОЛЫ</h4>
+                        <ul class="check-list mb-4">
+                            <li>Горизонтально-направленное бурение</li>
+                            <li>Проколы под дорогами</li>
+                            <li>Бестраншейная прокладка труб</li>
+                        </ul>
+                        <a href="#contacts" class="text-white text-decoration-none fw-bold mt-auto text-uppercase"
+                            style="font-size: 0.85rem; letter-spacing: 0.05em;">РАССЧИТАТЬ СТОИМОСТЬ <i
+                                class="bi bi-arrow-right ms-2"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Интерактивный блок / Дашборд мокап -->
+    <section id="projects" class="py-5 bg-dark">
+        <div class="container py-5">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-5 mb-lg-0 pe-lg-5">
+                    <h2 class="mb-4 fw-bold">КОНТРОЛИРУЙТЕ ХОД РАБОТ ОНЛАЙН</h2>
+                    <p class="text-muted mb-4 fs-5">Каждый клиент получает доступ к защищенному Личному Кабинету. Вы в
+                        реальном времени видите статус проекта и фото-отчеты с площадки.</p>
+                    <ul class="check-list mb-5">
+                        <li>Актуальный процент выполнения</li>
+                        <li>Архив документов и фото 24/7</li>
+                        <li>Прямая связь с руководителем проекта</li>
+                    </ul>
+                    <a href="/login.html" class="btn btn-outline-light">ВХОД ДЛЯ КЛИЕНТОВ</a>
                 </div>
                 <div class="col-lg-6">
-                    <img src="/assets/hero-image.svg" alt="ЭнергоАтлант" class="img-fluid">
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Services Section -->
-    <section id="services" class="py-5">
-        <div class="container">
-            <h2 class="text-center mb-5">Наши услуги</h2>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="card h-100 text-center border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="display-4 text-primary mb-3">⚡</div>
-                            <h5 class="card-title">Электромонтаж</h5>
-                            <p class="card-text">Полный цикл электромонтажных работ любой сложности</p>
+                    <div class="card p-4 glow-effect" style="background-color: #111; border-color: #333;">
+                        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom"
+                            style="border-color: rgba(255,255,255,0.1) !important;">
+                            <h5 class="mb-0 text-white"><i class="bi bi-display me-2"></i>СВОДКА ОБЪЕКТА</h5>
+                            <span class="badge bg-success">АКТИВНО</span>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card h-100 text-center border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="display-4 text-primary mb-3">🏗️</div>
-                            <h5 class="card-title">Реконструкция</h5>
-                            <p class="card-text">Модернизация и реконструкция электросетей</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card h-100 text-center border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="display-4 text-primary mb-3">📋</div>
-                            <h5 class="card-title">Проектирование</h5>
-                            <p class="card-text">Разработка проектной документации</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="bg-light py-5">
-        <div class="container">
-            <h2 class="text-center mb-5">Преимущества работы с нами</h2>
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="d-flex">
-                        <div class="flex-shrink-0">
-                            <div class="bg-primary text-white rounded-circle p-3">
-                                <h3 class="mb-0">✓</h3>
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-white">Монтаж кабельной линии 10 кВ</span>
+                                <span class="text-white fw-bold">60%</span>
+                            </div>
+                            <div class="progress rounded-0" style="height: 6px; background-color: #222;">
+                                <div class="progress-bar bg-white" role="progressbar" style="width: 60%;"></div>
                             </div>
                         </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5>Прозрачность</h5>
-                            <p>Отслеживайте прогресс работ в режиме реального времени</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex">
-                        <div class="flex-shrink-0">
-                            <div class="bg-primary text-white rounded-circle p-3">
-                                <h3 class="mb-0">✓</h3>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="p-3 border text-center"
+                                    style="border-color: rgba(255,255,255,0.1) !important;">
+                                    <div class="fs-4 fw-bold text-white mb-1"><i class="bi bi-camera"></i> 12</div>
+                                    <div class="text-muted text-uppercase"
+                                        style="font-size: 0.65rem; letter-spacing: 0.1em;">НОВЫХ ФОТО</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5>Контроль качества</h5>
-                            <p>Фото-отчеты с каждого этапа работ</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex">
-                        <div class="flex-shrink-0">
-                            <div class="bg-primary text-white rounded-circle p-3">
-                                <h3 class="mb-0">✓</h3>
+                            <div class="col-6">
+                                <div class="p-3 border text-center"
+                                    style="border-color: rgba(255,255,255,0.1) !important;">
+                                    <div class="fs-4 fw-bold text-white mb-1"><i class="bi bi-file-earmark-text"></i> 3
+                                    </div>
+                                    <div class="text-muted text-uppercase"
+                                        style="font-size: 0.65rem; letter-spacing: 0.1em;">АКТА ПОДПИСАНО</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5>Учет материалов</h5>
-                            <p>Контроль расхода материалов план/факт</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex">
-                        <div class="flex-shrink-0">
-                            <div class="bg-primary text-white rounded-circle p-3">
-                                <h3 class="mb-0">✓</h3>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5>Документация</h5>
-                            <p>Полный пакет исполнительной документации</p>
                         </div>
                     </div>
                 </div>
@@ -154,22 +278,90 @@
         </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="py-5 bg-primary text-white">
-        <div class="container text-center">
-            <h2 class="mb-4">Готовы начать?</h2>
-            <p class="lead mb-4">Зарегистрируйтесь и создайте свой первый проект</p>
-            <a href="/register.html" class="btn btn-light btn-lg">Начать работу</a>
+    <!-- Контакты -->
+    <section id="contacts" class="py-5 bg-surface border-top" style="border-color: rgba(255,255,255,0.05) !important;">
+        <div class="container py-5">
+            <div class="row justify-content-between">
+                <div class="col-lg-4 mb-5 mb-lg-0">
+                    <h2 class="mb-5 fw-bold">СВЯЗАТЬСЯ С НАМИ</h2>
+                    <div class="mb-4">
+                        <div class="text-muted mb-1 text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+                            Телефон</div>
+                        <a href="tel:+74950000000" class="text-white fs-4 text-decoration-none fw-bold">+7 (921)
+                            000-00-00</a>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted mb-1 text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+                            Email</div>
+                        <a href="mailto:info@energoatlant.ru"
+                            class="text-white fs-5 text-decoration-none">info@energoatlant.ru</a>
+                    </div>
+                    <div>
+                        <div class="text-muted mb-1 text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+                            Адрес</div>
+                        <p class="text-white fs-5">г. Москва, ул. Энтузиастов, д. 15, оф. 301</p>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card p-4 p-md-5">
+                        <h4 class="mb-4 fw-bold">РАССЧИТАТЬ СТОИМОСТЬ ПРОЕКТА</h4>
+                        <form>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6 form-floating">
+                                    <input type="text" class="form-control" id="floatingName" placeholder="Имя">
+                                    <label for="floatingName" class="ps-4">Ваше имя</label>
+                                </div>
+                                <div class="col-md-6 form-floating">
+                                    <input type="tel" class="form-control" id="floatingPhone" placeholder="Телефон">
+                                    <label for="floatingPhone" class="ps-4">Телефон</label>
+                                </div>
+                            </div>
+                            <div class="form-floating mb-4">
+                                <textarea class="form-control" placeholder="Опишите задачу" id="floatingTextarea"
+                                    style="height: 120px"></textarea>
+                                <label for="floatingTextarea" class="ps-4">Суть проекта (необязательно)</label>
+                            </div>
+                            <button class="btn btn-primary w-100 py-3 fw-bold" type="button">ОТПРАВИТЬ ЗАЯВКУ</button>
+                            <p class="text-muted mt-3 mb-0 text-center" style="font-size: 0.8rem;">Нажимая кнопку, вы
+                                соглашаетесь с Политикой конфиденциальности.</p>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4">
-        <div class="container text-center">
-            <p class="mb-0">&copy; 2026 ЭнергоАтлант. Все права защищены.</p>
+    <footer class="bg-dark py-4 border-top" style="border-color: rgba(255,255,255,0.05) !important;">
+        <div class="container text-center text-md-start">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <div class="text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">&copy;
+                        2026 ООО "ЭнергоАтлант". ВСЕ ПРАВА ЗАЩИЩЕНЫ.</div>
+                </div>
+                <div class="col-md-6 text-md-end text-muted text-uppercase"
+                    style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                    ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ
+                </div>
+            </div>
         </div>
     </footer>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Эффект шапки при скролле
+        window.addEventListener('scroll', function () {
+            const navbar = document.querySelector('.navbar-custom');
+            if (window.scrollY > 50) {
+                navbar.style.backgroundColor = 'rgba(10,10,10,0.98)';
+                navbar.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+            } else {
+                navbar.style.backgroundColor = 'transparent';
+                navbar.style.borderBottom = '1px solid transparent';
+            }
+        });
+    </script>
 </body>
+
 </html>

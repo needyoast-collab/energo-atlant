@@ -9,21 +9,21 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const XLSX = require('xlsx');
 
-const { 
-    requireAuth, 
-    requireManagerOrAdmin, 
-    requireForeman, 
-    requireSupplier, 
-    requirePTO, 
-    requireCustomer 
+const {
+    requireAuth,
+    requireManagerOrAdmin,
+    requireForeman,
+    requireSupplier,
+    requirePTO,
+    requireCustomer
 } = require('./middleware/auth');
 
-const { 
-    generateProjectCode, 
-    addHours, 
-    formatDateForDB, 
+const {
+    generateProjectCode,
+    addHours,
+    formatDateForDB,
     isDeadlinePassed,
-    sanitizeUser 
+    sanitizeUser
 } = require('./utils/helpers');
 
 const app = express();
@@ -59,7 +59,7 @@ const dbAll = (sql, params = []) => {
 
 const dbRun = (sql, params = []) => {
     return new Promise((resolve, reject) => {
-        db.run(sql, params, function(err) {
+        db.run(sql, params, function (err) {
             if (err) reject(err);
             else resolve({ id: this.lastID, changes: this.changes });
         });
@@ -74,7 +74,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'change-this-secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
+    cookie: {
         maxAge: 24 * 60 * 60 * 1000, // 24 часа
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production'
@@ -134,7 +134,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
         'pto': 'dashboard_pto.html',
         'customer': 'dashboard_customer.html'
     };
-    
+
     const file = dashboards[role] || 'dashboard_customer.html';
     res.sendFile(path.join(__dirname, 'public', file));
 });
@@ -147,11 +147,11 @@ app.get('/dashboard', requireAuth, (req, res) => {
 app.post('/api/login', loginLimiter, async (req, res) => {
     try {
         const { login, password } = req.body;
-        
+
         if (!login || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Заполните все поля" 
+            return res.status(400).json({
+                success: false,
+                message: "Заполните все поля"
             });
         }
 
@@ -162,9 +162,9 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         );
 
         if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "Пользователь не найден" 
+            return res.status(401).json({
+                success: false,
+                message: "Пользователь не найден"
             });
         }
 
@@ -174,17 +174,17 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         // 1. Проверяем, совпадает ли пароль как обычный текст (для тестовых юзеров)
         if (user.password === password) {
             passwordMatch = true;
-        } 
+        }
         // 2. Если нет, проверяем как хеш (bcrypt)
         else {
             passwordMatch = await bcrypt.compare(password, user.password);
         }
         // === КОНЕЦ ИЗМЕНЕНИЙ ===
-        
+
         if (!passwordMatch) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "Неверный логин или пароль" 
+            return res.status(401).json({
+                success: false,
+                message: "Неверный логин или пароль"
             });
         }
 
@@ -196,17 +196,17 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 
         console.log(`✅ Вход выполнен: ${user.login} (${user.role})`);
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             role: user.role,
             user: sanitizeUser(user)
         });
 
     } catch (error) {
         console.error('Ошибка входа:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Ошибка сервера" 
+        res.status(500).json({
+            success: false,
+            message: "Ошибка сервера"
         });
     }
 });
@@ -223,9 +223,9 @@ app.post('/api/register', async (req, res) => {
 
         // Валидация
         if (!login || !password || !fullName) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Заполните обязательные поля" 
+            return res.status(400).json({
+                success: false,
+                message: "Заполните обязательные поля"
             });
         }
 
@@ -236,9 +236,9 @@ app.post('/api/register', async (req, res) => {
         );
 
         if (existing) {
-            return res.json({ 
-                success: false, 
-                message: "Пользователь с такими данными уже существует" 
+            return res.json({
+                success: false,
+                message: "Пользователь с такими данными уже существует"
             });
         }
 
@@ -257,21 +257,11 @@ app.post('/api/register', async (req, res) => {
 
     } catch (error) {
         console.error('Ошибка регистрации:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: "Ошибка сервера" 
+        res.status(500).json({
+            success: false,
+            message: "Ошибка сервера"
         });
     }
-});
-
-// Выход
-app.post('/api/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({ success: false });
-        }
-        res.json({ success: true });
-    });
 });
 
 // Получение данных текущего пользователя
@@ -281,10 +271,87 @@ app.get('/api/user/me', requireAuth, async (req, res) => {
             "SELECT id, login, email, phone, role, full_name, organization FROM users WHERE id = ?",
             [req.session.userId]
         );
-        
+
         res.json({ success: true, user });
     } catch (error) {
         console.error('Ошибка получения данных пользователя:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// ============================================================
+// API ДЛЯ АДМИНИСТРАТОРА
+// ============================================================
+
+// Middleware для проверки прав администратора
+const requireAdmin = (req, res, next) => {
+    if (!req.session.userId || req.session.userRole !== 'admin') {
+        return res.status(403).json({ success: false, message: "Доступ запрещен. Только для администраторов." });
+    }
+    next();
+};
+
+// Получение списка всех пользователей
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+    try {
+        const users = await dbAll(
+            "SELECT id, login, email, phone, role, full_name, organization, is_active, created_at FROM users ORDER BY id DESC"
+        );
+        res.json({ success: true, users });
+    } catch (error) {
+        console.error('Ошибка получения списка пользователей:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// Создание нового пользователя администратором
+app.post('/api/admin/users', requireAdmin, async (req, res) => {
+    try {
+        const { login, password, email, phone, role, full_name, organization } = req.body;
+
+        if (!login || !password || !full_name || !role) {
+            return res.status(400).json({ success: false, message: "Заполните обязательные поля" });
+        }
+
+        const existingUser = await dbGet("SELECT id FROM users WHERE login = ?", [login]);
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: "Пользователь с таким логином уже существует" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await dbRun(
+            `INSERT INTO users (login, password, email, phone, role, full_name, organization) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [login, hashedPassword, email || null, phone || null, role, full_name, organization || null]
+        );
+
+        res.json({ success: true, message: "Пользователь успешно создан" });
+    } catch (error) {
+        console.error('Ошибка создания пользователя:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// Редактирование пользователя
+app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { full_name, role, is_active } = req.body;
+
+        if (!full_name || !role) {
+            return res.status(400).json({ success: false, message: "Заполните обязательные поля ФИО и Роль" });
+        }
+
+        // Если передали пароль (необязательно, можно добавить позже. Сейчас только ФИО, Роль, is_active)
+        await dbRun(
+            "UPDATE users SET full_name = ?, role = ?, is_active = ? WHERE id = ?",
+            [full_name, role, is_active !== undefined ? is_active : 1, userId]
+        );
+
+        res.json({ success: true, message: "Данные пользователя обновлены" });
+    } catch (error) {
+        console.error('Ошибка обновления пользователя:', error);
         res.status(500).json({ success: false, message: "Ошибка сервера" });
     }
 });
@@ -299,7 +366,7 @@ app.get('/api/manager/staff', requireManagerOrAdmin, async (req, res) => {
         const staff = await dbAll(
             "SELECT id, full_name, role FROM users WHERE role IN ('foreman', 'supplier', 'pto') AND is_active = 1"
         );
-        
+
         res.json({ success: true, staff });
     } catch (error) {
         console.error('Ошибка получения персонала:', error);
@@ -308,42 +375,47 @@ app.get('/api/manager/staff', requireManagerOrAdmin, async (req, res) => {
 });
 
 // Создание проекта менеджером
+// Создание проекта менеджером (ОБНОВЛЕННЫЙ)
 app.post('/api/manager/projects', requireManagerOrAdmin, upload.array('documents', 10), async (req, res) => {
     try {
-        const { title, address, description, clientName, clientOrganization, foremanId, supplierId, ptoId } = req.body;
+        // Добавили customerId и requestId
+        const { title, address, description, clientName, clientOrganization, foremanId, supplierId, ptoId, customerId, requestId } = req.body;
 
         if (!title) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Укажите название проекта" 
-            });
+            return res.status(400).json({ success: false, message: "Укажите название проекта" });
         }
 
-        // Генерация уникального кода
+        // Генерация кода
         let accessCode;
         let codeExists = true;
-        
         while (codeExists) {
             accessCode = generateProjectCode();
             const existing = await dbGet("SELECT id FROM projects WHERE access_code = ?", [accessCode]);
             codeExists = !!existing;
         }
 
-        // Дедлайн для создания этапов (72 часа)
         const stagesDeadline = formatDateForDB(addHours(new Date(), 72));
 
-        // Создание проекта
+        // 1. Создаем проект (Сразу прописываем customer_id, если он пришел)
         const result = await dbRun(
             `INSERT INTO projects (title, address, description, client_name, client_organization, access_code, 
-             status, stages_deadline, manager_id, foreman_id, supplier_id, pto_id)
-             VALUES (?, ?, ?, ?, ?, ?, 'stages_pending', ?, ?, ?, ?, ?)`,
+             status, stages_deadline, manager_id, foreman_id, supplier_id, pto_id, customer_id)
+             VALUES (?, ?, ?, ?, ?, ?, 'stages_pending', ?, ?, ?, ?, ?, ?)`,
             [title, address, description, clientName, clientOrganization, accessCode, stagesDeadline,
-             req.session.userId, foremanId || null, supplierId || null, ptoId || null]
+                req.session.userId, foremanId || null, supplierId || null, ptoId || null, customerId || null]
         );
 
         const projectId = result.id;
 
-        // Сохранение документов
+        // 2. Если проект создан на основе заявки -> обновляем статус заявки и связываем её
+        if (requestId) {
+            await dbRun(
+                "UPDATE project_requests SET status = 'accepted', notes = 'Проект создан', reviewed_at = datetime('now'), project_id = ? WHERE id = ?",
+                [projectId, requestId]
+            );
+        }
+
+        // 3. Сохранение документов
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
                 await dbRun(
@@ -353,10 +425,10 @@ app.post('/api/manager/projects', requireManagerOrAdmin, upload.array('documents
             }
         }
 
-        console.log(`✅ Проект создан: ${title} (${accessCode})`);
+        console.log(`✅ Проект создан: ${title} (${accessCode}). Заказчик ID: ${customerId || 'нет'}`);
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             projectId,
             accessCode,
             message: "Проект успешно создан"
@@ -398,13 +470,13 @@ app.get('/api/manager/projects', requireManagerOrAdmin, async (req, res) => {
 app.put('/api/manager/projects/:id', requireManagerOrAdmin, async (req, res) => {
     try {
         const { title, address, description, clientName, clientOrganization, foremanId, supplierId, ptoId, status } = req.body;
-        
+
         await dbRun(
             `UPDATE projects SET title = ?, address = ?, description = ?, client_name = ?, 
              client_organization = ?, foreman_id = ?, supplier_id = ?, pto_id = ?, status = ?
              WHERE id = ? AND manager_id = ?`,
             [title, address, description, clientName, clientOrganization, foremanId, supplierId, ptoId, status,
-             req.params.id, req.session.userId]
+                req.params.id, req.session.userId]
         );
 
         res.json({ success: true, message: "Проект обновлен" });
@@ -436,7 +508,7 @@ app.get('/api/manager/requests', requireManagerOrAdmin, async (req, res) => {
 app.put('/api/manager/requests/:id', requireManagerOrAdmin, async (req, res) => {
     try {
         const { status, notes } = req.body; // status: 'reviewed', 'accepted', 'rejected'
-        
+
         await dbRun(
             "UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?",
             [status, notes, req.session.userId, req.params.id]
@@ -459,9 +531,9 @@ app.post('/api/foreman/join', requireForeman, async (req, res) => {
         const { accessCode } = req.body;
 
         if (!accessCode) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Введите код проекта" 
+            return res.status(400).json({
+                success: false,
+                message: "Введите код проекта"
             });
         }
 
@@ -471,17 +543,17 @@ app.post('/api/foreman/join', requireForeman, async (req, res) => {
         );
 
         if (!project) {
-            return res.json({ 
-                success: false, 
-                message: "Проект с таким кодом не найден" 
+            return res.json({
+                success: false,
+                message: "Проект с таким кодом не найден"
             });
         }
 
         // Проверка, не истек ли срок создания этапов
         if (project.foreman_id && project.foreman_id !== req.session.userId) {
-            return res.json({ 
-                success: false, 
-                message: "К этому проекту уже привязан другой прораб" 
+            return res.json({
+                success: false,
+                message: "К этому проекту уже привязан другой прораб"
             });
         }
 
@@ -493,8 +565,8 @@ app.post('/api/foreman/join', requireForeman, async (req, res) => {
 
         console.log(`✅ Прораб ${req.session.userName} присоединился к проекту ${project.title}`);
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             project: {
                 id: project.id,
                 title: project.title,
@@ -542,9 +614,9 @@ app.get('/api/foreman/projects/:id', requireForeman, async (req, res) => {
         );
 
         if (!project) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Проект не найден" 
+            return res.status(404).json({
+                success: false,
+                message: "Проект не найден"
             });
         }
 
@@ -560,7 +632,7 @@ app.get('/api/foreman/projects/:id', requireForeman, async (req, res) => {
                 "SELECT * FROM project_materials WHERE stage_id = ?",
                 [stage.id]
             );
-            
+
             stage.photos = await dbAll(
                 "SELECT * FROM project_stage_photos WHERE stage_id = ?",
                 [stage.id]
@@ -573,8 +645,8 @@ app.get('/api/foreman/projects/:id', requireForeman, async (req, res) => {
             [req.params.id]
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             project,
             stages,
             documents
@@ -598,17 +670,17 @@ app.post('/api/foreman/stages', requireForeman, async (req, res) => {
         );
 
         if (!project) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Доступ запрещен" 
+            return res.status(403).json({
+                success: false,
+                message: "Доступ запрещен"
             });
         }
 
         // Проверка дедлайна
         if (isDeadlinePassed(project.stages_deadline)) {
-            return res.json({ 
-                success: false, 
-                message: "Срок создания этапов истек (72 часа)" 
+            return res.json({
+                success: false,
+                message: "Срок создания этапов истек (72 часа)"
             });
         }
 
@@ -617,7 +689,7 @@ app.post('/api/foreman/stages', requireForeman, async (req, res) => {
             "SELECT MAX(stage_number) as max_num FROM project_stages WHERE project_id = ?",
             [projectId]
         );
-        
+
         const stageNumber = (lastStage?.max_num || 0) + 1;
 
         // Создание этапа
@@ -640,10 +712,10 @@ app.post('/api/foreman/stages', requireForeman, async (req, res) => {
 
         console.log(`✅ Этап создан: ${stageName} (проект ${projectId})`);
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             stageId,
-            message: "Этап создан" 
+            message: "Этап создан"
         });
 
     } catch (error) {
@@ -653,38 +725,51 @@ app.post('/api/foreman/stages', requireForeman, async (req, res) => {
 });
 
 // Обновление использованных материалов
-app.put('/api/foreman/materials/:id', requireForeman, async (req, res) => {
+app.put('/api/foreman/materials/:id/usage', requireForeman, async (req, res) => {
     try {
         const { quantityUsed } = req.body;
 
-        await dbRun(
-            "UPDATE project_materials SET quantity_used = ? WHERE id = ?",
-            [quantityUsed, req.params.id]
+        // Получаем материал и проверяем принадлежность проекту прораба
+        const material = await dbGet(
+            `SELECT pm.*, p.foreman_id
+             FROM project_materials pm
+             JOIN project_stages ps ON pm.stage_id = ps.id
+             JOIN projects p ON ps.project_id = p.id
+             WHERE pm.id = ?`,
+            [req.params.id]
         );
 
-        res.json({ success: true, message: "Расход материала обновлен" });
+        if (!material) {
+            return res.status(404).json({ success: false, message: 'Материал не найден' });
+        }
 
-    } catch (error) {
-        console.error('Ошибка обновления материала:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
-    }
-});
+        if (material.foreman_id !== req.session.userId) {
+            return res.status(403).json({ success: false, message: 'Нет доступа' });
+        }
 
-// Подтверждение прихода материалов
-app.put('/api/foreman/materials/:id/receive', requireForeman, async (req, res) => {
-    try {
-        const { quantityReceived } = req.body;
+        const maxAllowed = parseFloat(material.quantity_received || 0);
+        const requested = parseFloat(quantityUsed);
+
+        if (requested > maxAllowed) {
+            return res.json({
+                success: false,
+                message: `Нельзя списать ${requested} — на складе только ${maxAllowed}`
+            });
+        }
+
+        if (requested < 0) {
+            return res.json({ success: false, message: 'Расход не может быть отрицательным' });
+        }
 
         await dbRun(
-            "UPDATE project_materials SET quantity_received = ?, is_received = 1, received_at = datetime('now') WHERE id = ?",
-            [quantityReceived, req.params.id]
+            'UPDATE project_materials SET quantity_used = ? WHERE id = ?',
+            [requested, req.params.id]
         );
 
-        res.json({ success: true, message: "Приход материала подтвержден" });
-
+        res.json({ success: true, message: 'Расход обновлён' });
     } catch (error) {
-        console.error('Ошибка подтверждения прихода:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        console.error('Ошибка обновления расхода:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
     }
 });
 
@@ -694,9 +779,9 @@ app.post('/api/foreman/stages/:id/photos', requireForeman, upload.array('photos'
         const stageId = req.params.id;
 
         if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Файлы не загружены" 
+            return res.status(400).json({
+                success: false,
+                message: "Файлы не загружены"
             });
         }
 
@@ -709,9 +794,9 @@ app.post('/api/foreman/stages/:id/photos', requireForeman, upload.array('photos'
         );
 
         if (!stage) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Доступ запрещен" 
+            return res.status(403).json({
+                success: false,
+                message: "Доступ запрещен"
             });
         }
 
@@ -723,8 +808,8 @@ app.post('/api/foreman/stages/:id/photos', requireForeman, upload.array('photos'
             );
         }
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: "Фото загружены",
             count: req.files.length
         });
@@ -747,9 +832,9 @@ app.put('/api/foreman/stages/:id/complete', requireForeman, async (req, res) => 
         );
 
         if (!stage) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Доступ запрещен" 
+            return res.status(403).json({
+                success: false,
+                message: "Доступ запрещен"
             });
         }
 
@@ -800,9 +885,9 @@ app.get('/api/supplier/projects/:id/materials', requireSupplier, async (req, res
         );
 
         if (!project) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Доступ запрещен" 
+            return res.status(403).json({
+                success: false,
+                message: "Доступ запрещен"
             });
         }
 
@@ -816,10 +901,10 @@ app.get('/api/supplier/projects/:id/materials', requireSupplier, async (req, res
             [req.params.id]
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             project,
-            materials 
+            materials
         });
 
     } catch (error) {
@@ -838,9 +923,9 @@ app.get('/api/supplier/projects/:id/materials/export', requireSupplier, async (r
         );
 
         if (!project) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Доступ запрещен" 
+            return res.status(403).json({
+                success: false,
+                message: "Доступ запрещен"
             });
         }
 
@@ -863,7 +948,7 @@ app.get('/api/supplier/projects/:id/materials/export', requireSupplier, async (r
 
         // Отправка файла
         const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-        
+
         res.setHeader('Content-Disposition', `attachment; filename=materials_project_${req.params.id}.xlsx`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.send(buffer);
@@ -871,6 +956,292 @@ app.get('/api/supplier/projects/:id/materials/export', requireSupplier, async (r
     } catch (error) {
         console.error('Ошибка экспорта материалов:', error);
         res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// ============================================================
+// СНАБЖЕНЕЦ: детали проекта + материалы + новый функционал
+// ============================================================
+
+// Детали проекта (этапы + материалы) для снабженца
+app.get('/api/supplier/projects/:id', requireSupplier, async (req, res) => {
+    try {
+        const project = await dbGet(
+            `SELECT p.*, um.full_name as manager_name, uf.full_name as foreman_name
+             FROM projects p
+             LEFT JOIN users um ON p.manager_id = um.id
+             LEFT JOIN users uf ON p.foreman_id = uf.id
+             WHERE p.id = ? AND p.supplier_id = ?`,
+            [req.params.id, req.session.userId]
+        );
+
+        if (!project) {
+            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+        }
+
+        const stages = await dbAll(
+            'SELECT * FROM project_stages WHERE project_id = ? ORDER BY stage_number',
+            [req.params.id]
+        );
+
+        const materials = await dbAll(
+            `SELECT pm.*, ps.name as stage_name, ps.stage_number
+             FROM project_materials pm
+             JOIN project_stages ps ON pm.stage_id = ps.id
+             WHERE ps.project_id = ?
+             ORDER BY ps.stage_number, pm.id`,
+            [req.params.id]
+        );
+
+        res.json({ success: true, project, stages, materials });
+    } catch (error) {
+        console.error('Ошибка:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
+// Снабженец предлагает материал (через material_requests → прораб согласовывает)
+app.post('/api/supplier/materials', requireSupplier, async (req, res) => {
+    try {
+        const { stageId, materialName, unit, quantity, notes } = req.body;
+
+        if (!stageId || !materialName || !quantity) {
+            return res.status(400).json({ success: false, message: 'Заполните обязательные поля' });
+        }
+
+        // Получаем этап и проверяем что снабженец в этом проекте
+        const stage = await dbGet(
+            `SELECT ps.*, p.supplier_id, p.foreman_id, p.id as project_id
+             FROM project_stages ps
+             JOIN projects p ON ps.project_id = p.id
+             WHERE ps.id = ? AND p.supplier_id = ?`,
+            [stageId, req.session.userId]
+        );
+
+        if (!stage) {
+            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+        }
+
+        // Создаём заявку на материал (material_requests — ждёт согласования прораба)
+        const result = await dbRun(
+            `INSERT INTO material_requests 
+             (project_id, foreman_id, supplier_id, material_name, quantity, unit, reason, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            [stage.project_id, stage.foreman_id, req.session.userId,
+                materialName, quantity, unit, notes || 'Предложено снабженцем']
+        );
+
+        res.json({ success: true, id: result.id, message: 'Материал отправлен прорабу на согласование' });
+    } catch (error) {
+        console.error('Ошибка добавления материала:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
+// Снабженец получает список своих заявок на материалы (и от прораба тоже)
+app.get('/api/supplier/material-requests', requireSupplier, async (req, res) => {
+    try {
+        const requests = await dbAll(
+            `SELECT mr.*, 
+                    p.title as project_title,
+                    uf.full_name as foreman_name
+             FROM material_requests mr
+             JOIN projects p ON mr.project_id = p.id
+             LEFT JOIN users uf ON mr.foreman_id = uf.id
+             WHERE mr.supplier_id = ? OR p.supplier_id = ?
+             ORDER BY mr.created_at DESC`,
+            [req.session.userId, req.session.userId]
+        );
+        res.json({ success: true, requests });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
+// Снабженец обновляет статус заявки (принять в работу / отклонить / отметить доставленным)
+app.put('/api/supplier/material-requests/:id', requireSupplier, async (req, res) => {
+    try {
+        const { status, notes } = req.body;
+
+        const request = await dbGet(
+            `SELECT mr.*, p.supplier_id 
+             FROM material_requests mr
+             JOIN projects p ON mr.project_id = p.id
+             WHERE mr.id = ?`,
+            [req.params.id]
+        );
+
+        if (!request || request.supplier_id !== req.session.userId) {
+            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+        }
+
+        if (status === 'delivered') {
+            // При доставке — создаём запись в project_materials для прораба
+            // Ищем этап (первый доступный по проекту или конкретный)
+            const stage = await dbGet(
+                'SELECT id FROM project_stages WHERE project_id = ? ORDER BY stage_number LIMIT 1',
+                [request.project_id]
+            );
+
+            if (stage) {
+                // Проверяем не существует ли уже такой материал
+                const exists = await dbGet(
+                    'SELECT id FROM project_materials WHERE stage_id = ? AND material_name = ?',
+                    [stage.id, request.material_name]
+                );
+
+                if (exists) {
+                    // Обновляем количество полученного
+                    await dbRun(
+                        `UPDATE project_materials 
+                         SET quantity_received = quantity_received + ?, is_received = 1, received_at = datetime('now')
+                         WHERE id = ?`,
+                        [request.quantity, exists.id]
+                    );
+                } else {
+                    // Создаём новую запись
+                    await dbRun(
+                        `INSERT INTO project_materials 
+                         (stage_id, material_name, unit, quantity_planned, quantity_received, is_received, received_at)
+                         VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`,
+                        [stage.id, request.material_name, request.unit, request.quantity, request.quantity]
+                    );
+                }
+            }
+
+            await dbRun(
+                `UPDATE material_requests SET status = 'delivered', delivered_at = datetime('now'), notes = ?
+                 WHERE id = ?`,
+                [notes || null, req.params.id]
+            );
+        } else {
+            await dbRun(
+                "UPDATE material_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?",
+                [status, notes || null, req.params.id]
+            );
+        }
+
+        res.json({ success: true, message: 'Заявка обновлена' });
+    } catch (error) {
+        console.error('Ошибка обновления заявки:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
+// Снабженец подтверждает доставку конкретного материала (quantity_received)
+app.put('/api/supplier/materials/:id/deliver', requireSupplier, async (req, res) => {
+    try {
+        const { quantityReceived } = req.body;
+
+        const material = await dbGet(
+            `SELECT pm.*, p.supplier_id
+             FROM project_materials pm
+             JOIN project_stages ps ON pm.stage_id = ps.id
+             JOIN projects p ON ps.project_id = p.id
+             WHERE pm.id = ?`,
+            [req.params.id]
+        );
+
+        if (!material || material.supplier_id !== req.session.userId) {
+            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+        }
+
+        await dbRun(
+            `UPDATE project_materials 
+             SET quantity_received = ?, is_received = 1, received_at = datetime('now')
+             WHERE id = ?`,
+            [quantityReceived, req.params.id]
+        );
+
+        res.json({ success: true, message: 'Поступление на склад зафиксировано' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
+// ============================================================
+// ПРОРАБ: Согласование материалов от снабженца + свои заявки
+// ============================================================
+
+// Прораб видит материалы ожидающие согласования от снабженца
+app.get('/api/foreman/material-requests', requireForeman, async (req, res) => {
+    try {
+        const requests = await dbAll(
+            `SELECT mr.*,
+                    p.title as project_title,
+                    us.full_name as supplier_name
+             FROM material_requests mr
+             JOIN projects p ON mr.project_id = p.id
+             LEFT JOIN users us ON mr.supplier_id = us.id
+             WHERE mr.foreman_id = ?
+             ORDER BY mr.created_at DESC`,
+            [req.session.userId]
+        );
+        res.json({ success: true, requests });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
+// Прораб согласует или отклоняет предложение снабженца
+app.put('/api/foreman/material-requests/:id', requireForeman, async (req, res) => {
+    try {
+        const { status, notes } = req.body;
+
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Недопустимый статус' });
+        }
+
+        const request = await dbGet(
+            'SELECT * FROM material_requests WHERE id = ? AND foreman_id = ?',
+            [req.params.id, req.session.userId]
+        );
+
+        if (!request) {
+            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+        }
+
+        await dbRun(
+            `UPDATE material_requests SET status = ?, notes = ?, reviewed_at = datetime('now')
+             WHERE id = ?`,
+            [status, notes || null, req.params.id]
+        );
+
+        res.json({ success: true, message: status === 'approved' ? 'Материал согласован' : 'Материал отклонён' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
+// Прораб создаёт заявку на дополнительный материал (когда запасы закончились)
+app.post('/api/foreman/material-requests', requireForeman, async (req, res) => {
+    try {
+        const { projectId, materialName, unit, quantity, reason } = req.body;
+
+        if (!projectId || !materialName || !quantity) {
+            return res.status(400).json({ success: false, message: 'Заполните обязательные поля' });
+        }
+
+        const project = await dbGet(
+            'SELECT * FROM projects WHERE id = ? AND foreman_id = ?',
+            [projectId, req.session.userId]
+        );
+
+        if (!project) {
+            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+        }
+
+        const result = await dbRun(
+            `INSERT INTO material_requests 
+             (project_id, foreman_id, supplier_id, material_name, quantity, unit, reason, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            [projectId, req.session.userId, project.supplier_id,
+                materialName, quantity, unit, reason || 'Запрос от прораба']
+        );
+
+        res.json({ success: true, id: result.id, message: 'Заявка отправлена снабженцу' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
     }
 });
 
@@ -911,9 +1282,9 @@ app.get('/api/pto/projects/:id', requirePTO, async (req, res) => {
         );
 
         if (!project) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Доступ запрещен" 
+            return res.status(403).json({
+                success: false,
+                message: "Доступ запрещен"
             });
         }
 
@@ -928,7 +1299,7 @@ app.get('/api/pto/projects/:id', requirePTO, async (req, res) => {
                 "SELECT * FROM project_stage_photos WHERE stage_id = ?",
                 [stage.id]
             );
-            
+
             stage.materials = await dbAll(
                 "SELECT * FROM project_materials WHERE stage_id = ?",
                 [stage.id]
@@ -941,8 +1312,8 @@ app.get('/api/pto/projects/:id', requirePTO, async (req, res) => {
             [req.params.id]
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             project,
             stages,
             documents
@@ -964,16 +1335,16 @@ app.post('/api/pto/projects/:id/documents', requirePTO, upload.array('documents'
         );
 
         if (!project) {
-            return res.status(403).json({ 
-                success: false, 
-                message: "Доступ запрещен" 
+            return res.status(403).json({
+                success: false,
+                message: "Доступ запрещен"
             });
         }
 
         if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Файлы не загружены" 
+            return res.status(400).json({
+                success: false,
+                message: "Файлы не загружены"
             });
         }
 
@@ -985,8 +1356,8 @@ app.post('/api/pto/projects/:id/documents', requirePTO, upload.array('documents'
             );
         }
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: "Документы загружены",
             count: req.files.length
         });
@@ -1007,9 +1378,9 @@ app.post('/api/customer/requests', requireCustomer, upload.array('documents', 5)
         const { title, description, contactInfo } = req.body;
 
         if (!title || !description) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Заполните обязательные поля" 
+            return res.status(400).json({
+                success: false,
+                message: "Заполните обязательные поля"
             });
         }
 
@@ -1023,9 +1394,9 @@ app.post('/api/customer/requests', requireCustomer, upload.array('documents', 5)
 
         console.log(`✅ Заявка создана: ${title} (клиент ${req.session.userName})`);
 
-        res.json({ 
-            success: true, 
-            message: "Заявка отправлена. С вами свяжется наш менеджер." 
+        res.json({
+            success: true,
+            message: "Заявка отправлена. С вами свяжется наш менеджер."
         });
 
     } catch (error) {
@@ -1040,9 +1411,9 @@ app.post('/api/customer/join', requireCustomer, async (req, res) => {
         const { accessCode } = req.body;
 
         if (!accessCode) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Введите код проекта" 
+            return res.status(400).json({
+                success: false,
+                message: "Введите код проекта"
             });
         }
 
@@ -1052,16 +1423,16 @@ app.post('/api/customer/join', requireCustomer, async (req, res) => {
         );
 
         if (!project) {
-            return res.json({ 
-                success: false, 
-                message: "Проект с таким кодом не найден" 
+            return res.json({
+                success: false,
+                message: "Проект с таким кодом не найден"
             });
         }
 
         if (project.customer_id && project.customer_id !== req.session.userId) {
-            return res.json({ 
-                success: false, 
-                message: "К этому проекту уже привязан другой заказчик" 
+            return res.json({
+                success: false,
+                message: "К этому проекту уже привязан другой заказчик"
             });
         }
 
@@ -1073,8 +1444,8 @@ app.post('/api/customer/join', requireCustomer, async (req, res) => {
 
         console.log(`✅ Заказчик ${req.session.userName} присоединился к проекту ${project.title}`);
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             project: {
                 id: project.id,
                 title: project.title,
@@ -1125,9 +1496,9 @@ app.get('/api/customer/projects/:id', requireCustomer, async (req, res) => {
         );
 
         if (!project) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Проект не найден" 
+            return res.status(404).json({
+                success: false,
+                message: "Проект не найден"
             });
         }
 
@@ -1150,8 +1521,8 @@ app.get('/api/customer/projects/:id', requireCustomer, async (req, res) => {
             [req.params.id]
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             project,
             stages,
             documents
@@ -1209,9 +1580,9 @@ app.use((req, res) => {
 // Обработка ошибок
 app.use((err, req, res, next) => {
     console.error('Ошибка сервера:', err);
-    res.status(500).json({ 
-        success: false, 
-        message: "Внутренняя ошибка сервера" 
+    res.status(500).json({
+        success: false,
+        message: "Внутренняя ошибка сервера"
     });
 });
 // ==========================================
@@ -1221,9 +1592,9 @@ app.use((err, req, res, next) => {
 // 1. Снабженец вводит код
 app.post('/api/supplier/join', async (req, res) => { // Добавь middleware requireSupplier если используешь
     try {
-        if (!req.session.userId) return res.status(401).json({success:false, message:"Нет авторизации"});
+        if (!req.session.userId) return res.status(401).json({ success: false, message: "Нет авторизации" });
         const { accessCode } = req.body;
-        
+
         const project = await dbGet("SELECT * FROM projects WHERE access_code = ?", [accessCode]);
         if (!project) return res.json({ success: false, message: "Неверный код" });
 
@@ -1239,9 +1610,9 @@ app.post('/api/supplier/join', async (req, res) => { // Добавь middleware 
 // 2. ПТО вводит код
 app.post('/api/pto/join', async (req, res) => { // Добавь middleware requirePTO если используешь
     try {
-        if (!req.session.userId) return res.status(401).json({success:false, message:"Нет авторизации"});
+        if (!req.session.userId) return res.status(401).json({ success: false, message: "Нет авторизации" });
         const { accessCode } = req.body;
-        
+
         const project = await dbGet("SELECT * FROM projects WHERE access_code = ?", [accessCode]);
         if (!project) return res.json({ success: false, message: "Неверный код" });
 
@@ -1253,6 +1624,50 @@ app.post('/api/pto/join', async (req, res) => { // Добавь middleware requi
         res.json({ success: true, message: "Вы добавлены в проект!" });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+app.get('/api/foreman/materials', requireForeman, async (req, res) => {
+    try {
+        const materials = await dbAll(
+            `SELECT pm.*, 
+                    ps.name as stage_name,
+                    ps.project_id,
+                    p.title as project_title
+             FROM project_materials pm
+             JOIN project_stages ps ON pm.stage_id = ps.id
+             JOIN projects p ON ps.project_id = p.id
+             WHERE p.foreman_id = ?
+             ORDER BY p.id, ps.stage_number, pm.id`,
+            [req.session.userId]
+        );
+
+        res.json({ success: true, materials });
+    } catch (error) {
+        console.error('Ошибка получения материалов:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+app.get('/api/manager/requests/archive', requireManagerOrAdmin, async (req, res) => {
+    try {
+        const requests = await dbAll(
+            `SELECT pr.*, 
+                    u.full_name as customer_name, 
+                    u.email, 
+                    u.phone,
+                    rv.full_name as reviewer_name
+             FROM project_requests pr
+             JOIN users u ON pr.customer_id = u.id
+             LEFT JOIN users rv ON pr.reviewer_id = rv.id
+             WHERE pr.status IN ('accepted', 'rejected', 'reviewed')
+             ORDER BY pr.reviewed_at DESC`,
+            []
+        );
+
+        res.json({ success: true, requests });
+    } catch (error) {
+        console.error('Ошибка получения архива:', error);
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);

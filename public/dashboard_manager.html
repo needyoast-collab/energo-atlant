@@ -60,7 +60,7 @@
             </li>
             <li class="nav-item">
                 <button class="nav-link text-muted" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archivePanel">
-                    🗄 Архив
+                    🗄 Архив заявок
                 </button>
             </li>
         </ul>
@@ -95,9 +95,12 @@
 
             <div class="tab-pane fade" id="archivePanel">
                 <div class="card shadow-sm border-0">
-                    <div class="card-body text-center py-5 text-muted">
-                        <i class="bi bi-archive" style="font-size: 2rem;"></i>
-                        <p class="mt-2">Здесь будут завершенные проекты и обработанные заявки</p>
+                    <div class="card-body">
+                        <div id="archiveList" class="table-responsive">
+                            <div class="text-center py-5 text-muted">
+                                Нажмите на вкладку, чтобы загрузить архив
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -114,6 +117,9 @@
                 
                 <form id="createProjectForm">
                     <div class="modal-body">
+                        <input type="hidden" id="p_customerId" name="customerId">
+                        <input type="hidden" id="p_requestId" name="requestId">
+
                         <div class="alert alert-info d-flex align-items-center">
                             <i class="bi bi-info-circle-fill me-2"></i>
                             <div>После создания система сгенерирует <b>Код Доступа</b>.</div>
@@ -121,27 +127,27 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Название проекта *</label>
-                            <input type="text" class="form-control" id="p_title" required placeholder="Например: Реконструкция ПС-110">
+                            <input type="text" class="form-control" id="p_title" name="title" required placeholder="Например: Реконструкция ПС-110">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Адрес объекта</label>
-                            <input type="text" class="form-control" id="p_address" placeholder="Адрес проведения работ">
+                            <input type="text" class="form-control" id="p_address" name="address" placeholder="Адрес проведения работ">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Описание</label>
-                            <textarea class="form-control" id="p_description" rows="2"></textarea>
+                            <textarea class="form-control" id="p_description" name="description" rows="2"></textarea>
                         </div>
 
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Заказчик (ФИО)</label>
-                                <input type="text" class="form-control" id="p_clientName">
+                                <input type="text" class="form-control" id="p_clientName" name="clientName">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Организация</label>
-                                <input type="text" class="form-control" id="p_clientOrg">
+                                <input type="text" class="form-control" id="p_clientOrg" name="clientOrganization">
                             </div>
                         </div>
 
@@ -151,19 +157,19 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">Прораб</label>
-                                <select class="form-select" id="sel_foreman">
+                                <select class="form-select" id="sel_foreman" name="foremanId">
                                     <option value="">-- Не назначен --</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Снабженец</label>
-                                <select class="form-select" id="sel_supplier">
+                                <select class="form-select" id="sel_supplier" name="supplierId">
                                     <option value="">-- Не назначен --</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Инженер ПТО</label>
-                                <select class="form-select" id="sel_pto">
+                                <select class="form-select" id="sel_pto" name="ptoId">
                                     <option value="">-- Не назначен --</option>
                                 </select>
                             </div>
@@ -171,7 +177,7 @@
                         
                         <div class="mt-4">
                             <label class="form-label"><i class="bi bi-paperclip"></i> Документы (ТЗ, Сметы)</label>
-                            <input type="file" class="form-control" id="p_files" multiple>
+                            <input type="file" class="form-control" id="p_files" name="documents" multiple>
                         </div>
                     </div>
                     
@@ -189,12 +195,14 @@
     <script src="/js/manager.js"></script>
 
     <script>
+        // Инициализация имени
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const res = await fetch('/api/user/me');
                 const data = await res.json();
                 if(data.success) {
-                    document.getElementById('userName').innerText = data.user.name || 'Менеджер';
+                    // Используем full_name, если оно есть
+                    document.getElementById('userName').innerText = data.user.full_name || data.user.login || 'Менеджер';
                 }
             } catch (e) {}
         });

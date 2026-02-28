@@ -1,94 +1,209 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход - ЭнергоАтлант</title>
+    <!-- Подключаем Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Иконки Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Наши кастомные премиум стили -->
     <link href="/css/style.css" rel="stylesheet">
+    <style>
+        /* Локальные фиксы для страницы логина */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 50;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .back-button:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+
+        .brand-logo {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            display: inline-block;
+        }
+
+        .glass-panel {
+            width: 100%;
+            max-width: 440px;
+            padding: 3rem 2.5rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Декоративные размытые круги на фоне */
+        .blur-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 1;
+            opacity: 0.6;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            background: rgba(79, 70, 229, 0.4);
+            top: -100px;
+            left: -100px;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background: rgba(16, 185, 129, 0.2);
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(50px, 50px) scale(1.1);
+            }
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container">
-        <div class="row justify-content-center align-items-center min-vh-100">
-            <div class="col-md-5">
-                <div class="card shadow-lg border-0">
-                    <div class="card-body p-5">
-                        <div class="text-center mb-4">
-                            <h2 class="text-primary">⚡ ЭнергоАтлант</h2>
-                            <p class="text-muted">Вход в систему</p>
-                        </div>
 
-                        <div id="alertBox" class="alert alert-danger d-none"></div>
+<body class="bg-animated-gradient">
+    <!-- Кнопка назад -->
+    <a href="/index.html" class="back-button">
+        <i class="bi bi-arrow-left"></i> На главную
+    </a>
 
-                        <form id="loginForm">
-                            <div class="mb-3">
-                                <label for="login" class="form-label">Логин, email или телефон</label>
-                                <input type="text" class="form-control form-control-lg" id="login" 
-                                       placeholder="Введите логин" required autofocus autocomplete="username">
-                            </div>
+    <!-- Декоративные элементы фона -->
+    <div class="blur-circle circle-1"></div>
+    <div class="blur-circle circle-2"></div>
 
-                            <div class="mb-3">
-                                <label for="password" class="form-label">Пароль</label>
-                                <input type="password" class="form-control form-control-lg" id="password" 
-                                       placeholder="Введите пароль" required autocomplete="current-password">
-                            </div>
+    <div class="login-container">
+        <!-- Главная карточка (Glassmorphism) -->
+        <div class="glass-panel fade-in">
+            <div class="text-center mb-5">
+                <div class="brand-logo mb-2"><i class="bi bi-lightning-charge-fill me-2"></i>ЭнергоАтлант</div>
+                <p class="text-white-50 fs-5">Добро пожаловать в систему</p>
+            </div>
 
-                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="submitBtn">
-                                Войти
-                            </button>
+            <div id="alertBox" class="alert d-none mb-4 shadow-sm" style="border-radius: 0.75rem;"></div>
 
-                            <div class="text-center">
-                                <p class="mb-0">
-                                    Нет аккаунта? 
-                                    <a href="/register.html" class="text-primary">Зарегистрироваться</a>
-                                </p>
-                            </div>
-                        </form>
-
-                        <hr class="my-4">
-
-                        <div class="text-center">
-                            <small class="text-muted">
-                                Тестовые данные:<br>
-                                <strong>admin</strong> / <strong>admin123</strong>
-                            </small>
-                        </div>
-                    </div>
+            <form id="loginForm">
+                <!-- Логин (Плавающий Label) -->
+                <div class="form-floating mb-4">
+                    <input type="text" class="form-control" id="login" placeholder="Логин" required autofocus
+                        autocomplete="username">
+                    <label for="login"><i class="bi bi-person me-2"></i>Логин, email или телефон</label>
                 </div>
+
+                <!-- Пароль (Плавающий Label) -->
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="password" placeholder="Пароль" required
+                        autocomplete="current-password">
+                    <label for="password"><i class="bi bi-lock me-2"></i>Пароль</label>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe">
+                        <label class="form-check-label text-light" for="rememberMe" style="opacity: 0.9;">
+                            Запомнить меня
+                        </label>
+                    </div>
+                    <a href="#" class="text-white text-decoration-none small transition" style="opacity: 0.9;">Забыли
+                        пароль?</a>
+                </div>
+
+                <button type="submit"
+                    class="btn btn-primary btn-lg w-100 mb-4 py-3 shadow-hover fw-bold text-white border-0"
+                    id="submitBtn">
+                    Войти в аккаунт <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+
+                <div class="text-center">
+                    <p class="text-light mb-0" style="opacity: 0.9;">
+                        Нет аккаунта?
+                        <a href="/register.html"
+                            class="text-white fw-bold text-decoration-none border-bottom border-white hover-border-opacity-100 transition px-1">Создать
+                            сейчас</a>
+                    </p>
+                </div>
+            </form>
+
+            <hr class="my-4 border-light opacity-25">
+
+            <div class="text-center">
+                <small class="text-light d-flex flex-column align-items-center gap-1" style="opacity: 0.8;">
+                    <span><i class="bi bi-info-circle me-1"></i> Тестовый доступ:</span>
+                    <span
+                        class="badge bg-light text-dark bg-opacity-25 mt-1 border border-light border-opacity-25 px-3 py-2 rounded-pill">
+                        Логин: <strong class="mx-1">admin</strong> / Пароль: <strong class="ms-1">admin123</strong>
+                    </span>
+                </small>
             </div>
         </div>
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            // 1. ОТМЕНЯЕМ ПЕРЕЗАГРУЗКУ (Убирает моргание)
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const loginInput = document.getElementById('login');
             const passwordInput = document.getElementById('password');
             const submitBtn = document.getElementById('submitBtn');
             const alertBox = document.getElementById('alertBox');
-            
-            // Сбрасываем старые ошибки
+
             alertBox.classList.add('d-none');
             alertBox.innerText = '';
-            
+
             const login = loginInput.value.trim();
             const password = passwordInput.value.trim();
-            
-            // Валидация на пустоту
+
             if (!login || !password) {
-                showAlert('Заполните все поля');
+                showAlert('Заполните все поля', 'warning');
                 return;
             }
-            
-            // 2. БЛОКИРУЕМ КНОПКУ (Показываем, что идет загрузка)
+
             submitBtn.disabled = true;
-            const originalText = submitBtn.innerText;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Вход...';
-            
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Авторизация...';
+
             try {
-                // 3. ОТПРАВЛЯЕМ ЗАПРОС
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -98,39 +213,48 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // УСПЕХ: Показываем зеленое сообщение и переходим
-                    alertBox.className = 'alert alert-success';
-                    alertBox.innerText = 'Вход выполнен! Перенаправление...';
+                    alertBox.className = 'alert alert-success d-flex align-items-center gap-2';
+                    alertBox.innerHTML = '<i class="bi bi-check-circle-fill"></i> Вход выполнен! Перенаправление...';
                     alertBox.classList.remove('d-none');
-                    
+
+                    submitBtn.classList.remove('btn-primary');
+                    submitBtn.classList.add('btn-success');
+                    submitBtn.innerHTML = '<i class="bi bi-check2"></i> Успешно';
+
                     setTimeout(() => {
-                        // Перенаправление в зависимости от роли (используем replace чтобы убрать из истории)
                         if (data.role === 'admin' || data.role === 'manager') window.location.replace('/dashboard_manager.html');
                         else if (data.role === 'foreman') window.location.replace('/dashboard_foreman.html');
                         else if (data.role === 'supplier') window.location.replace('/dashboard_supplier.html');
                         else if (data.role === 'pto') window.location.replace('/dashboard_pto.html');
                         else window.location.replace('/dashboard_customer.html');
-                    }, 500);
+                    }, 800);
                 } else {
-                    // ОШИБКА СЕРВЕРА (например, неверный пароль)
                     throw new Error(data.message || 'Ошибка входа');
                 }
             } catch (error) {
                 console.error(error);
-                // 4. ЕСЛИ ОШИБКА - ВОЗВРАЩАЕМ КНОПКУ (Убирает вечное зависание)
-                showAlert(error.message || 'Ошибка соединения с сервером');
+                showAlert(error.message || 'Ошибка соединения с сервером', 'danger');
                 submitBtn.disabled = false;
-                submitBtn.innerText = originalText;
+                submitBtn.innerHTML = originalText;
+
+                // Эффект тряски при ошибке
+                const panel = document.querySelector('.glass-panel');
+                panel.style.transform = 'translateX(-10px)';
+                setTimeout(() => panel.style.transform = 'translateX(10px)', 100);
+                setTimeout(() => panel.style.transform = 'translateX(-10px)', 200);
+                setTimeout(() => panel.style.transform = 'translateX(10px)', 300);
+                setTimeout(() => panel.style.transform = 'translateX(0)', 400);
             }
         });
 
-        // Функция для показа красной ошибки
-        function showAlert(message) {
+        function showAlert(message, type = 'danger') {
             const alertBox = document.getElementById('alertBox');
-            alertBox.className = 'alert alert-danger';
-            alertBox.innerText = message;
+            const icon = type === 'danger' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill';
+            alertBox.className = `alert alert-${type} d-flex align-items-center gap-2 border-0 bg-${type} bg-opacity-25 text-white`;
+            alertBox.innerHTML = `<i class="bi ${icon}"></i> ${message}`;
             alertBox.classList.remove('d-none');
         }
     </script>
 </body>
+
 </html>

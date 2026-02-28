@@ -5,29 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кабинет заказчика - ЭнергоАтлант</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="/css/style.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
+    <!-- NAVBAR с постоянными кнопками -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="#">⚡ ЭнергоАтлант</a>
-            
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
+                <!-- Постоянные кнопки действий -->
+                <div class="d-flex gap-2 ms-3 me-auto">
+                    <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createRequestModal">
+                        <i class="bi bi-plus-circle-fill"></i> Создать заявку
+                    </button>
+                    <button class="btn btn-outline-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#joinProjectModal">
+                        <i class="bi bi-link-45deg"></i> Присоединиться к проекту
+                    </button>
+                </div>
+
+                <ul class="navbar-nav align-items-center">
                     <li class="nav-item me-3">
-                        <span class="text-white">
+                        <span class="text-white small">
                             <i class="bi bi-person-circle"></i> <span id="userName">Загрузка...</span>
                         </span>
                     </li>
                     <li class="nav-item">
-                        <a href="/api/logout" class="btn btn-danger btn-sm text-white fw-bold">
-                            Выйти
-                        </a>
+                        <a href="/api/logout" class="btn btn-danger btn-sm fw-bold">Выйти</a>
                     </li>
                 </ul>
             </div>
@@ -35,34 +45,25 @@
     </nav>
 
     <div class="container">
-        
- <div class="mb-3">
-    <label class="form-label">Контактный телефон *</label>
-    <input type="tel" class="form-control" id="requestContact" 
-           placeholder="+79991234567"
-           pattern="^[\\+]?[78][-\\s\\(]?\\d{3}[-\\s\\)]?\\d{3}[-\\s]?\\d{2}[-\\s]?\\d{2}$"
-           required>
-    <small class="text-muted">Формат: +79991234567 или 89991234567</small>
-    <div class="invalid-feedback">
-        Введите корректный номер телефона
-    </div>
-</div>
 
         <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projectsTab" type="button">
+                <button class="nav-link active fw-bold" id="projects-tab" data-bs-toggle="tab"
+                    data-bs-target="#projectsTab" type="button">
                     🏗 Мои проекты
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requestsTab" type="button">
-                    📬 История заявок
+                <button class="nav-link fw-bold" id="requests-tab" data-bs-toggle="tab"
+                    data-bs-target="#requestsTab" type="button">
+                    📬 Мои заявки
                 </button>
             </li>
         </ul>
 
         <div class="tab-content bg-white p-4 rounded shadow-sm border" id="myTabContent">
-            
+
+            <!-- Проекты -->
             <div class="tab-pane fade show active" id="projectsTab" role="tabpanel">
                 <div id="projectsList" class="row g-3">
                     <div class="text-center py-5">
@@ -72,13 +73,121 @@
                 </div>
             </div>
 
+            <!-- Заявки -->
             <div class="tab-pane fade" id="requestsTab" role="tabpanel">
-                <div id="requestsStatus">
+                <div id="requestsList">
                     <div class="text-center py-5">
                         <div class="spinner-border text-primary" role="status"></div>
-                        <p class="mt-2 text-muted">Проверяем историю заявок...</p>
+                        <p class="mt-2 text-muted">Загружаем заявки...</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== МОДАЛЬНЫЕ ОКНА ===================== -->
+
+    <!-- Создать заявку -->
+    <div class="modal fade" id="createRequestModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Новая заявка</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createRequestForm">
+                    <div class="modal-body">
+                        <div class="alert alert-info d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            Опишите задачу, и менеджер свяжется с вами для обсуждения
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Тема заявки *</label>
+                            <input type="text" class="form-control" id="req_title"
+                                placeholder="Например: Электромонтаж офиса" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Описание работ *</label>
+                            <textarea class="form-control" id="req_description" rows="4"
+                                placeholder="Подробно опишите, что нужно сделать..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Контактный телефон *</label>
+                            <input type="tel" class="form-control" id="req_contact"
+                                placeholder="+79991234567" required>
+                            <small class="text-muted">Формат: +79991234567 или 89991234567</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Документы (ТЗ, планы, схемы)</label>
+                            <input type="file" class="form-control" id="req_files" multiple
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                            <small class="text-muted">До 5 файлов</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-link text-muted text-decoration-none"
+                            data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold" id="submitRequestBtn">
+                            📤 Отправить заявку
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Присоединиться к проекту -->
+    <div class="modal fade" id="joinProjectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-link-45deg"></i> Присоединиться к проекту</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Введите код проекта, который вам выдал менеджер:</p>
+                    <input type="text" class="form-control form-control-lg text-center fw-bold"
+                        id="joinProjectCode" placeholder="PRJ-XXXXXX"
+                        style="letter-spacing: 3px; text-transform: uppercase; font-family: monospace;">
+                    <div id="joinProjectResult" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none"
+                        data-bs-dismiss="modal">Отмена</button>
+                    <button class="btn btn-success fw-bold" onclick="joinProject()">
+                        ✔️ Присоединиться
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Детали проекта -->
+    <div class="modal fade" id="projectDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="projectDetailTitle">Проект</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="projectDetailBody">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Детали заявки -->
+    <div class="modal fade" id="requestDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="requestDetailTitle">Заявка</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="requestDetailBody"></div>
             </div>
         </div>
     </div>
@@ -92,8 +201,8 @@
             try {
                 const res = await fetch('/api/user/me');
                 const data = await res.json();
-                if(data.success) {
-                    document.getElementById('userName').innerText = data.user.name || data.user.login;
+                if (data.success) {
+                    document.getElementById('userName').innerText = data.user.full_name || data.user.login;
                 }
             } catch (e) { console.error(e); }
         });

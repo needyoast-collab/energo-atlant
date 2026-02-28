@@ -1,5 +1,5 @@
 // =============================================================================
-// FOREMAN.JS - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
+// FOREMAN.JS - Прораб: Этапы работ + Материалы
 // =============================================================================
 
 let currentProjects = [];
@@ -11,25 +11,23 @@ let currentProject = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadProjects();
+    await checkPendingApprovals();
 });
 
 // =============================================================================
-// ЗАГРУЗКА ПРОЕКТОВ
+// ===== ВКЛАДКА: ЭТАПЫ РАБОТ =====
 // =============================================================================
 
 async function loadProjects() {
     const container = document.getElementById('projectsList');
-    
-    // Показываем загрузку
     container.innerHTML = `
         <div class="col-12 text-center py-5">
             <div class="spinner-border text-warning"></div>
             <p class="mt-2 text-muted">Загружаем список объектов...</p>
-        </div>
-    `;
-    
+        </div>`;
+
     const data = await apiRequest('/api/foreman/projects');
-    
+
     if (data.success) {
         currentProjects = data.projects;
         renderProjects(data.projects);
@@ -40,281 +38,346 @@ async function loadProjects() {
 
 function renderProjects(projects) {
     const container = document.getElementById('projectsList');
-    
-    // ИСПРАВЛЕНО: Если нет проектов - показываем сообщение
+
     if (!projects || projects.length === 0) {
         container.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-info">
-                    <h5>📋 Проекты отсутствуют</h5>
-                    <p class="mb-0">У вас пока нет проектов. Введите код доступа от менеджера чтобы присоединиться.</p>
+                    <h5>📋 Объекты отсутствуют</h5>
+                    <p class="mb-0">Введите код доступа от менеджера чтобы присоединиться к объекту.</p>
                 </div>
-            </div>
-        `;
+            </div>`;
         return;
     }
-    
-    let html = '';
-    
-    projects.forEach(project => {
-        // Проверяем дедлайн для этапов
+
+    container.innerHTML = projects.map(project => {
         const deadline = new Date(project.stages_deadline);
         const now = new Date();
         const isExpired = deadline < now;
         const hoursLeft = Math.max(0, Math.round((deadline - now) / (1000 * 60 * 60)));
-        
-        html += `
-            <div class="col-md-6 mb-3">
-                <div class="card h-100 ${isExpired ? 'border-danger' : ''}">
+
+        return `
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm ${isExpired && project.status === 'stages_pending' ? 'border-danger' : ''}">
                     <div class="card-body">
-                        <h5 class="card-title">${project.title}</h5>
-                        <p class="text-muted">${project.address || ''}</p>
+                        <h5 class="card-title fw-bold">${project.title}</h5>
+                        <p class="text-muted small">${project.address || ''}</p>
                         <hr>
-                        <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
-                        <p><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
-                        <p><strong>Снабженец:</strong> ${project.supplier_name || '-'}</p>
-                        
+                        <p class="mb-1"><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
+                        <p class="mb-1"><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
+                        <p class="mb-2"><strong>Снабженец:</strong> ${project.supplier_name || 'Не назначен'}</p>
+
                         ${project.status === 'stages_pending' ? `
-                            <div class="alert ${isExpired ? 'alert-danger' : 'alert-warning'} mb-2">
-                                ⏰ ${isExpired 
-                                    ? 'Дедлайн истек! Создание этапов недоступно' 
-                                    : `Осталось ${hoursLeft} часов для создания этапов`}
-                            </div>
-                        ` : ''}
-                        
-                        <button class="btn btn-primary w-100" onclick="viewProjectDetails(${project.id})">
-                            🔍 Детали проекта
+                            <div class="alert ${isExpired ? 'alert-danger' : 'alert-warning'} py-2 mb-2 small">
+                                ⏰ ${isExpired
+                                    ? 'Дедлайн истёк! Создание этапов недоступно'
+                                    : `Осталось ${hoursLeft} ч. для создания этапов`}
+                            </div>` : ''}
+
+                        <button class="btn btn-warning w-100 fw-bold" onclick="openProjectModal(${project.id})">
+                            <i class="bi bi-folder2-open"></i> Открыть объект
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
+            </div>`;
+    }).join('');
 }
 
 // =============================================================================
-// ПРОСМОТР ДЕТАЛЕЙ ПРОЕКТА
+// МОДАЛЬНОЕ ОКНО ПРОЕКТА
 // =============================================================================
 
-async function viewProjectDetails(projectId) {
-    const container = document.getElementById('projectsList');
-    
-    // Показываем загрузку
-    container.innerHTML = `
-        <div class="col-12 text-center py-5">
-            <div class="spinner-border text-primary"></div>
-            <p class="mt-2 text-muted">Загрузка проекта...</p>
+async function openProjectModal(projectId) {
+    const modal = new bootstrap.Modal(document.getElementById('projectModal'));
+    document.getElementById('modalTitle').textContent = 'Загрузка...';
+    document.getElementById('modalBody').innerHTML = `
+        <div class="text-center py-4"><div class="spinner-border text-warning"></div></div>`;
+    modal.show();
+
+    const data = await apiRequest(`/api/foreman/projects/${projectId}`);
+
+    if (!data.success) {
+        document.getElementById('modalBody').innerHTML = '<div class="alert alert-danger">Ошибка загрузки</div>';
+        return;
+    }
+
+    currentProject = data.project;
+    document.getElementById('modalTitle').textContent = data.project.title;
+    renderModalContent(data.project, data.stages, data.documents);
+}
+
+function renderModalContent(project, stages, documents) {
+    const deadline = new Date(project.stages_deadline);
+    const canCreateStages = deadline > new Date() && project.status === 'stages_pending';
+
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>Адрес:</strong> ${project.address || '-'}</p>
+                <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
+                <p><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Описание:</strong></p>
+                <p class="text-muted">${project.description || 'Нет описания'}</p>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h5 class="mb-0">🛠 Этапы работ</h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-warning btn-sm fw-bold"
+                    onclick="showRequestMaterialModal(${project.id})"
+                    title="Запросить дополнительный материал у снабженца">
+                    ⚠️ Запросить материал
+                </button>
+                ${canCreateStages ? `
+                <button class="btn btn-success btn-sm fw-bold" onclick="showCreateStageModal()">
+                    ➕ Создать этап
+                </button>` : ''}
+            </div>
         </div>
     `;
-    
-    const data = await apiRequest(`/api/foreman/projects/${projectId}`);
-    
-    if (data.success) {
-        currentProject = data.project;
-        renderProjectDetails(data.project, data.stages, data.documents);
-    } else {
-        showError('Ошибка загрузки проекта');
-        await loadProjects(); // Вернуться к списку
-    }
-}
 
-function renderProjectDetails(project, stages, documents) {
-    const container = document.getElementById('projectsList');
-    
-    // Проверка дедлайна
-    const deadline = new Date(project.stages_deadline);
-    const now = new Date();
-    const canCreateStages = deadline > now && project.status === 'stages_pending';
-    
-    let html = `
-        <div class="col-12">
-            <button class="btn btn-secondary mb-3" onclick="loadProjects()">
-                ← Назад к списку проектов
-            </button>
-            
-            <div class="card mb-3">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">📋 ${project.title}</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Адрес:</strong> ${project.address || '-'}</p>
-                            <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
-                            <p><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Описание:</strong></p>
-                            <p>${project.description || 'Нет описания'}</p>
-                        </div>
-                    </div>
-                    
-                    ${canCreateStages ? `
-                        <button class="btn btn-success mt-2" onclick="showCreateStageModal()">
-                            ➕ Создать этап работ
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-            
-            <h5 class="mt-4 mb-3">Этапы работ</h5>
-    `;
-    
     if (!stages || stages.length === 0) {
-        html += `
-            <div class="alert alert-warning">
-                📝 Этапы еще не созданы. 
-                ${canCreateStages ? 'Создайте первый этап!' : ''}
-            </div>
-        `;
+        html += `<div class="alert alert-warning">
+            📝 Этапы ещё не созданы.
+            ${canCreateStages ? 'Создайте первый этап!' : ''}
+        </div>`;
     } else {
-        stages.forEach(stage => {
-            html += renderStage(stage);
-        });
+        stages.forEach(stage => { html += renderStage(stage); });
     }
-    
+
     // Документы
     if (documents && documents.length > 0) {
-        html += `
-            <h5 class="mt-4 mb-3">📄 Документы</h5>
-            <div class="list-group">
-        `;
+        html += '<h5 class="border-bottom pb-2 mt-4">📄 Документы</h5><div class="list-group">';
         documents.forEach(doc => {
             html += `
                 <a href="/${doc.file_path}" target="_blank" class="list-group-item list-group-item-action">
-                    📎 ${doc.file_name}
+                    <i class="bi bi-paperclip"></i> ${doc.file_name}
                     <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
-                </a>
-            `;
+                </a>`;
         });
         html += '</div>';
     }
-    
-    html += '</div>';
-    container.innerHTML = html;
+
+    document.getElementById('modalBody').innerHTML = html;
 }
 
 function renderStage(stage) {
-    const isCompleted = stage.is_completed === 1;
-    
+    const done = stage.is_completed === 1;
+
     let html = `
-        <div class="card mb-3 ${isCompleted ? 'border-success' : ''}">
-            <div class="card-header ${isCompleted ? 'bg-success text-white' : 'bg-light'}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        ${isCompleted ? '✅' : '🔨'} Этап ${stage.stage_number}: ${stage.name}
-                    </h5>
-                    ${!isCompleted ? `
-                        <button class="btn btn-sm btn-success" onclick="completeStage(${stage.id})">
-                            ✔️ Завершить
-                        </button>
-                    ` : `
-                        <span class="badge bg-light text-success">Завершен ${formatDateShort(stage.completed_at)}</span>
-                    `}
+        <div class="card mb-3 ${done ? 'border-success' : ''}">
+            <div class="card-header d-flex justify-content-between align-items-center
+                        ${done ? 'bg-success text-white' : 'bg-light'}">
+                <h6 class="mb-0">
+                    ${done ? '✅' : '🔨'} Этап ${stage.stage_number}: ${stage.name}
+                </h6>
+                <div class="d-flex gap-2 align-items-center">
+                    ${done
+                        ? `<small>Завершён ${formatDateShort(stage.completed_at)}</small>`
+                        : `<button class="btn btn-sm btn-success" onclick="completeStage(${stage.id})">
+                               ✔️ Завершить
+                           </button>`}
+                    <button class="btn btn-sm ${done ? 'btn-outline-light' : 'btn-outline-secondary'}"
+                            onclick="showUploadPhotosModal(${stage.id})">
+                        📸 Фото
+                    </button>
                 </div>
             </div>
             <div class="card-body">
-                ${stage.description ? `<p>${stage.description}</p><hr>` : ''}
-                
-                <h6>Материалы:</h6>
-                ${renderMaterials(stage.materials, stage.id)}
-                
-                <h6 class="mt-3">Фото:</h6>
-                ${renderPhotos(stage.photos, stage.id)}
-                
-                <button class="btn btn-primary mt-2" onclick="showUploadPhotosModal(${stage.id})">
-                    📸 Загрузить фото
-                </button>
+                ${stage.description ? `<p class="text-muted small">${stage.description}</p>` : ''}
+
+                ${stage.materials && stage.materials.length > 0 ? `
+                    <h6 class="mt-2">Материалы этапа:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Материал</th>
+                                    <th>Ед.</th>
+                                    <th>План</th>
+                                    <th>На складе</th>
+                                    <th>Расход</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${stage.materials.map(mat => {
+                                    const received = parseFloat(mat.quantity_received || 0);
+                                    const used = parseFloat(mat.quantity_used || 0);
+                                    return `
+                                        <tr>
+                                            <td>${mat.material_name}</td>
+                                            <td>${mat.unit || '-'}</td>
+                                            <td>${mat.quantity_planned}</td>
+                                            <td class="${received > 0 ? 'text-success fw-bold' : 'text-muted'}">
+                                                ${received > 0 ? received : 'Не получено'}
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm"
+                                                    id="used_${mat.id}"
+                                                    value="${used}"
+                                                    min="0" max="${received}"
+                                                    step="0.1"
+                                                    ${received === 0 ? 'disabled title="Сначала получите материал на склад"' : ''}
+                                                    style="width:90px;">
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary"
+                                                    onclick="updateMaterial(${mat.id})"
+                                                    ${received === 0 ? 'disabled' : ''}>
+                                                    Сохранить
+                                                </button>
+                                            </td>
+                                        </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>` : '<p class="text-muted small mb-0">Материалы не добавлены</p>'}
+
+                ${stage.photos && stage.photos.length > 0 ? `
+                    <div class="photo-grid mt-3">
+                        ${stage.photos.map(ph => `
+                            <a href="/${ph.file_path}" target="_blank">
+                                <img src="/${ph.file_path}" class="img-thumbnail"
+                                     style="height:80px;object-fit:cover;">
+                            </a>`).join('')}
+                    </div>` : ''}
             </div>
-        </div>
-    `;
-    
+        </div>`;
+
     return html;
 }
 
-function renderMaterials(materials, stageId) {
-    if (!materials || materials.length === 0) {
-        return '<p class="text-muted">Материалы не добавлены</p>';
+// =============================================================================
+// ===== ВКЛАДКА: МАТЕРИАЛЫ =====
+// =============================================================================
+
+async function loadAllMaterials() {
+    const container = document.getElementById('materialsContainer');
+    container.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2 text-muted">Загрузка материалов...</p>
+        </div>`;
+
+    const data = await apiRequest('/api/foreman/materials');
+
+    if (!data.success) {
+        container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки материалов</div>';
+        return;
     }
-    
-    let html = '<div class="table-responsive"><table class="table table-sm">';
-    html += `
-        <thead>
-            <tr>
-                <th>Материал</th>
-                <th>Ед.</th>
-                <th>План</th>
-                <th>Факт</th>
-                <th>Приход</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-    `;
-    
-    materials.forEach(mat => {
-        html += `
-            <tr>
-                <td>${mat.material_name}</td>
-                <td>${mat.unit || '-'}</td>
-                <td>${mat.quantity_planned}</td>
-                <td>
-                    <input type="number" 
-                           class="form-control form-control-sm" 
-                           value="${mat.quantity_used || 0}" 
-                           id="used_${mat.id}" 
-                           step="0.1"
-                           style="width: 80px;">
-                </td>
-                <td>
-                    ${mat.is_received ? 
-                        `✅ ${mat.quantity_received}` : 
-                        `<input type="number" 
-                                class="form-control form-control-sm" 
-                                id="received_${mat.id}" 
-                                step="0.1"
-                                placeholder="0"
-                                style="width: 80px;">`
-                    }
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="updateMaterial(${mat.id})">
-                        💾
-                    </button>
-                    ${!mat.is_received ? `
-                        <button class="btn btn-sm btn-success" onclick="receiveMaterial(${mat.id})">
-                            ✔️
-                        </button>
-                    ` : ''}
-                </td>
-            </tr>
-        `;
+
+    if (!data.materials || data.materials.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                📦 Материалы пока не добавлены ни в одном из ваших проектов.
+            </div>`;
+        return;
+    }
+
+    // Группируем по проекту
+    const grouped = {};
+    data.materials.forEach(mat => {
+        const key = mat.project_title;
+        if (!grouped[key]) grouped[key] = { items: [], projectId: mat.project_id };
+        grouped[key].items.push(mat);
     });
-    
-    html += '</tbody></table></div>';
-    return html;
+
+    let html = '';
+
+    for (const [projectTitle, group] of Object.entries(grouped)) {
+        html += `
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white fw-bold">
+                    🏗 ${projectTitle}
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Материал</th>
+                                    <th>Этап</th>
+                                    <th>Ед.</th>
+                                    <th>План</th>
+                                    <th>На складе</th>
+                                    <th>Расход</th>
+                                    <th>Статус</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${group.items.map(mat => {
+                                    const received = parseFloat(mat.quantity_received || 0);
+                                    const used = parseFloat(mat.quantity_used || 0);
+                                    const deficit = parseFloat(mat.quantity_planned) - received;
+
+                                    return `
+                                        <tr>
+                                            <td><strong>${mat.material_name}</strong></td>
+                                            <td><small class="text-muted">${mat.stage_name}</small></td>
+                                            <td>${mat.unit || '-'}</td>
+                                            <td>${mat.quantity_planned}</td>
+                                            <td class="${received > 0 ? 'text-success fw-bold' : 'text-danger'}">
+                                                ${received > 0 ? received : '—'}
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm"
+                                                    id="mat_used_${mat.id}"
+                                                    value="${used}"
+                                                    min="0" max="${received}"
+                                                    step="0.1"
+                                                    ${received === 0 ? 'disabled title="Материал ещё не получен на склад"' : ''}
+                                                    style="width:90px;">
+                                            </td>
+                                            <td>
+                                                ${received === 0
+                                                    ? '<span class="badge bg-secondary">Ожидается</span>'
+                                                    : used >= received
+                                                        ? '<span class="badge bg-danger">Всё списано</span>'
+                                                        : '<span class="badge bg-success">На складе</span>'}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary"
+                                                    onclick="updateMaterialFromTab(${mat.id})"
+                                                    ${received === 0 ? 'disabled' : ''}>
+                                                    💾
+                                                </button>
+                                            </td>
+                                        </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    container.innerHTML = html;
 }
 
-function renderPhotos(photos, stageId) {
-    if (!photos || photos.length === 0) {
-        return '<p class="text-muted">Фото пока нет</p>';
+// Сохранение расхода из вкладки Материалы
+async function updateMaterialFromTab(materialId) {
+    const input = document.getElementById(`mat_used_${materialId}`);
+    const quantityUsed = parseFloat(input.value) || 0;
+    const maxAllowed = parseFloat(input.max);
+
+    if (quantityUsed > maxAllowed) {
+        showError(`Нельзя списать больше ${maxAllowed} (получено на склад)`);
+        input.value = maxAllowed;
+        return;
     }
-    
-    let html = '<div class="row">';
-    photos.forEach(photo => {
-        html += `
-            <div class="col-md-3 mb-2">
-                <a href="/${photo.file_path}" target="_blank">
-                    <img src="/${photo.file_path}" class="img-thumbnail" alt="${photo.file_name}">
-                </a>
-                <small class="d-block text-muted">${formatDateShort(photo.uploaded_at)}</small>
-            </div>
-        `;
-    });
-    html += '</div>';
-    return html;
+
+    const result = await apiRequest(`/api/foreman/materials/${materialId}`, 'PUT', { quantityUsed });
+
+    if (result.success) {
+        showSuccess('Расход сохранён');
+    } else {
+        showError(result.message || 'Ошибка сохранения');
+    }
 }
 
 // =============================================================================
@@ -322,154 +385,127 @@ function renderPhotos(photos, stageId) {
 // =============================================================================
 
 function showCreateStageModal() {
-    const modal = `
+    if (!currentProject) return;
+
+    const modalHtml = `
         <div class="modal fade" id="createStageModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">➕ Создание этапа работ</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">➕ Создать этап работ</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <form id="createStageFormModal">
+                    <form id="createStageForm">
                         <div class="modal-body">
                             <div class="mb-3">
-                                <label class="form-label">Название этапа *</label>
-                                <input type="text" class="form-control" id="stageName" required 
-                                       placeholder="Например: Подготовительные работы">
+                                <label class="form-label fw-bold">Название этапа *</label>
+                                <input type="text" class="form-control" id="stageName"
+                                    placeholder="Например: Прокладка кабельных линий" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Описание</label>
                                 <textarea class="form-control" id="stageDescription" rows="2"></textarea>
                             </div>
-                            
-                            <h6>Материалы:</h6>
-                            <div id="materialsContainer">
-                                <div class="material-row row mb-2">
-                                    <div class="col-5">
-                                        <input type="text" class="form-control" placeholder="Название материала" required>
-                                    </div>
-                                    <div class="col-3">
-                                        <input type="text" class="form-control" placeholder="Ед. (м, шт, кг)">
-                                    </div>
-                                    <div class="col-3">
-                                        <input type="number" class="form-control" placeholder="Кол-во" step="0.1" required>
-                                    </div>
-                                    <div class="col-1">
-                                        <button type="button" class="btn btn-danger" onclick="removeMaterialRow(this)">❌</button>
-                                    </div>
-                                </div>
+
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">📦 Материалы этапа</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                    onclick="addMaterialRow()">
+                                    + Добавить материал
+                                </button>
                             </div>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="addMaterialRow()">
-                                ➕ Добавить материал
-                            </button>
+                            <div id="materialsContainer"></div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            <button type="submit" class="btn btn-primary">💾 Создать этап</button>
+                            <button type="submit" class="btn btn-success fw-bold">Создать этап</button>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('createStageModal');
-    
-    document.getElementById('createStageFormModal').addEventListener('submit', async (e) => {
+        </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('createStageModal'));
+    modal.show();
+
+    document.getElementById('createStageForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        // Собираем материалы
+
         const materials = [];
         document.querySelectorAll('.material-row').forEach(row => {
             const inputs = row.querySelectorAll('input');
             if (inputs[0].value) {
                 materials.push({
                     name: inputs[0].value,
-                    unit: inputs[1].value || '',
+                    unit: inputs[1].value,
                     quantity: parseFloat(inputs[2].value) || 0
                 });
             }
         });
-        
-        const stageData = {
+
+        const result = await apiRequest('/api/foreman/stages', 'POST', {
             projectId: currentProject.id,
             stageName: document.getElementById('stageName').value,
             description: document.getElementById('stageDescription').value,
-            materials: materials
-        };
-        
-        const result = await apiRequest('/api/foreman/stages', 'POST', stageData);
-        
+            materials
+        });
+
         if (result.success) {
             showSuccess('Этап создан');
-            hideModal('createStageModal');
-            await viewProjectDetails(currentProject.id);
+            modal.hide();
+            await openProjectModal(currentProject.id);
         } else {
             showError(result.message || 'Ошибка создания этапа');
         }
     });
-    
-    document.getElementById('createStageModal').addEventListener('hidden.bs.modal', function() {
+
+    document.getElementById('createStageModal').addEventListener('hidden.bs.modal', function () {
         this.remove();
     });
 }
 
 function addMaterialRow() {
-    const row = `
-        <div class="material-row row mb-2">
+    document.getElementById('materialsContainer').insertAdjacentHTML('beforeend', `
+        <div class="material-row row g-2 mb-2 align-items-center">
             <div class="col-5">
-                <input type="text" class="form-control" placeholder="Название материала" required>
+                <input type="text" class="form-control form-control-sm" placeholder="Название материала">
+            </div>
+            <div class="col-2">
+                <input type="text" class="form-control form-control-sm" placeholder="Ед. (м, шт, кг)">
             </div>
             <div class="col-3">
-                <input type="text" class="form-control" placeholder="Ед. (м, шт, кг)">
+                <input type="number" class="form-control form-control-sm" placeholder="Кол-во" step="0.1" min="0">
             </div>
-            <div class="col-3">
-                <input type="number" class="form-control" placeholder="Кол-во" step="0.1" required>
+            <div class="col-2">
+                <button type="button" class="btn btn-sm btn-outline-danger w-100"
+                    onclick="this.closest('.material-row').remove()">✕</button>
             </div>
-            <div class="col-1">
-                <button type="button" class="btn btn-danger" onclick="removeMaterialRow(this)">❌</button>
-            </div>
-        </div>
-    `;
-    document.getElementById('materialsContainer').insertAdjacentHTML('beforeend', row);
-}
-
-function removeMaterialRow(btn) {
-    btn.closest('.material-row').remove();
+        </div>`);
 }
 
 // =============================================================================
-// ОБНОВЛЕНИЕ МАТЕРИАЛОВ
+// ОБНОВЛЕНИЕ МАТЕРИАЛОВ (из окна этапа)
 // =============================================================================
 
 async function updateMaterial(materialId) {
-    const quantityUsed = parseFloat(document.getElementById(`used_${materialId}`).value) || 0;
-    
-    const result = await apiRequest(`/api/foreman/materials/${materialId}`, 'PUT', { quantityUsed });
-    
-    if (result.success) {
-        showSuccess('Расход обновлен');
-    } else {
-        showError('Ошибка обновления');
-    }
-}
+    const input = document.getElementById(`used_${materialId}`);
+    const quantityUsed = parseFloat(input.value) || 0;
+    const maxAllowed = parseFloat(input.max);
 
-async function receiveMaterial(materialId) {
-    const quantityReceived = parseFloat(document.getElementById(`received_${materialId}`).value);
-    
-    if (!quantityReceived || quantityReceived <= 0) {
-        showError('Укажите количество полученного материала');
+    if (quantityUsed > maxAllowed) {
+        showError(`Нельзя списать больше ${maxAllowed} — столько получено на склад`);
+        input.value = maxAllowed;
         return;
     }
-    
-    const result = await apiRequest(`/api/foreman/materials/${materialId}/receive`, 'PUT', { quantityReceived });
-    
+
+    const result = await apiRequest(`/api/foreman/materials/${materialId}`, 'PUT', { quantityUsed });
+
     if (result.success) {
-        showSuccess('Приход подтвержден');
-        await viewProjectDetails(currentProject.id);
+        showSuccess('Расход обновлён');
     } else {
-        showError('Ошибка подтверждения прихода');
+        showError(result.message || 'Ошибка обновления');
     }
 }
 
@@ -478,16 +514,15 @@ async function receiveMaterial(materialId) {
 // =============================================================================
 
 async function completeStage(stageId) {
-    const confirmed = confirm('Отметить этап как завершенный?');
-    if (!confirmed) return;
-    
+    if (!confirm('Отметить этап как завершённый? Это действие необратимо.')) return;
+
     const result = await apiRequest(`/api/foreman/stages/${stageId}/complete`, 'PUT');
-    
+
     if (result.success) {
-        showSuccess('Этап завершен');
-        await viewProjectDetails(currentProject.id);
+        showSuccess('Этап завершён!');
+        await openProjectModal(currentProject.id);
     } else {
-        showError('Ошибка завершения этапа');
+        showError(result.message || 'Ошибка завершения');
     }
 }
 
@@ -496,109 +531,286 @@ async function completeStage(stageId) {
 // =============================================================================
 
 function showUploadPhotosModal(stageId) {
-    const modal = `
+    const modalHtml = `
         <div class="modal fade" id="uploadPhotosModal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">📸 Загрузка фото</h5>
+                        <h5 class="modal-title">📸 Загрузка фото к этапу</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <form id="uploadPhotosForm">
                         <div class="modal-body">
                             <div class="mb-3">
-                                <label class="form-label">Выберите фото (до 10 штук)</label>
-                                <input type="file" class="form-control" id="photoFiles" 
-                                       accept="image/*" multiple required>
+                                <label class="form-label">Фото (до 10 штук)</label>
+                                <input type="file" class="form-control" id="photoFiles"
+                                    accept="image/*" multiple required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Описание</label>
-                                <textarea class="form-control" id="photoDescription" rows="2"></textarea>
+                                <textarea class="form-control" id="photoDescription" rows="2"
+                                    placeholder="Что изображено на фото..."></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                            <button type="submit" class="btn btn-primary">📤 Загрузить</button>
+                            <button type="submit" class="btn btn-primary fw-bold">📤 Загрузить</button>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modal);
-    showModal('uploadPhotosModal');
-    
+        </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('uploadPhotosModal'));
+    modal.show();
+
     document.getElementById('uploadPhotosForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        const formData = new FormData();
+
         const files = document.getElementById('photoFiles').files;
-        
-        if (files.length === 0) {
-            showError('Выберите файлы');
-            return;
-        }
-        
-        if (files.length > 10) {
-            showError('Максимум 10 фото за раз');
-            return;
-        }
-        
-        Array.from(files).forEach(file => {
-            formData.append('photos', file);
-        });
-        
+        if (!files.length) { showError('Выберите файлы'); return; }
+        if (files.length > 10) { showError('Максимум 10 фото'); return; }
+
+        const formData = new FormData();
+        Array.from(files).forEach(f => formData.append('photos', f));
         formData.append('description', document.getElementById('photoDescription').value);
-        
+
         const result = await apiRequest(`/api/foreman/stages/${stageId}/photos`, 'POST', formData);
-        
+
         if (result.success) {
             showSuccess(`Загружено фото: ${result.count}`);
-            hideModal('uploadPhotosModal');
-            await viewProjectDetails(currentProject.id);
+            modal.hide();
+            if (currentProject) await openProjectModal(currentProject.id);
         } else {
-            showError(result.message || 'Ошибка загрузки фото');
+            showError(result.message || 'Ошибка загрузки');
         }
     });
-    
-    document.getElementById('uploadPhotosModal').addEventListener('hidden.bs.modal', function() {
+
+    document.getElementById('uploadPhotosModal').addEventListener('hidden.bs.modal', function () {
         this.remove();
     });
 }
 
 // =============================================================================
-// ГЛОБАЛЬНАЯ ФУНКЦИЯ ДЛЯ КНОПКИ joinProject() В HTML
+// ПРИСОЕДИНЕНИЕ К ПРОЕКТУ
 // =============================================================================
 
-// Эта функция вызывается из dashboard_foreman.html (onclick="joinProject()")
-// НЕ УДАЛЯЙ ЭТУ ФУНКЦИЮ!
-window.joinProject = async function() {
-    const code = document.getElementById('joinCode').value.trim();
-    
-    if (!code) {
-        alert('Введите код проекта!');
-        return;
-    }
-    
-    try {
-        const res = await fetch('/api/foreman/join', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accessCode: code })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            alert('✅ Вы добавлены в проект: ' + data.project.title);
-            document.getElementById('joinCode').value = '';
-            if (typeof loadProjects === 'function') loadProjects();
-        } else {
-            alert('❌ Ошибка: ' + (data.message || 'Проект не найден'));
-        }
-    } catch (error) {
-        console.error(error);
-        alert('❌ Ошибка соединения с сервером');
+window.joinProject = async function () {
+    const code = document.getElementById('joinCode').value.trim().toUpperCase();
+    if (!code) { alert('Введите код проекта!'); return; }
+
+    const data = await apiRequest('/api/foreman/join', 'POST', { accessCode: code });
+
+    if (data.success) {
+        showSuccess('✅ Вы добавлены в проект: ' + data.project.title);
+        document.getElementById('joinCode').value = '';
+        await loadProjects();
+    } else {
+        showError('❌ ' + (data.message || 'Проект не найден'));
     }
 };
+
+// =============================================================================
+// СОГЛАСОВАНИЕ МАТЕРИАЛОВ ОТ СНАБЖЕНЦА
+// =============================================================================
+
+async function loadMaterialApprovals() {
+    const container = document.getElementById('approvalsContainer');
+    container.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-warning"></div></div>`;
+
+    const data = await apiRequest('/api/foreman/material-requests');
+
+    if (!data.success || !data.requests || data.requests.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-check2-all" style="font-size:3rem"></i>
+                <p class="mt-3">Нет материалов ожидающих согласования</p>
+            </div>`;
+        return;
+    }
+
+    const pending = data.requests.filter(r => r.status === 'pending');
+    const badge = document.getElementById('approvalsBadge');
+    if (badge && pending.length > 0) {
+        badge.textContent = pending.length;
+        badge.style.display = 'inline-block';
+    }
+
+    const statusMap = {
+        pending:   { label: 'Ожидает',    cls: 'warning text-dark' },
+        approved:  { label: 'Согласовано', cls: 'success' },
+        rejected:  { label: 'Отклонено',  cls: 'danger' },
+        delivered: { label: 'Доставлено', cls: 'info' }
+    };
+
+    container.innerHTML = `<div class="row g-3">${data.requests.map(r => {
+        const st = statusMap[r.status] || { label: r.status, cls: 'secondary' };
+        return `
+            <div class="col-md-6">
+                <div class="card shadow-sm border-start border-4 border-${st.cls.split(' ')[0]} h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="fw-bold mb-0">${r.material_name}</h6>
+                            <span class="badge bg-${st.cls}">${st.label}</span>
+                        </div>
+                        <p class="mb-1 small"><i class="bi bi-building"></i> ${r.project_title}</p>
+                        <p class="mb-1 small"><strong>Кол-во:</strong> ${r.quantity} ${r.unit || ''}</p>
+                        ${r.supplier_name ? `<p class="mb-1 small"><strong>От снабженца:</strong> ${r.supplier_name}</p>` : ''}
+                        ${r.reason ? `<p class="mb-1 small text-muted">${r.reason}</p>` : ''}
+                        <small class="text-muted">${formatDate(r.created_at)}</small>
+
+                        ${r.status === 'pending' ? `
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="btn btn-success btn-sm flex-fill fw-bold"
+                                    onclick="approveRequest(${r.id})">
+                                    ✅ Согласовать
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                    onclick="rejectRequest(${r.id})">
+                                    ✖
+                                </button>
+                            </div>` : ''}
+
+                        ${r.status === 'delivered' ? `
+                            <div class="alert alert-success py-1 mt-2 mb-0 small">
+                                🚚 Материал доставлен — доступен для списания
+                            </div>` : ''}
+                    </div>
+                </div>
+            </div>`;
+    }).join('')}</div>`;
+}
+
+async function approveRequest(requestId) {
+    const data = await apiRequest(`/api/foreman/material-requests/${requestId}`, 'PUT', {
+        status: 'approved'
+    });
+
+    if (data.success) {
+        showSuccess('✅ Материал согласован — снабженец может заказывать');
+        await loadMaterialApprovals();
+    } else {
+        showError(data.message || 'Ошибка');
+    }
+}
+
+async function rejectRequest(requestId) {
+    const reason = prompt('Причина отказа:');
+    if (reason === null) return;
+
+    const data = await apiRequest(`/api/foreman/material-requests/${requestId}`, 'PUT', {
+        status: 'rejected',
+        notes: reason
+    });
+
+    if (data.success) {
+        showSuccess('Материал отклонён');
+        await loadMaterialApprovals();
+    } else {
+        showError(data.message || 'Ошибка');
+    }
+}
+
+// Счётчик при загрузке
+async function checkPendingApprovals() {
+    const data = await apiRequest('/api/foreman/material-requests');
+    if (data.success && data.requests) {
+        const pending = data.requests.filter(r => r.status === 'pending').length;
+        const badge = document.getElementById('approvalsBadge');
+        if (badge && pending > 0) {
+            badge.textContent = pending;
+            badge.style.display = 'inline-block';
+        }
+    }
+}
+
+// =============================================================================
+// ПРОРАБ СОЗДАЁТ ЗАЯВКУ НА ДОПОЛНИТЕЛЬНЫЙ МАТЕРИАЛ
+// =============================================================================
+
+function showRequestMaterialModal(projectId) {
+    const old = document.getElementById('requestMaterialModal');
+    if (old) old.remove();
+
+    const modalHtml = `
+        <div class="modal fade" id="requestMaterialModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title fw-bold text-dark">
+                            ⚠️ Запросить материал у снабженца
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="requestMaterialForm">
+                        <div class="modal-body">
+                            <div class="alert alert-info small">
+                                Запрос уйдёт снабженцу — он подтвердит и доставит материал
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Материал *</label>
+                                <input type="text" class="form-control" id="req_mat_name"
+                                    placeholder="Название материала" required>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label">Единица</label>
+                                    <input type="text" class="form-control" id="req_mat_unit"
+                                        placeholder="м, шт, кг...">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold">Количество *</label>
+                                    <input type="number" class="form-control" id="req_mat_qty"
+                                        step="0.1" min="0" required>
+                                </div>
+                            </div>
+                            <div class="mb-3 mt-3">
+                                <label class="form-label">Причина / комментарий</label>
+                                <textarea class="form-control" id="req_mat_reason" rows="2"
+                                    placeholder="Почему нужен дополнительный материал..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-link text-muted text-decoration-none"
+                                data-bs-dismiss="modal">Отмена</button>
+                            <button type="submit" class="btn btn-warning fw-bold">
+                                📨 Отправить снабженцу
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    new bootstrap.Modal(document.getElementById('requestMaterialModal')).show();
+
+    document.getElementById('requestMaterialForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const btn = e.target.querySelector('[type=submit]');
+        btn.disabled = true;
+
+        const data = await apiRequest('/api/foreman/material-requests', 'POST', {
+            projectId,
+            materialName: document.getElementById('req_mat_name').value,
+            unit: document.getElementById('req_mat_unit').value,
+            quantity: parseFloat(document.getElementById('req_mat_qty').value),
+            reason: document.getElementById('req_mat_reason').value
+        });
+
+        if (data.success) {
+            showSuccess('Заявка отправлена снабженцу!');
+            bootstrap.Modal.getInstance(document.getElementById('requestMaterialModal')).hide();
+        } else {
+            showError(data.message || 'Ошибка');
+        }
+
+        btn.disabled = false;
+    });
+
+    document.getElementById('requestMaterialModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+    });
+}

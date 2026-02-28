@@ -1,23 +1,63 @@
 /* =============================================================================
-   ЭнергоАтлант - Основные стили
+   ЭнергоАтлант - Индустриальный Дизайн (Aterenergo Style)
    ============================================================================= */
 
-/* Основные переменные */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* Основные переменные (Industrial Dark Palette) */
 :root {
-    --primary-color: #0d6efd;
-    --secondary-color: #6c757d;
-    --success-color: #198754;
-    --danger-color: #dc3545;
-    --warning-color: #ffc107;
-    --info-color: #0dcaf0;
-    --light-color: #f8f9fa;
-    --dark-color: #212529;
+    --primary-color: #ffffff;
+    /* Белый акцент */
+    --primary-hover: #e5e5e5;
+    /* Светло-серый при наведении */
+    --secondary-color: #1f2937;
+    /* Темно-серый для карточек бордеров */
+
+    --bg-dark: #0a0a0a;
+    /* Очень глубокий черный фон */
+    --bg-surface: #111111;
+    /* Поверхность элементов (чуть светлее фона) */
+    --bg-elevated: #1a1a1a;
+    /* Приподнятые элементы */
+
+    --text-main: #ffffff;
+    /* Основной белый текст */
+    --text-muted: #9ca3af;
+    /* Серый текст для описаний */
+
+    --border-color: rgba(255, 255, 255, 0.1);
+    /* Тонкие границы */
+    --border-hover: rgba(255, 255, 255, 0.3);
+    /* Границы при наведении */
+
+    --danger-color: #ef4444;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+
+    --app-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Общие стили */
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--app-font);
+    background-color: var(--bg-dark);
+    color: var(--text-main);
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+}
+
+/* Типографика */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 700;
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 /* Navbar */
@@ -26,57 +66,142 @@ body {
     letter-spacing: -1px;
 }
 
-/* Карточки */
+.navbar-dark .navbar-nav .nav-link {
+    color: var(--text-main);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 0.5rem 1rem;
+    border-bottom: 2px solid transparent;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Карточки (Брутализм) */
 .card {
-    transition: transform 0.2s, box-shadow 0.2s;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    transition: all 0.3s ease;
 }
 
 .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Кнопки */
-.btn {
-    font-weight: 500;
-    padding: 0.5rem 1.5rem;
-    transition: all 0.2s;
-}
-
-.btn:hover {
+    border-color: var(--border-hover);
     transform: translateY(-2px);
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+}
+
+/* Кнопки (Брутальный стиль) */
+.btn {
+    font-family: var(--app-font);
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 0;
+    /* Острые углы */
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #000;
+    border: 1px solid var(--primary-color);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.btn-outline-light {
+    border: 1px solid var(--border-hover);
+    color: var(--text-main);
+    background: transparent;
+}
+
+.btn-outline-light:hover {
+    background-color: var(--primary-color);
+    color: #000;
+    border-color: var(--primary-color);
 }
 
 /* Формы */
-.form-control:focus {
+.form-control,
+.form-select {
+    font-family: var(--app-font);
+    border-radius: 0;
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--bg-elevated);
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    color: var(--text-main);
+    box-shadow: none;
+    /* Убираем стандартное свечение Bootstrap */
 }
 
-/* Таблицы */
+/* Заглушка (Placeholder) цвета */
+.form-control::placeholder {
+    color: var(--text-muted);
+}
+
+/* Таблицы (Для админки/дашборда - адаптируем под темную тему) */
 .table {
-    vertical-align: middle;
+    color: var(--text-main);
+    border-color: var(--border-color);
 }
 
-.table thead {
-    background-color: var(--light-color);
+.table>thead {
+    background-color: var(--bg-surface);
+}
+
+.table>tbody>tr>td {
+    border-color: var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--bg-elevated);
+    color: var(--text-main);
 }
 
 /* Модальные окна */
-.modal-header {
-    border-bottom: 2px solid var(--primary-color);
+.modal-content {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+    color: var(--text-main);
 }
 
-.modal-content {
-    border: none;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
 }
 
 /* Бейджи */
 .badge {
-    padding: 0.5em 0.75em;
-    font-weight: 500;
+    font-weight: 600;
+    padding: 0.4em 0.8em;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
 }
 
 /* Прогресс-бары */
@@ -201,6 +326,7 @@ footer {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -216,11 +342,11 @@ footer {
     .navbar-brand h3 {
         font-size: 1.5rem;
     }
-    
+
     .display-4 {
         font-size: 2rem;
     }
-    
+
     .btn-lg {
         padding: 0.5rem 1rem;
         font-size: 1rem;
@@ -279,4 +405,86 @@ footer {
 .form-check-input:checked {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
+}
+
+/* =============================================================================
+   НОВЫЕ ИНДУСТРИАЛЬНЫЕ УТИЛИТЫ (Aterenergo Style)
+   ============================================================================= */
+
+/* Разделительные линии */
+.divider {
+    height: 1px;
+    background-color: var(--border-color);
+    width: 100%;
+}
+
+/* Иконки-галочки в списках (Как на референсе) */
+.check-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.check-list li {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.check-list li::before {
+    content: '\F633';
+    /* Иконка bi-check-circle-fill */
+    font-family: 'bootstrap-icons';
+    color: var(--primary-color);
+    font-size: 1.25rem;
+    margin-right: 1rem;
+    line-height: 1.2;
+}
+
+/* Акцентные детали (Свечение Glow) */
+.glow-effect {
+    position: relative;
+}
+
+.glow-effect::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    height: 60%;
+    background: rgba(45, 122, 255, 0.15);
+    /* Холодный синий оттенок для подсветки */
+    filter: blur(100px);
+    z-index: -1;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Плавающие Label (Floating Labels) - Адаптация под темную тему */
+.form-floating>.form-control,
+.form-floating>.form-select {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    border-radius: 0;
+}
+
+.form-floating>.form-control:focus {
+    background-color: var(--bg-elevated);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.form-floating>label {
+    color: var(--text-muted);
+}
+
+.form-floating>.form-control:focus~label,
+.form-floating>.form-control:not(:placeholder-shown)~label {
+    color: var(--primary-color);
+    opacity: 0.9;
 }
