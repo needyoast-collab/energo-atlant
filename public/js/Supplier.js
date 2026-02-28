@@ -179,10 +179,10 @@ function renderProjectModal(project, stages, materials) {
 }
 
 function renderMaterialRow(mat) {
-    const approvalStatus = mat.approval_status || 'pending';
+    const approvalStatus = mat.approval_status || 'approved'; // project_materials are already approved/planned
     const approvalBadge = {
-        pending:  '<span class="badge bg-warning text-dark">⏳ На согласовании</span>',
-        approved: '<span class="badge bg-success">✅ Согласовано</span>',
+        pending: '<span class="badge bg-warning text-dark">⏳ На согласовании</span>',
+        approved: '<span class="badge bg-success">✅ Согласовано/План</span>',
         rejected: '<span class="badge bg-danger">❌ Отклонено</span>'
     }[approvalStatus] || '<span class="badge bg-secondary">—</span>';
 
@@ -332,10 +332,10 @@ async function loadMaterialRequests() {
     }
 
     const statusMap = {
-        pending:   { label: 'Новая',       cls: 'warning text-dark' },
-        approved:  { label: 'Принято',     cls: 'primary' },
-        rejected:  { label: 'Отклонено',   cls: 'danger' },
-        delivered: { label: 'Доставлено',  cls: 'success' }
+        pending: { label: 'Новая', cls: 'warning text-dark' },
+        approved: { label: 'Принято', cls: 'primary' },
+        rejected: { label: 'Отклонено', cls: 'danger' },
+        delivered: { label: 'Доставлено', cls: 'success' }
     };
 
     container.innerHTML = `<div class="row g-3">${data.requests.map(r => {

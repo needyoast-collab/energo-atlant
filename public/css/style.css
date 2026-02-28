@@ -4,35 +4,37 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-/* Основные переменные (Industrial Dark Palette) */
+/* Основные переменные (Industrial Dark Palette + Neon Cyberpunk) */
 :root {
-    --primary-color: #ffffff;
-    /* Белый акцент */
-    --primary-hover: #e5e5e5;
-    /* Светло-серый при наведении */
-    --secondary-color: #1f2937;
-    /* Темно-серый для карточек бордеров */
+    --primary-color: #ff9800;
+    /* Электрический оранжевый/неоновый акцент */
+    --primary-hover: #f57c00;
+    /* Оранжевый при наведении */
+    --secondary-color: #1a202c;
+    /* Темно-серый/графитовый для карточек бордеров */
 
-    --bg-dark: #0a0a0a;
+    --bg-dark: #050505;
     /* Очень глубокий черный фон */
-    --bg-surface: #111111;
+    --bg-surface: #0d1117;
     /* Поверхность элементов (чуть светлее фона) */
-    --bg-elevated: #1a1a1a;
+    --bg-elevated: #161b22;
     /* Приподнятые элементы */
 
     --text-main: #ffffff;
     /* Основной белый текст */
-    --text-muted: #9ca3af;
-    /* Серый текст для описаний */
+    --text-muted: #f0f6fc;
+    /* Светло-светло серый/белый текст для описаний */
 
-    --border-color: rgba(255, 255, 255, 0.1);
+    --border-color: rgba(255, 255, 255, 0.08);
     /* Тонкие границы */
-    --border-hover: rgba(255, 255, 255, 0.3);
-    /* Границы при наведении */
+    --border-hover: rgba(255, 152, 0, 0.4);
+    /* Оранжевые границы при наведении */
 
-    --danger-color: #ef4444;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
+    --danger-color: #f85149;
+    --success-color: #2ea043;
+    --warning-color: #d29922;
+    --info-color: #58a6ff;
+    /* Киберпанк голубой */
 
     --app-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
@@ -45,6 +47,54 @@ body {
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     letter-spacing: -0.01em;
+}
+
+/* Переписываем стандартный бутстраповский text-muted, чтобы текст был белым (или очень светлым) */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Прелоадер (Пульсирующее лого) */
+.preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-dark);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+}
+
+.preloader-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.preloader-logo {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--text-main);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    animation: neon-pulse 2s infinite alternate;
+}
+
+.preloader-logo span {
+    color: var(--primary-color);
+}
+
+@keyframes neon-pulse {
+    0% {
+        text-shadow: 0 0 5px rgba(255, 152, 0, 0.2), 0 0 10px rgba(255, 152, 0, 0.2);
+    }
+
+    100% {
+        text-shadow: 0 0 10px rgba(255, 152, 0, 0.8), 0 0 20px rgba(255, 152, 0, 0.5), 0 0 30px rgba(255, 152, 0, 0.3);
+    }
 }
 
 /* Типографика */
@@ -61,7 +111,7 @@ h6 {
 }
 
 /* Navbar */
-.navbar-brand h3 {
+.navbar-brand {
     font-weight: 700;
     letter-spacing: -1px;
 }
@@ -80,9 +130,10 @@ h6 {
 .navbar-dark .navbar-nav .nav-link.active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
+    text-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
 }
 
-/* Карточки (Брутализм) */
+/* Карточки (Индастриал) */
 .card {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
@@ -92,10 +143,10 @@ h6 {
 
 .card:hover {
     border-color: var(--border-hover);
-    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.05);
 }
 
-/* Кнопки (Брутальный стиль) */
+/* Кнопки (Киберпанк/Брутальный стиль) */
 .btn {
     font-family: var(--app-font);
     font-weight: 600;
@@ -106,6 +157,8 @@ h6 {
     text-transform: uppercase;
     transition: all 0.2s ease;
     font-size: 0.875rem;
+    position: relative;
+    overflow: hidden;
 }
 
 .btn-primary {
@@ -119,18 +172,19 @@ h6 {
     background-color: transparent;
     color: var(--primary-color);
     border: 1px solid var(--primary-color);
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.4);
 }
 
 .btn-outline-light {
-    border: 1px solid var(--border-hover);
+    border: 1px solid var(--border-color);
     color: var(--text-main);
     background: transparent;
 }
 
 .btn-outline-light:hover {
-    background-color: var(--primary-color);
-    color: #000;
-    border-color: var(--primary-color);
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Формы */
@@ -138,7 +192,7 @@ h6 {
 .form-select {
     font-family: var(--app-font);
     border-radius: 0;
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
     background-color: var(--bg-elevated);
     border: 1px solid var(--border-color);
     color: var(--text-main);
@@ -147,11 +201,11 @@ h6 {
 
 .form-control:focus,
 .form-select:focus {
-    background-color: var(--bg-elevated);
+    background-color: #111;
     border-color: var(--primary-color);
     color: var(--text-main);
-    box-shadow: none;
-    /* Убираем стандартное свечение Bootstrap */
+    box-shadow: 0 0 0 1px var(--primary-color);
+    /* Резкий контур фокуса */
 }
 
 /* Заглушка (Placeholder) цвета */

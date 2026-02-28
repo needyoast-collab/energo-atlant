@@ -19,9 +19,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadProjects() {
     showLoading('projectsList');
-    
+
     const data = await apiRequest('/api/pto/projects');
-    
+
     if (data.success) {
         currentProjects = data.projects;
         renderProjects(data.projects);
@@ -34,7 +34,7 @@ async function loadProjects() {
 
 function renderProjects(projects) {
     const container = document.getElementById('projectsList');
-    
+
     if (!projects || projects.length === 0) {
         container.innerHTML = `
             <div class="alert alert-info">
@@ -43,9 +43,9 @@ function renderProjects(projects) {
         `;
         return;
     }
-    
+
     let html = '<div class="row">';
-    
+
     projects.forEach(project => {
         html += `
             <div class="col-md-6 mb-3">
@@ -69,9 +69,23 @@ function renderProjects(projects) {
             </div>
         `;
     });
-    
+
     html += '</div>';
     container.innerHTML = html;
+}
+
+async function joinProject() {
+    const code = document.getElementById('joinCode').value.trim().toUpperCase();
+    if (!code) { showError('Введите код проекта!'); return; }
+
+    const data = await apiRequest('/api/pto/join', 'POST', { accessCode: code });
+    if (data.success) {
+        showSuccess('✅ Вы добавлены в проект!');
+        document.getElementById('joinCode').value = '';
+        await loadProjects();
+    } else {
+        showError(data.message || 'Неверный код проекта');
+    }
 }
 
 // =============================================================================
@@ -79,14 +93,16 @@ function renderProjects(projects) {
 // =============================================================================
 
 async function viewProjectDetails(projectId) {
+    new bootstrap.Modal(document.getElementById('projectModal')).show();
     showLoading('projectDetails');
-    
+
     const data = await apiRequest(`/api/pto/projects/${projectId}`);
-    
+
     if (data.success) {
         currentProject = data.project;
         renderProjectDetails(data.project, data.stages, data.documents);
     } else {
+        document.getElementById('projectDetails').innerHTML = '<div class="alert alert-danger">Ошибка загрузки</div>';
         showError('Ошибка загрузки проекта');
     }
 }
@@ -94,7 +110,7 @@ async function viewProjectDetails(projectId) {
 function renderProjectDetails(project, stages, documents) {
     const container = document.getElementById('projectDetails');
     if (!container) return;
-    
+
     let html = `
         <div class="card mb-3">
             <div class="card-header bg-primary text-white">
@@ -123,7 +139,7 @@ function renderProjectDetails(project, stages, documents) {
         
         <h5 class="mt-4 mb-3">Этапы работ</h5>
     `;
-    
+
     if (!stages || stages.length === 0) {
         html += '<div class="alert alert-warning">Этапы еще не созданы</div>';
     } else {
@@ -131,14 +147,14 @@ function renderProjectDetails(project, stages, documents) {
             html += renderStage(stage);
         });
     }
-    
+
     // Документы
     html += `
         <h5 class="mt-4 mb-3">📄 Документы проекта</h5>
         <div class="card">
             <div class="card-body">
     `;
-    
+
     if (!documents || documents.length === 0) {
         html += '<p class="text-muted">Документов пока нет</p>';
     } else {
@@ -146,7 +162,7 @@ function renderProjectDetails(project, stages, documents) {
         const initialDocs = documents.filter(d => d.document_type === 'initial');
         const executiveDocs = documents.filter(d => d.document_type === 'executive');
         const otherDocs = documents.filter(d => !['initial', 'executive'].includes(d.document_type));
-        
+
         if (initialDocs.length > 0) {
             html += '<h6 class="mb-2">📋 Начальные документы:</h6><div class="list-group mb-3">';
             initialDocs.forEach(doc => {
@@ -159,7 +175,7 @@ function renderProjectDetails(project, stages, documents) {
             });
             html += '</div>';
         }
-        
+
         if (executiveDocs.length > 0) {
             html += '<h6 class="mb-2">✅ Исполнительная документация:</h6><div class="list-group mb-3">';
             executiveDocs.forEach(doc => {
@@ -172,7 +188,7 @@ function renderProjectDetails(project, stages, documents) {
             });
             html += '</div>';
         }
-        
+
         if (otherDocs.length > 0) {
             html += '<h6 class="mb-2">📁 Другие документы:</h6><div class="list-group">';
             otherDocs.forEach(doc => {
@@ -186,18 +202,18 @@ function renderProjectDetails(project, stages, documents) {
             html += '</div>';
         }
     }
-    
+
     html += `
             </div>
         </div>
     `;
-    
+
     container.innerHTML = html;
 }
 
 function renderStage(stage) {
     const isCompleted = stage.is_completed === 1;
-    
+
     let html = `
         <div class="card mb-3 ${isCompleted ? 'border-success' : ''}">
             <div class="card-header ${isCompleted ? 'bg-success text-white' : 'bg-light'}">
@@ -226,7 +242,7 @@ function renderStage(stage) {
             </div>
         </div>
     `;
-    
+
     return html;
 }
 
@@ -234,7 +250,7 @@ function renderMaterials(materials) {
     if (!materials || materials.length === 0) {
         return '<p class="text-muted">Материалы не добавлены</p>';
     }
-    
+
     let html = '<div class="table-responsive"><table class="table table-sm">';
     html += `
         <thead>
@@ -248,12 +264,12 @@ function renderMaterials(materials) {
         </thead>
         <tbody>
     `;
-    
+
     materials.forEach(mat => {
-        const percentage = mat.quantity_planned > 0 
-            ? Math.round((mat.quantity_used / mat.quantity_planned) * 100) 
+        const percentage = mat.quantity_planned > 0
+            ? Math.round((mat.quantity_used / mat.quantity_planned) * 100)
             : 0;
-        
+
         html += `
             <tr>
                 <td>${mat.material_name}</td>
@@ -271,7 +287,7 @@ function renderMaterials(materials) {
             </tr>
         `;
     });
-    
+
     html += '</tbody></table></div>';
     return html;
 }
@@ -280,7 +296,7 @@ function renderPhotos(photos) {
     if (!photos || photos.length === 0) {
         return '<p class="text-muted">Фото пока нет</p>';
     }
-    
+
     let html = '<div class="row">';
     photos.forEach(photo => {
         html += `
@@ -337,40 +353,40 @@ function showUploadDocumentsModal(projectId) {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modal);
     showModal('uploadDocumentsModal');
-    
+
     document.getElementById('uploadDocumentsForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const formData = new FormData();
         const files = document.getElementById('documentFiles').files;
-        
+
         if (files.length === 0) {
             showError('Выберите файлы');
             return;
         }
-        
+
         if (files.length > 10) {
             showError('Максимум 10 файлов за раз');
             return;
         }
-        
+
         Array.from(files).forEach(file => {
             formData.append('documents', file);
         });
-        
+
         formData.append('description', document.getElementById('documentDescription').value);
-        
+
         showInfo('Загрузка файлов...');
-        
+
         const result = await apiRequest(`/api/pto/projects/${projectId}/documents`, 'POST', formData);
-        
+
         if (result.success) {
             showSuccess(`Загружено документов: ${result.count}`);
             hideModal('uploadDocumentsModal');
-            
+
             // Обновляем детали проекта если он открыт
             if (currentProject && currentProject.id === projectId) {
                 await viewProjectDetails(projectId);
@@ -379,8 +395,8 @@ function showUploadDocumentsModal(projectId) {
             showError(result.message || 'Ошибка загрузки документов');
         }
     });
-    
-    document.getElementById('uploadDocumentsModal').addEventListener('hidden.bs.modal', function() {
+
+    document.getElementById('uploadDocumentsModal').addEventListener('hidden.bs.modal', function () {
         this.remove();
     });
 }

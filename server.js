@@ -8,6 +8,12 @@ const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const XLSX = require('xlsx');
+const { OpenAI } = require("openai");
+
+const openai = new OpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: "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"
+});
 
 const {
     requireAuth,
@@ -132,7 +138,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
         'foreman': 'dashboard_foreman.html',
         'supplier': 'dashboard_supplier.html',
         'pto': 'dashboard_pto.html',
-        'customer': 'dashboard_customer.html'
+        'customer': 'dashboard_customer.html',
+        'partner': 'dashboard_partner.html'
     };
 
     const file = dashboards[role] || 'dashboard_customer.html';
@@ -440,6 +447,115 @@ app.post('/api/manager/projects', requireManagerOrAdmin, upload.array('documents
     }
 });
 
+// ============================================================
+// ИИ: АНАЛИЗ ВОМ И ВОР
+// ============================================================
+app.post('/api/manager/ai-analyze', requireManagerOrAdmin, upload.single('document'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, message: "Файл не загружен" });
+
+        console.log(`[ИИ] Нейросеть OpenRouter анализирует файл: ${req.file.originalname}`);
+
+        const mimeType = req.file.mimetype;
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+        if (mimeType === 'application/pdf') {
+            return res.status(400).json({ success: false, message: "Пожалуйста, загрузите картинку (JPG/PNG). OpenRouter временно не принимает PDF напрямую." });
+        }
+        if (!validTypes.includes(mimeType)) {
+            return res.status(400).json({ success: false, message: "ИИ поддерживает только изображения (JPG, PNG)" });
+        }
+
+        // Читаем файл в base64
+        const fileData = fs.readFileSync(req.file.path);
+        const base64Data = Buffer.from(fileData).toString("base64");
+        const dataUrl = `data:${mimeType};base64,${base64Data}`;
+
+        const prompt = `Ты - опытный инженер-сметчик и снабженец строительной компании. 
+Твоя задача: изучить предоставленный файл (это может быть проектная документация, чертёж спецификации, смета или список).
+Извлеки из него все строительно-монтажные работы (этапы работ) и все требуемые материалы.
+Обязательно игнорируй любые цены и стоимости, нас интересуют только физические объёмы для закупки и проведения работ.
+
+Верни ТОЛЬКО валидный JSON-объект, содержащий два массива ("works" и "materials"). Без лишнего текста, без markdown блоков! 
+Пример формата:
+{
+  "works": [
+    { "name": "Установка опор", "unit": "шт", "quantity": 10 }
+  ],
+  "materials": [
+    { "name": "Опора железобетонная", "unit": "шт", "quantity": 10.5 }
+  ]
+}`;
+
+        const response = await openai.chat.completions.create({
+            model: "google/gemma-3-27b-it:free",
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: prompt },
+                        { type: "image_url", image_url: { url: dataUrl } }
+                    ]
+                }
+            ]
+        });
+
+        let jsonText = response.choices[0].message.content.trim();
+
+        // Очищаем от возможных markdown тегов, которые любит добавлять нейросеть
+        if (jsonText.startsWith('\`\`\`json')) jsonText = jsonText.replace(/^\`\`\`json/, '');
+        if (jsonText.startsWith('\`\`\`')) jsonText = jsonText.replace(/^\`\`\`/, '');
+        if (jsonText.endsWith('\`\`\`')) jsonText = jsonText.replace(/\`\`\`$/, '');
+        jsonText = jsonText.trim();
+
+        let aiData;
+        try {
+            aiData = JSON.parse(jsonText);
+        } catch (parseError) {
+            console.error("Не удалось распарсить JSON от ИИ:", jsonText);
+            return res.status(500).json({ success: false, message: "ИИ вернул ответ в неверном формате. Попробуйте снова." });
+        }
+
+        res.json({
+            success: true,
+            data: aiData
+        });
+
+    } catch (error) {
+        console.error('Ошибка ИИ API:', error);
+        res.status(500).json({ success: false, message: "Сбой на стороне нейросети (API). Убедитесь, что размер файла не превышает лимиты." });
+    }
+});
+
+app.post('/api/manager/projects/:id/apply-ai-estimate', requireManagerOrAdmin, async (req, res) => {
+    try {
+        const { works, materials } = req.body;
+        const projectId = req.params.id;
+
+        // 1. Создаем один общий этап работ (или несколько)
+        const stageRes = await dbRun(
+            "INSERT INTO project_stages (project_id, stage_number, name, description, created_by) VALUES (?, ?, ?, ?, ?)",
+            [projectId, 1, "Основные работы (по смете ИИ)", "Сгенерировано нейросетью из загруженной документации", req.session.userId]
+        );
+        const stageId = stageRes.id;
+
+        // 2. Вставляем все материалы с привязкой к этому этапу
+        if (materials && materials.length > 0) {
+            for (const mat of materials) {
+                await dbRun(
+                    "INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned) VALUES (?, ?, ?, ?)",
+                    [stageId, mat.name, mat.unit, mat.quantity]
+                );
+            }
+        }
+
+        res.json({ success: true, message: "Смета прикреплена к проекту" });
+    } catch (error) {
+        console.error('Ошибка сохранения ИИ сметы:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
 // Получение проектов менеджера
 app.get('/api/manager/projects', requireManagerOrAdmin, async (req, res) => {
     try {
@@ -482,6 +598,67 @@ app.put('/api/manager/projects/:id', requireManagerOrAdmin, async (req, res) => 
         res.json({ success: true, message: "Проект обновлен" });
     } catch (error) {
         console.error('Ошибка обновления проекта:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// Завершение проекта (загрузка Акта + SMS подписание)
+app.put('/api/manager/projects/:id/complete', requireManagerOrAdmin, upload.single('act'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "Необходимо загрузить скан-копию Акта выполненных работ" });
+        }
+
+        const smsCode = req.body.smsCode;
+        if (!smsCode || smsCode.length < 4) {
+            return res.status(400).json({ success: false, message: "Необходим корректный СМС-код от заказчика" });
+        }
+
+        const projectId = req.params.id;
+
+        // 1. Сохраняем Акт (указываем что подписан по смс)
+        await dbRun(
+            "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, 'act', ?, ?, ?, ?)",
+            [projectId, req.file.originalname, req.file.path, req.session.userId, `Акт выполненных работ (Подписан по СМС: ${smsCode})`]
+        );
+
+        // 2. Закрываем проект
+        await dbRun(
+            "UPDATE projects SET status = 'completed' WHERE id = ? AND manager_id = ?",
+            [projectId, req.session.userId]
+        );
+
+        res.json({ success: true, message: "Проект успешно завершен, Акт подписан по СМС и загружен" });
+    } catch (error) {
+        console.error('Ошибка завершения проекта:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// Получить документы проекта для менеджера
+app.get('/api/manager/projects/:id/documents', requireManagerOrAdmin, async (req, res) => {
+    try {
+        const documents = await dbAll(
+            "SELECT * FROM project_documents WHERE project_id = ? ORDER BY uploaded_at DESC",
+            [req.params.id]
+        );
+        res.json({ success: true, documents });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// Загрузить новый документ (договор, РД и т.д.)
+app.post('/api/manager/projects/:id/documents', requireManagerOrAdmin, upload.single('document'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, message: "Файл не выбран" });
+
+        await dbRun(
+            "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?, ?)",
+            [req.params.id, req.body.docType || 'other', req.file.originalname, req.file.path, req.session.userId, req.body.description || '']
+        );
+        res.json({ success: true, message: "Документ загружен" });
+    } catch (error) {
         res.status(500).json({ success: false, message: "Ошибка сервера" });
     }
 });

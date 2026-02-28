@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,16 +9,18 @@
     <link href="/css/style.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
-<body class="bg-light">
+
+<body>
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#">⚡ ЭнергоАтлант <span class="badge bg-primary ms-2" style="font-size: 0.6em; vertical-align: top;">MANAGER</span></a>
-            
+            <a class="navbar-brand fw-bold" href="#">⚡ ЭнергоАтлант <span class="badge bg-primary ms-2"
+                    style="font-size: 0.6em; vertical-align: top;">MANAGER</span></a>
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item me-3">
@@ -36,9 +39,9 @@
     </nav>
 
     <div class="container-fluid px-4">
-        
+
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h3 mb-0 text-dark"><i class="bi bi-speedometer2"></i> Панель управления</h2>
+            <h2 class="h3 mb-0 text-white"><i class="bi bi-speedometer2"></i> Панель управления</h2>
             <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createProjectModal">
                 <i class="bi bi-plus-lg"></i> Новый проект
             </button>
@@ -46,27 +49,31 @@
 
         <ul class="nav nav-tabs mb-4" id="managerTabs" role="tablist">
             <li class="nav-item">
-                <button class="nav-link active fw-bold" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projectsPanel">
+                <button class="nav-link active fw-bold" id="projects-tab" data-bs-toggle="tab"
+                    data-bs-target="#projectsPanel">
                     🏗 Активные проекты
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link fw-bold position-relative" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requestsPanel">
-                    📬 Новые заявки 
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="newRequestsBadge" style="display:none">
+                <button class="nav-link fw-bold position-relative" id="requests-tab" data-bs-toggle="tab"
+                    data-bs-target="#requestsPanel">
+                    📬 Новые заявки
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                        id="newRequestsBadge" style="display:none">
                         0
                     </span>
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link text-muted" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archivePanel">
+                <button class="nav-link text-muted" id="archive-tab" data-bs-toggle="tab"
+                    data-bs-target="#archivePanel">
                     🗄 Архив заявок
                 </button>
             </li>
         </ul>
 
         <div class="tab-content" id="managerTabsContent">
-            
+
             <div class="tab-pane fade show active" id="projectsPanel">
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-0">
@@ -114,7 +121,7 @@
                     <h5 class="modal-title"><i class="bi bi-folder-plus"></i> Новый проект</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                
+
                 <form id="createProjectForm">
                     <div class="modal-body">
                         <input type="hidden" id="p_customerId" name="customerId">
@@ -127,12 +134,14 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Название проекта *</label>
-                            <input type="text" class="form-control" id="p_title" name="title" required placeholder="Например: Реконструкция ПС-110">
+                            <input type="text" class="form-control" id="p_title" name="title" required
+                                placeholder="Например: Реконструкция ПС-110">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Адрес объекта</label>
-                            <input type="text" class="form-control" id="p_address" name="address" placeholder="Адрес проведения работ">
+                            <input type="text" class="form-control" id="p_address" name="address"
+                                placeholder="Адрес проведения работ">
                         </div>
 
                         <div class="mb-3">
@@ -174,15 +183,16 @@
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div class="mt-4">
                             <label class="form-label"><i class="bi bi-paperclip"></i> Документы (ТЗ, Сметы)</label>
                             <input type="file" class="form-control" id="p_files" name="documents" multiple>
                         </div>
                     </div>
-                    
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Отмена</button>
+
+                    <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                        <button type="button" class="btn btn-link text-muted text-decoration-none"
+                            data-bs-dismiss="modal">Отмена</button>
                         <button type="submit" class="btn btn-primary px-4 fw-bold">Создать проект</button>
                     </div>
                 </form>
@@ -200,12 +210,13 @@
             try {
                 const res = await fetch('/api/user/me');
                 const data = await res.json();
-                if(data.success) {
+                if (data.success) {
                     // Используем full_name, если оно есть
                     document.getElementById('userName').innerText = data.user.full_name || data.user.login || 'Менеджер';
                 }
-            } catch (e) {}
+            } catch (e) { }
         });
     </script>
 </body>
+
 </html>

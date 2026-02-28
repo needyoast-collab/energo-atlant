@@ -1,145 +1,219 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Услуги - ЭнергоАтлант</title>
+    <!-- Bootstrap 5 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS (Industrial Dark Design System + Neon) -->
     <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .page-header {
+            padding: 120px 0 60px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-custom {
+            background-color: rgba(5, 5, 5, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--text-main) !important;
+            letter-spacing: 0.05em;
+        }
+
+        .navbar-brand span {
+            color: var(--text-muted);
+        }
+
+        .service-card {
+            height: 100%;
+            padding: 2.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .service-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 15px rgba(255, 152, 0, 0.3);
+        }
+
+        .service-price {
+            font-size: 1.25rem;
+            color: var(--text-main);
+            font-weight: 700;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px dashed var(--border-color);
+        }
+    </style>
 </head>
+
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <!-- Прелоадер -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-logo">Энерго<span>Атлант</span></div>
+    </div>
+
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <h3 class="mb-0">⚡ ЭнергоАтлант</h3>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+            <a class="navbar-brand text-uppercase" href="/index.html">Энерго<span>Атлант</span></a>
+            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav">
+                <i class="bi bi-list fs-2 text-white"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Главная</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/services.html">Услуги</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/login.html">Вход</a>
-                    </li>
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="/index.html">Главная</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/services.html">Услуги</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/portfolio.html">Портфолио</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/partners.html">Партнерам</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/contact.html">Контакты</a></li>
                 </ul>
+                <div class="d-flex align-items-center gap-4">
+                    <div class="contact-info d-none d-xl-block">
+                        <a href="tel:+74950000000" class="text-white text-decoration-none fw-bold">+7 (921)
+                            000-00-00</a>
+                    </div>
+                    <a href="/login.html" class="btn btn-primary text-black fw-bold">КАБИНЕТ</a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Hero -->
-    <section class="bg-light py-5">
-        <div class="container text-center">
-            <h1 class="display-4">Наши услуги</h1>
-            <p class="lead text-muted">Профессиональные электромонтажные работы любой сложности</p>
+    <!-- Заголовок страницы -->
+    <section class="page-header">
+        <div class="container">
+            <h1 class="display-4 fw-bold text-uppercase mb-3">Наши услуги</h1>
+            <p class="lead text-muted max-w-75">
+                Мы предлагаем полный спектр услуг по проектированию, строительству и реконструкции объектов энергетики.
+                Гарантируем соблюдение сроков, использование современных материалов и прозрачную отчетность.
+            </p>
         </div>
     </section>
 
-    <!-- Services -->
-    <section class="py-5">
-        <div class="container">
+    <!-- Услуги Подробно -->
+    <section class="py-5 bg-dark">
+        <div class="container py-5">
             <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="display-4 text-primary mb-3">⚡</div>
-                            <h4 class="card-title">Электромонтажные работы</h4>
-                            <p class="card-text">
-                                Полный комплекс электромонтажных работ для промышленных и гражданских объектов.
-                                Монтаж кабельных линий, электрооборудования, систем освещения.
-                            </p>
-                            <ul>
-                                <li>Прокладка кабельных линий</li>
-                                <li>Монтаж распределительных щитов</li>
-                                <li>Установка электрооборудования</li>
-                                <li>Системы освещения</li>
-                            </ul>
+                <!-- Услуга 1 -->
+                <div class="col-lg-6">
+                    <div class="card service-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <i class="bi bi-bezier2 service-icon"></i>
+                            <span class="badge bg-primary text-black rounded-0 fs-6">ХИТ</span>
                         </div>
+                        <h3 class="mb-4">СТРОИТЕЛЬСТВО ЛЭП И ВЛ</h3>
+                        <p class="text-muted mb-4 fs-5">Проектирование и монтаж воздушных и кабельных линий
+                            электропередач напряжением от 0.4 кВ до 110 кВ под ключ.</p>
+                        <ul class="check-list mb-auto">
+                            <li>Монтаж опор (СВ-95, СВ-105, СВ-110, металлические решетчатые опоры)</li>
+                            <li>Подвес провода СИП и неизолированных проводов</li>
+                            <li>Прокладка кабельных линий в траншее и кабельных сооружениях</li>
+                            <li>Реконструкция существующих линий</li>
+                            <li>Получение разрешительной документации</li>
+                        </ul>
+                        <div class="service-price">От 500 000 ₽</div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="display-4 text-primary mb-3">🏗️</div>
-                            <h4 class="card-title">Реконструкция подстанций</h4>
-                            <p class="card-text">
-                                Комплексная реконструкция и модернизация трансформаторных подстанций
-                                и распределительных устройств.
-                            </p>
-                            <ul>
-                                <li>Замена силовых трансформаторов</li>
-                                <li>Модернизация РУ</li>
-                                <li>Обновление систем защиты и автоматики</li>
-                                <li>Пусконаладочные работы</li>
-                            </ul>
-                        </div>
+                <!-- Услуга 2 -->
+                <div class="col-lg-6">
+                    <div class="card service-card">
+                        <i class="bi bi-lightning-charge service-icon"></i>
+                        <h3 class="mb-4">МОНТАЖ И ПУСКОНАЛАДКА КТП / РТП</h3>
+                        <p class="text-muted mb-4 fs-5">Комплексные работы по установке трансформаторных подстанций
+                            различных типов и мощностей.</p>
+                        <ul class="check-list mb-auto">
+                            <li>Установка киосковых, мачтовых и столбовых КТП</li>
+                            <li>Строительство и монтаж закрытых подстанций (ЗТП, РТП)</li>
+                            <li>Сборка ячеек КРУ, КСО, ЩО-70</li>
+                            <li>Проведение полного комплекса пусконаладочных работ с выдачей протоколов лаборатории</li>
+                        </ul>
+                        <div class="service-price">От 850 000 ₽</div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="display-4 text-primary mb-3">📋</div>
-                            <h4 class="card-title">Проектирование</h4>
-                            <p class="card-text">
-                                Разработка проектной документации для объектов любой сложности.
-                                Согласование в надзорных органах.
-                            </p>
-                            <ul>
-                                <li>Рабочая документация</li>
-                                <li>Расчеты электрических нагрузок</li>
-                                <li>Схемы электроснабжения</li>
-                                <li>Согласование проектов</li>
-                            </ul>
-                        </div>
+                <!-- Услуга 3 -->
+                <div class="col-lg-6">
+                    <div class="card service-card">
+                        <i class="bi bi-cone-striped service-icon"></i>
+                        <h3 class="mb-4">ГОРИЗОНТАЛЬНО-НАПРАВЛЕННОЕ БУРЕНИЕ (ГНБ)</h3>
+                        <p class="text-muted mb-4 fs-5">Бестраншейная прокладка коммуникаций под автомобильными
+                            дорогами, реками и другими преградами.</p>
+                        <ul class="check-list mb-auto">
+                            <li>Бурение пилотной скважины</li>
+                            <li>Последовательное расширение скважины до нужного диаметра</li>
+                            <li>Затягивание трубопровода ПНД для кабельных линий</li>
+                            <li>Сварка ПНД труб встык и электромуфтовая сварка</li>
+                        </ul>
+                        <div class="service-price">От 2 500 ₽ / метр</div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="display-4 text-primary mb-3">📄</div>
-                            <h4 class="card-title">Исполнительная документация</h4>
-                            <p class="card-text">
-                                Оформление полного комплекта исполнительной документации.
-                                Подготовка к сдаче объекта в эксплуатацию.
-                            </p>
-                            <ul>
-                                <li>Исполнительные схемы</li>
-                                <li>Акты скрытых работ</li>
-                                <li>Протоколы испытаний</li>
-                                <li>Паспорта оборудования</li>
-                            </ul>
-                        </div>
+                <!-- Услуга 4 -->
+                <div class="col-lg-6">
+                    <div class="card service-card">
+                        <i class="bi bi-building-add service-icon"></i>
+                        <h3 class="mb-4">ПРОЕКТИРОВАНИЕ ОБЪЕКТОВ ЭНЕРГЕТИКИ</h3>
+                        <p class="text-muted mb-4 fs-5">Разработка проектной и рабочей документации на строительство и
+                            реконструкцию.</p>
+                        <ul class="check-list mb-auto">
+                            <li>Сбор исходно-разрешительной документации</li>
+                            <li>Проведение инженерных изысканий (геодезия, геология)</li>
+                            <li>Разработка стадий "П" (Проект) и "Р" (Рабочая документация)</li>
+                            <li>Согласование проекта во всех инстанциях и прохождение экспертизы</li>
+                        </ul>
+                        <div class="service-price">Индивидуальный расчет</div>
                     </div>
                 </div>
+            </div>
+
+            <div class="mt-5 text-center">
+                <a href="/contact.html" class="btn btn-primary btn-lg">ОСТАВИТЬ ЗАЯВКУ НА РАСЧЕТ</a>
             </div>
         </div>
     </section>
 
-    <!-- CTA -->
-    <section class="py-5 bg-primary text-white">
-        <div class="container text-center">
-            <h2 class="mb-4">Нужна консультация?</h2>
-            <p class="lead mb-4">Зарегистрируйтесь и создайте заявку на проект</p>
-            <a href="/register.html" class="btn btn-light btn-lg">Начать работу</a>
-        </div>
-    </section>
-
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4">
-        <div class="container text-center">
-            <p class="mb-0">&copy; 2026 ЭнергоАтлант. Все права защищены.</p>
+    <footer class="bg-surface py-4 border-top" style="border-color: var(--border-color) !important;">
+        <div class="container text-center text-md-start">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <div class="text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">&copy;
+                        2026 ООО "ЭнергоАтлант". ВСЕ ПРАВА ЗАЩИЩЕНЫ.</div>
+                </div>
+                <div class="col-md-6 text-md-end text-muted text-uppercase"
+                    style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                    ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ
+                </div>
+            </div>
         </div>
     </footer>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Прелоадер
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                document.getElementById('preloader').classList.add('preloader-hidden');
+            }, 500);
+        });
+    </script>
 </body>
+
 </html>

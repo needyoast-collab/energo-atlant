@@ -14,7 +14,7 @@ const db = new sqlite3.Database('./energo.db');
 
 db.serialize(() => {
     console.log("🔄 Удаление старых таблиц...");
-    
+
     // 1. Очистка старых таблиц
     db.run("DROP TABLE IF EXISTS material_requests");
     db.run("DROP TABLE IF EXISTS project_materials");
@@ -35,7 +35,7 @@ db.serialize(() => {
         password TEXT NOT NULL,
         email TEXT UNIQUE,
         phone TEXT,
-        role TEXT NOT NULL CHECK(role IN ('admin', 'manager', 'foreman', 'supplier', 'pto', 'customer')),
+        role TEXT NOT NULL CHECK(role IN ('admin', 'manager', 'foreman', 'supplier', 'pto', 'customer', 'partner')),
         full_name TEXT NOT NULL,
         organization TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -92,7 +92,7 @@ db.serialize(() => {
     db.run(`CREATE TABLE project_documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
-        document_type TEXT CHECK(document_type IN ('initial', 'technical', 'executive', 'contract', 'other')),
+        document_type TEXT CHECK(document_type IN ('initial', 'technical', 'executive', 'contract', 'act', 'other')),
         file_name TEXT NOT NULL,
         file_path TEXT NOT NULL,
         uploaded_by INTEGER NOT NULL,
@@ -184,18 +184,19 @@ db.serialize(() => {
 
     // 11. СОЗДАНИЕ БАЗОВЫХ ПОЛЬЗОВАТЕЛЕЙ
     console.log("🔄 Создание пользователей...");
-    
+
     const users = [
         { login: "admin", password: "admin123", email: "admin@energo.ru", phone: "+70000000000", role: "admin", full_name: "Главный Администратор" },
         { login: "manager1", password: "manager123", email: "manager@energo.ru", phone: "+71111111111", role: "manager", full_name: "Алексей Менеджеров" },
         { login: "konstantin", password: "foreman123", email: "konstantin@energo.ru", phone: "+79000000000", role: "foreman", full_name: "Константин Каракчиев" },
         { login: "snab", password: "supplier123", email: "snab@energo.ru", phone: "+72222222222", role: "supplier", full_name: "Иван Снабженцев" },
         { login: "pto", password: "pto123", email: "pto@energo.ru", phone: "+73333333333", role: "pto", full_name: "Сергей Инженеров" },
-        { login: "customer1", password: "customer123", email: "customer@test.ru", phone: "+74444444444", role: "customer", full_name: "Тестовый Заказчик", organization: "ООО Тест" }
+        { login: "customer1", password: "customer123", email: "customer@test.ru", phone: "+74444444444", role: "customer", full_name: "Тестовый Заказчик", organization: "ООО Тест" },
+        { login: "partner1", password: "partner123", email: "partner@test.ru", phone: "+75555555555", role: "partner", full_name: "Игорь Партнеров", organization: "Агентство" }
     ];
 
     const stmt = db.prepare("INSERT INTO users (login, password, email, phone, role, full_name, organization) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    
+
     let completed = 0;
     users.forEach(user => {
         bcrypt.hash(user.password, 10, (err, hash) => {

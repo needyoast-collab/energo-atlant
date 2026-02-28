@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="/css/style.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+
+<body>
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-secondary mb-4 shadow-sm">
         <div class="container-fluid">
@@ -20,8 +22,7 @@
             <div class="d-flex align-items-center gap-2">
                 <!-- Ввод кода проекта прямо в navbar -->
                 <div class="input-group input-group-sm d-none d-md-flex" style="width:260px;">
-                    <input type="text" id="joinCode" class="form-control"
-                        placeholder="Код проекта (PRJ-XXXX)"
+                    <input type="text" id="joinCode" class="form-control" placeholder="Код проекта (PRJ-XXXX)"
                         style="text-transform:uppercase; letter-spacing:1px;">
                     <button class="btn btn-warning fw-bold" onclick="joinProject()">
                         <i class="bi bi-link-45deg"></i> Добавить
@@ -40,22 +41,20 @@
         <!-- Главный переключатель: Этапы / Материалы -->
         <ul class="nav nav-tabs mb-4" id="foremanTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold" id="tab-projects-btn"
-                    data-bs-toggle="tab" data-bs-target="#tabProjects" type="button">
+                <button class="nav-link active fw-bold" id="tab-projects-btn" data-bs-toggle="tab"
+                    data-bs-target="#tabProjects" type="button">
                     🛠 Этапы работ
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold" id="tab-materials-btn"
-                    data-bs-toggle="tab" data-bs-target="#tabMaterials" type="button"
-                    onclick="loadAllMaterials()">
+                <button class="nav-link fw-bold" id="tab-materials-btn" data-bs-toggle="tab"
+                    data-bs-target="#tabMaterials" type="button" onclick="loadAllMaterials()">
                     📦 Материалы
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold" id="tab-approvals-btn"
-                    data-bs-toggle="tab" data-bs-target="#tabApprovals" type="button"
-                    onclick="loadMaterialApprovals()">
+                <button class="nav-link fw-bold" id="tab-approvals-btn" data-bs-toggle="tab"
+                    data-bs-target="#tabApprovals" type="button" onclick="loadMaterialApprovals()">
                     ✅ Согласование
                     <span class="badge bg-danger ms-1" id="approvalsBadge" style="display:none;">0</span>
                 </button>
@@ -72,8 +71,8 @@
                     <div class="card-body">
                         <h6 class="mb-2">👷 Добавить объект по коду</h6>
                         <div class="d-flex gap-2">
-                            <input type="text" id="joinCodeMobile" class="form-control"
-                                placeholder="PRJ-XXXX" style="text-transform:uppercase;">
+                            <input type="text" id="joinCodeMobile" class="form-control" placeholder="PRJ-XXXX"
+                                style="text-transform:uppercase;">
                             <button class="btn btn-warning fw-bold" onclick="joinProjectMobile()">OK</button>
                         </div>
                     </div>
@@ -107,18 +106,18 @@
             </div>
         </div>
 
-            <!-- ===== ВКЛАДКА СОГЛАСОВАНИЕ ===== -->
-            <div class="tab-pane fade" id="tabApprovals" role="tabpanel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">Материалы от снабженца — ожидают согласования</h4>
-                </div>
-                <div id="approvalsContainer">
-                    <div class="text-center py-4">
-                        <div class="spinner-border text-warning"></div>
-                    </div>
+        <!-- ===== ВКЛАДКА СОГЛАСОВАНИЕ ===== -->
+        <div class="tab-pane fade" id="tabApprovals" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Материалы от снабженца — ожидают согласования</h4>
+            </div>
+            <div id="approvalsContainer">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-warning"></div>
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Модальное окно деталей проекта -->
@@ -126,11 +125,13 @@
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold text-dark" id="modalTitle">Объект</h5>
+                    <h5 class="modal-title fw-bold text-white" id="modalTitle">Объект</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="modalBody">
-                    <div class="text-center py-4"><div class="spinner-border text-warning"></div></div>
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-warning"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -158,4 +159,5 @@
         }
     </script>
 </body>
+
 </html>

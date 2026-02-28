@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+
+<body>
     <div class="container">
         <div class="row justify-content-center align-items-center min-vh-100 py-5">
             <div class="col-md-6">
@@ -23,8 +25,8 @@
                         <form id="registerForm" class="needs-validation" novalidate>
                             <div class="mb-3">
                                 <label for="login" class="form-label">Логин *</label>
-                                <input type="text" class="form-control" id="login" 
-                                       placeholder="Придумайте логин" required minlength="3">
+                                <input type="text" class="form-control" id="login" placeholder="Придумайте логин"
+                                    required minlength="3">
                                 <div class="invalid-feedback">
                                     Минимум 3 символа
                                 </div>
@@ -32,8 +34,8 @@
 
                             <div class="mb-3">
                                 <label for="password" class="form-label">Пароль *</label>
-                                <input type="password" class="form-control" id="password" 
-                                       placeholder="Минимум 6 символов" minlength="6" required>
+                                <input type="password" class="form-control" id="password"
+                                    placeholder="Минимум 6 символов" minlength="6" required>
                                 <div class="invalid-feedback">
                                     Минимум 6 символов
                                 </div>
@@ -41,17 +43,14 @@
 
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" 
-                                       placeholder="example@mail.ru">
+                                <input type="email" class="form-control" id="email" placeholder="example@mail.ru">
                             </div>
 
                             <div class="mb-3">
                                 <label for="phone" class="form-label">Телефон *</label>
-                                <input type="tel" class="form-control" id="phone" 
-                                       placeholder="+79991234567"
-                                       pattern="^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$"
-                                       title="Формат: +79991234567 или 89991234567"
-                                       required>
+                                <input type="tel" class="form-control" id="phone" placeholder="+79991234567"
+                                    pattern="^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$"
+                                    title="Формат: +79991234567 или 89991234567" required>
                                 <div class="invalid-feedback">
                                     Введите корректный номер телефона
                                 </div>
@@ -60,8 +59,8 @@
 
                             <div class="mb-3">
                                 <label for="fullName" class="form-label">ФИО *</label>
-                                <input type="text" class="form-control" id="fullName" 
-                                       placeholder="Иванов Иван Иванович" required>
+                                <input type="text" class="form-control" id="fullName" placeholder="Иванов Иван Иванович"
+                                    required>
                                 <div class="invalid-feedback">
                                     Введите ФИО
                                 </div>
@@ -69,8 +68,8 @@
 
                             <div class="mb-3">
                                 <label for="organization" class="form-label">Организация</label>
-                                <input type="text" class="form-control" id="organization" 
-                                       placeholder="ООО Название (необязательно)">
+                                <input type="text" class="form-control" id="organization"
+                                    placeholder="ООО Название (необязательно)">
                             </div>
 
                             <div class="mb-3 form-check">
@@ -89,7 +88,7 @@
 
                             <div class="text-center">
                                 <p class="mb-0">
-                                    Уже есть аккаунт? 
+                                    Уже есть аккаунт?
                                     <a href="/login.html" class="text-primary">Войти</a>
                                 </p>
                             </div>
@@ -106,22 +105,22 @@
 
     <script>
         // РЕГИСТРАЦИЯ
-        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        document.getElementById('registerForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const form = e.target;
             const alertBox = document.getElementById('alertBox');
             const submitBtn = document.getElementById('submitBtn');
-            
+
             // Сброс ошибок
             alertBox.classList.add('d-none');
-            
+
             // Валидация формы
             if (!form.checkValidity()) {
                 form.classList.add('was-validated');
                 return;
             }
-            
+
             // Собираем данные
             const formData = {
                 login: document.getElementById('login').value.trim(),
@@ -131,27 +130,27 @@
                 fullName: document.getElementById('fullName').value.trim(),
                 organization: document.getElementById('organization').value.trim()
             };
-            
+
             // Блокируем кнопку
             submitBtn.disabled = true;
             const originalText = submitBtn.innerText;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Регистрация...';
-            
+
             try {
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // УСПЕХ
                     alertBox.className = 'alert alert-success';
                     alertBox.innerText = '✅ Регистрация успешна! Сейчас вы будете перенаправлены на страницу входа';
                     alertBox.classList.remove('d-none');
-                    
+
                     setTimeout(() => {
                         window.location.href = '/login.html';
                     }, 2000);
@@ -164,11 +163,12 @@
                 alertBox.className = 'alert alert-danger';
                 alertBox.innerText = error.message || 'Ошибка соединения с сервером';
                 alertBox.classList.remove('d-none');
-                
+
                 submitBtn.disabled = false;
                 submitBtn.innerText = originalText;
             }
         });
     </script>
 </body>
+
 </html>

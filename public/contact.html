@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Контакты - ЭнергоАтлант</title>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS (Industrial Dark) -->
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .page-header {
+            padding: 120px 0 60px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .navbar-custom {
+            background-color: rgba(5, 5, 5, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--text-main) !important;
+            letter-spacing: 0.05em;
+        }
+
+        .navbar-brand span {
+            color: var(--text-muted);
+        }
+
+        .contact-box {
+            padding: 2rem;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            height: 100%;
+        }
+
+        .contact-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Прелоадер -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-logo">Энерго<span>Атлант</span></div>
+    </div>
+
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+        <div class="container">
+            <a class="navbar-brand text-uppercase" href="/index.html">Энерго<span>Атлант</span></a>
+            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav">
+                <i class="bi bi-list fs-2 text-white"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="/index.html">Главная</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/services.html">Услуги</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/portfolio.html">Портфолио</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/partners.html">Партнерам</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/contact.html">Контакты</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-4">
+                    <div class="contact-info d-none d-xl-block">
+                        <a href="tel:+74950000000" class="text-white text-decoration-none fw-bold">+7 (921)
+                            000-00-00</a>
+                    </div>
+                    <a href="/login.html" class="btn btn-primary text-black fw-bold">КАБИНЕТ</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок страницы -->
+    <section class="page-header">
+        <div class="container">
+            <h1 class="display-4 fw-bold text-uppercase mb-3">Контакты</h1>
+            <p class="lead text-muted max-w-75">
+                Свяжитесь с нами удобным для вас способом. Оставьте заявку, и мы ответим в течение 30 минут.
+            </p>
+        </div>
+    </section>
+
+    <!-- Контакты и Форма -->
+    <section class="py-5 bg-dark">
+        <div class="container py-5 border-top" style="border-color: rgba(255,255,255,0.05) !important;">
+            <div class="row g-5">
+                <!-- Контактная информация -->
+                <div class="col-lg-5">
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <div class="contact-box">
+                                <i class="bi bi-geo-alt contact-icon"></i>
+                                <h4 class="mb-3 text-uppercase fw-bold">Офис в Москве</h4>
+                                <p class="text-muted mb-0 fs-5">Пресненская наб., 12 (Москва-Сити)<br>Башня Федерация,
+                                    эт. 45</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="contact-box">
+                                <i class="bi bi-telephone contact-icon"></i>
+                                <h5 class="mb-3 text-uppercase fw-bold">Телефон</h5>
+                                <a href="tel:+74950000000" class="text-white text-decoration-none fs-5">+7 (921)
+                                    000-00-00</a>
+                                <p class="text-muted mt-2 mb-0 small">Пн-Пт: 9:00 - 18:00</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="contact-box">
+                                <i class="bi bi-envelope contact-icon"></i>
+                                <h5 class="mb-3 text-uppercase fw-bold">Эл. почта</h5>
+                                <a href="mailto:info@energoatlant.ru"
+                                    class="text-white text-decoration-none fs-5">info@energoatlant.ru</a>
+                                <p class="text-muted mt-2 mb-0 small">Для заказов и прессы</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Форма заявки -->
+                <div class="col-lg-7">
+                    <div class="card p-4 p-md-5 bg-surface border-0 h-100 shadow-lg">
+                        <h3 class="mb-4 fw-bold text-uppercase">ОСТАВИТЬ ЗАЯВКУ</h3>
+                        <p class="text-muted mb-4">Опишите вашу задачу, и мы подготовим предварительное коммерческое
+                            предложение.</p>
+
+                        <!-- Форма (с enctype="multipart/form-data" для файлов) -->
+                        <form id="publicRequestForm" enctype="multipart/form-data">
+                            <div id="requestAlert" class="alert d-none rounded-0"></div>
+
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-6 form-floating">
+                                    <input type="text" class="form-control bg-elevated border-secondary" id="clientName"
+                                        name="fullName" placeholder="ФИО" required>
+                                    <label for="clientName" class="ps-4">Ваше ФИО *</label>
+                                </div>
+                                <div class="col-md-6 form-floating">
+                                    <!-- Маска телефона обрабатывается в JS -->
+                                    <input type="tel" class="form-control bg-elevated border-secondary" id="clientPhone"
+                                        name="phone" placeholder="Телефон" required>
+                                    <label for="clientPhone" class="ps-4">Телефон *</label>
+                                </div>
+                            </div>
+
+                            <div class="mb-4 form-floating">
+                                <input type="text" class="form-control bg-elevated border-secondary" id="clientOrg"
+                                    name="organization" placeholder="Тип объекта">
+                                <label for="clientOrg" class="ps-4">Наименование организации (если есть)</label>
+                            </div>
+
+                            <div class="form-floating mb-4">
+                                <textarea class="form-control bg-elevated border-secondary" name="description"
+                                    placeholder="Опишите задачу" id="clientDesc" style="height: 150px"
+                                    required></textarea>
+                                <label for="clientDesc" class="ps-4">Суть проекта (описание проблемы или задачи)
+                                    *</label>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label text-muted text-uppercase fw-bold small">Прикрепить ТЗ, смету
+                                    или фото (Опционально)</label>
+                                <input type="file" class="form-control bg-elevated border-secondary rounded-0 py-2"
+                                    name="documents" id="clientFiles" multiple>
+                            </div>
+
+                            <button class="btn btn-primary w-100 py-3 fw-bold fs-5 text-uppercase" type="submit"
+                                id="submitBtn">ОТПРАВИТЬ ЗАЯВКУ</button>
+                            <p class="text-muted mt-3 mb-0 text-center" style="font-size: 0.8rem;">Нажимая кнопку, вы
+                                соглашаетесь с Политикой конфиденциальности.</p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Карта -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="card border-0 rounded-0" style="height: 400px; overflow: hidden; background: #222;">
+                        <!-- Заглушка вместо настоящей карты -->
+                        <div class="w-100 h-100 d-flex justify-content-center align-items-center"
+                            style="background-color: var(--bg-surface); filter: grayscale(1);">
+                            <div class="text-center text-muted">
+                                <i class="bi bi-map display-1 mb-3"></i>
+                                <h3>КАРТА ПРОЕЗДА</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-surface py-4 border-top" style="border-color: var(--border-color) !important;">
+        <div class="container text-center text-md-start">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <div class="text-muted text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">&copy;
+                        2026 ООО "ЭнергоАтлант". ВСЕ ПРАВА ЗАЩИЩЕНЫ.</div>
+                </div>
+                <div class="col-md-6 text-md-end text-muted text-uppercase"
+                    style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                    ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Прелоадер
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                document.getElementById('preloader').classList.add('preloader-hidden');
+            }, 500);
+        });
+
+        // Простая маска для телефона
+        const phoneInput = document.getElementById('clientPhone');
+        phoneInput.addEventListener('input', function (e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
+            if (!x[2]) {
+                e.target.value = x[1] === '7' || x[1] === '8' ? '+7' : '';
+            } else {
+                e.target.value = !x[3] ? '+7 (' + x[2] : '+7 (' + x[2] + ') ' + x[3] + (x[4] ? '-' + x[4] : '') + (x[5] ? '-' + x[5] : '');
+            }
+        });
+
+        // Форма отправки
+        document.getElementById('publicRequestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const alertBox = document.getElementById('requestAlert');
+            const formData = new FormData(e.target);
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>ОТПРАВКА...';
+            alertBox.classList.add('d-none');
+
+            try {
+                // В будущем здесь будет реальный запрос на API (например /api/public/requests)
+                // Имитация успешной отправки:
+                setTimeout(() => {
+                    alertBox.className = 'alert alert-success rounded-0 mt-3 border-0 bg-success bg-opacity-25 text-white';
+                    alertBox.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Заявка успешно отправлена! Наши менеджеры скоро свяжутся с Вами.';
+                    alertBox.classList.remove('d-none');
+                    e.target.reset();
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'ОТПРАВИТЬ ЗАЯВКУ';
+                }, 1500);
+
+            } catch (err) {
+                alertBox.className = 'alert alert-danger rounded-0 mt-3 border-0 bg-danger bg-opacity-25 text-white';
+                alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>Произошла ошибка при отправке.';
+                alertBox.classList.remove('d-none');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'ОТПРАВИТЬ ЗАЯВКУ';
+            }
+        });
+    </script>
+</body>
+
+</html>

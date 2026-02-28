@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет Партнера</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="/css/style.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: var(--bg-surface);
+            padding-top: 1rem;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar .nav-link {
+            color: var(--text-muted);
+            padding: 0.8rem 1rem;
+            font-weight: 500;
+            border-radius: 0;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: var(--primary-color);
+            background-color: rgba(255, 152, 0, 0.1);
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 10px;
+        }
+
+        .ref-link-box {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+
+<body class="bg-dark text-white">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
+        <div class="container-fluid">
+            <a class="navbar-brand text-uppercase fw-bold" href="#">Энерго<span class="text-primary">Атлант</span> |
+                Кабинет Партнера</a>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3" id="userName">Партнер</span>
+                <button class="btn btn-outline-danger btn-sm rounded-0" onclick="logout()">Выход</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="nav flex-column nav-pills" role="tablist" aria-orientation="vertical">
+                    <a class="nav-link active" id="v-pills-dashboard-tab" data-bs-toggle="pill"
+                        href="#v-pills-dashboard">
+                        <i class="bi bi-speedometer2"></i> Дашборд
+                    </a>
+                    <a class="nav-link" id="v-pills-clients-tab" data-bs-toggle="pill" href="#v-pills-clients">
+                        <i class="bi bi-people"></i> Мои клиенты
+                    </a>
+                    <a class="nav-link" id="v-pills-finance-tab" data-bs-toggle="pill" href="#v-pills-finance">
+                        <i class="bi bi-wallet2"></i> Финансы и Выплаты
+                    </a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <main class="col-md-9 col-lg-10 p-4">
+                <div class="tab-content" id="v-pills-tabContent">
+
+                    <!-- Dashboard Tab -->
+                    <div class="tab-pane fade show active" id="v-pills-dashboard">
+                        <h2 class="mb-4 text-uppercase">Статистика Партнера</h2>
+
+                        <div class="ref-link-box">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-link-45deg fs-3 text-primary me-3"></i>
+                                <div>
+                                    <small class="text-muted text-uppercase d-block mb-1">Ваша реферальная
+                                        ссылка</small>
+                                    <code class="fs-5 text-white"
+                                        id="refLink">https://energoatlant.ru/ref/partner123</code>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-sm rounded-0"
+                                onclick="navigator.clipboard.writeText(document.getElementById('refLink').innerText); alert('Ссылка скопирована!');">
+                                Копировать
+                            </button>
+                        </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-4">
+                                <div class="card bg-surface border-secondary h-100 p-3">
+                                    <h6 class="text-muted text-uppercase mb-3">Текущий уровень</h6>
+                                    <h3 class="text-primary mb-0">Старт (7.5%)</h3>
+                                    <p class="small text-muted mt-2 mb-0">Приведите еще 2 клиентов для повышения до 10%
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-surface border-secondary h-100 p-3">
+                                    <h6 class="text-muted text-uppercase mb-3">Привлечено клиентов</h6>
+                                    <h3 class="text-white mb-0">0</h3>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-surface border-secondary h-100 p-3">
+                                    <h6 class="text-muted text-uppercase mb-3">Доступно к выплате</h6>
+                                    <h3 class="text-success mb-0">0 ₽</h3>
+                                    <button class="btn btn-outline-success btn-sm rounded-0 mt-2"
+                                        disabled>Запросить</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Другие вкладки (заглушки) -->
+                    <div class="tab-pane fade" id="v-pills-clients">
+                        <h2 class="mb-4 text-uppercase">Мои Клиенты</h2>
+                        <p class="text-muted">Раздел находится в разработке (Перспективный модуль).</p>
+                    </div>
+
+                    <div class="tab-pane fade" id="v-pills-finance">
+                        <h2 class="mb-4 text-uppercase">Финансы</h2>
+                        <p class="text-muted">Раздел находится в разработке (Перспективный модуль).</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function logout() {
+            await fetch('/api/logout');
+            window.location.href = '/login.html';
+        }
+
+        // Загрузка данных пользователя
+        async function loadUser() {
+            const res = await fetch('/api/user/me');
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('userName').textContent = data.user.full_name;
+                document.getElementById('refLink').textContent = `https://energoatlant.ru/ref/${data.user.id}`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUser();
+        });
+    </script>
+</body>
+
+</html>
