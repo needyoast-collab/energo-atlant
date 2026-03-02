@@ -8,7 +8,7 @@ async function apiRequest(url, method = 'GET', data = null) {
         method: method,
         headers: {}
     };
-    
+
     // Если данные не FormData, добавляем JSON заголовок
     if (data && !(data instanceof FormData)) {
         options.headers['Content-Type'] = 'application/json';
@@ -16,15 +16,15 @@ async function apiRequest(url, method = 'GET', data = null) {
     } else if (data) {
         options.body = data;
     }
-    
+
     try {
         const response = await fetch(url, options);
-        
+
         // Если это экспорт файла (Excel)
         if (response.headers.get('content-type')?.includes('spreadsheet')) {
             return response.blob();
         }
-        
+
         const result = await response.json();
         return result;
     } catch (error) {
@@ -86,7 +86,7 @@ function showToast(message, type = 'success') {
         container.style.zIndex = '9999';
         document.body.appendChild(container);
     }
-    
+
     // Создаём toast
     const toast = document.createElement('div');
     toast.className = `alert alert-${type} alert-dismissible fade show`;
@@ -96,9 +96,9 @@ function showToast(message, type = 'success') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     container.appendChild(toast);
-    
+
     // Автоудаление через 5 секунд
     setTimeout(() => {
         toast.classList.remove('show');
@@ -113,9 +113,9 @@ function showToast(message, type = 'success') {
 function formatDate(dateString) {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', { 
-        year: 'numeric', 
-        month: 'long', 
+    return date.toLocaleDateString('ru-RU', {
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
@@ -129,18 +129,20 @@ function formatDateShort(dateString) {
 }
 
 function getStatusBadge(status) {
-    const statuses = {
-        'new': '<span class="badge bg-primary">Новый</span>',
-        'stages_pending': '<span class="badge bg-warning">Ожидание этапов</span>',
-        'in_progress': '<span class="badge bg-info">В работе</span>',
-        'completed': '<span class="badge bg-success">Завершен</span>',
-        'cancelled': '<span class="badge bg-danger">Отменен</span>',
-        'pending': '<span class="badge bg-warning">На рассмотрении</span>',
-        'reviewed': '<span class="badge bg-info">Рассмотрено</span>',
-        'accepted': '<span class="badge bg-success">Принято</span>',
-        'rejected': '<span class="badge bg-danger">Отклонено</span>'
-    };
-    return statuses[status] || status;
+    switch (status) {
+        case 'new': return '<span class="badge bg-primary">НОВЫЙ</span>';
+        case 'in_progress': return '<span class="badge bg-info text-dark">В РАБОТЕ</span>';
+        case 'stages_pending': return '<span class="badge bg-warning text-dark">ОЖИДАНИЕ ЭТАПОВ</span>';
+        case 'completed': return '<span class="badge bg-success">ЗАВЕРШЁН</span>';
+        case 'cancelled': return '<span class="badge bg-danger">ОТМЕНЁН</span>';
+        case 'pending': return '<span class="badge bg-warning text-dark">ОЖИДАЕТ</span>';
+        case 'reviewed': return '<span class="badge bg-info text-dark">РАССМОТРЕНО</span>';
+        case 'accepted': return '<span class="badge bg-success">ПРИНЯТО</span>';
+        case 'rejected': return '<span class="badge bg-danger">ОТКЛОНЕНО</span>';
+        case 'approved': return '<span class="badge bg-success">ОДОБРЕНО</span>';
+        case 'delivered': return '<span class="badge bg-primary">ДОСТАВЛЕНО</span>';
+        default: return `<span class="badge bg-secondary">${status ? status.toUpperCase() : 'НЕИЗВЕСТНО'}</span>`;
+    }
 }
 
 // =============================================================================
@@ -197,12 +199,12 @@ function validateForm(formId) {
 function exportTableToCSV(tableId, filename) {
     const table = document.getElementById(tableId);
     let csv = [];
-    
+
     // Заголовки
     const headers = Array.from(table.querySelectorAll('thead th'))
         .map(th => th.textContent.trim());
     csv.push(headers.join(','));
-    
+
     // Данные
     const rows = table.querySelectorAll('tbody tr');
     rows.forEach(row => {
@@ -210,7 +212,7 @@ function exportTableToCSV(tableId, filename) {
             .map(td => `"${td.textContent.trim()}"`);
         csv.push(cols.join(','));
     });
-    
+
     // Скачивание
     const csvContent = csv.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -230,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
     }
-    
+
     // Показываем имя пользователя
     checkAuth().then(user => {
         if (user) {
@@ -238,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (userNameElement) {
                 userNameElement.textContent = user.full_name || user.login;
             }
-            
+
             const userRoleElement = document.getElementById('userRole');
             if (userRoleElement) {
                 const roles = {

@@ -1,5 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcrypt');
+const argon2 = require('argon2');
 const fs = require('fs');
 const path = require('path');
 
@@ -39,7 +39,8 @@ db.serialize(() => {
         full_name TEXT NOT NULL,
         organization TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        is_active INTEGER DEFAULT 1
+        is_active INTEGER DEFAULT 1,
+        is_verified INTEGER DEFAULT 0
     )`);
     console.log("✅ Таблица users создана");
 
@@ -92,7 +93,7 @@ db.serialize(() => {
     db.run(`CREATE TABLE project_documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
-        document_type TEXT CHECK(document_type IN ('initial', 'technical', 'executive', 'contract', 'act', 'other')),
+        document_type TEXT,
         file_name TEXT NOT NULL,
         file_path TEXT NOT NULL,
         uploaded_by INTEGER NOT NULL,
@@ -197,36 +198,39 @@ db.serialize(() => {
 
     const stmt = db.prepare("INSERT INTO users (login, password, email, phone, role, full_name, organization) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
-    let completed = 0;
-    users.forEach(user => {
-        bcrypt.hash(user.password, 10, (err, hash) => {
-            if (err) {
+    const createUsers = async () => {
+        let completed = 0;
+        for (const user of users) {
+            try {
+                const hash = await argon2.hash(user.password);
+                stmt.run(user.login, hash, user.email, user.phone, user.role, user.full_name, user.organization || null, (err) => {
+                    if (err) {
+                        console.error(`❌ Ошибка создания ${user.login}:`, err);
+                    } else {
+                        console.log(`✅ Пользователь создан: ${user.login} (${user.role})`);
+                    }
+                    completed++;
+                    if (completed === users.length) {
+                        stmt.finalize();
+                        console.log("\n🎉 ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА!");
+                        console.log("\n📋 УЧЕТНЫЕ ДАННЫЕ:");
+                        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        console.log("👤 Админ:       admin / admin123");
+                        console.log("👤 Менеджер:    manager1 / manager123");
+                        console.log("👤 Прораб:      konstantin / foreman123");
+                        console.log("👤 Снабженец:   snab / supplier123");
+                        console.log("👤 ПТО:         pto / pto123");
+                        console.log("👤 Заказчик:    customer1 / customer123");
+                        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                        console.log("\n⚠️  ОБЯЗАТЕЛЬНО смените пароли после первого входа!");
+                        db.close();
+                    }
+                });
+            } catch (err) {
                 console.error(`❌ Ошибка хеширования для ${user.login}:`, err);
-                return;
             }
-            stmt.run(user.login, hash, user.email, user.phone, user.role, user.full_name, user.organization || null, (err) => {
-                if (err) {
-                    console.error(`❌ Ошибка создания ${user.login}:`, err);
-                } else {
-                    console.log(`✅ Пользователь создан: ${user.login} (${user.role})`);
-                }
-                completed++;
-                if (completed === users.length) {
-                    stmt.finalize();
-                    console.log("\n🎉 ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА!");
-                    console.log("\n📋 УЧЕТНЫЕ ДАННЫЕ:");
-                    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                    console.log("👤 Админ:       admin / admin123");
-                    console.log("👤 Менеджер:    manager1 / manager123");
-                    console.log("👤 Прораб:      konstantin / foreman123");
-                    console.log("👤 Снабженец:   snab / supplier123");
-                    console.log("👤 ПТО:         pto / pto123");
-                    console.log("👤 Заказчик:    customer1 / customer123");
-                    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                    console.log("\n⚠️  ОБЯЗАТЕЛЬНО смените пароли после первого входа!");
-                    db.close();
-                }
-            });
-        });
-    });
+        }
+    };
+
+    createUsers();
 });

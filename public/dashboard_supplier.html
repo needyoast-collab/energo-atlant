@@ -14,24 +14,25 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#">
-                📦 ЭнергоАтлант
-                <span class="badge bg-light text-primary ms-2" style="font-size:0.6em;">Снабженец</span>
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+                <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;" class="me-2">
+                <span class="badge bg-info text-dark ms-1 align-middle d-none d-sm-inline"
+                    style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">СНАБЖЕНИЕ</span>
             </a>
 
             <div class="d-flex align-items-center gap-2">
                 <!-- Ввод кода проекта -->
                 <div class="input-group input-group-sm d-none d-md-flex" style="width:280px;">
                     <input type="text" id="joinCode" class="form-control" placeholder="Код проекта (PRJ-XXXX)"
-                        style="text-transform:uppercase; letter-spacing:1px; font-family:monospace;">
+                        style="background-color: var(--bg-elevated); border-color: var(--border-color); color: white; text-transform:uppercase; letter-spacing:1px; font-family:monospace;">
                     <button class="btn btn-light fw-bold" onclick="joinProject()">
-                        <i class="bi bi-link-45deg"></i> Добавить
+                        <i class="bi bi-link-45deg"></i> ДОБАВИТЬ
                     </button>
                 </div>
                 <span class="text-white small d-none d-md-inline">
                     <i class="bi bi-person-fill"></i> <span id="userName">Загрузка...</span>
                 </span>
-                <a href="/api/logout" class="btn btn-outline-light btn-sm fw-bold">Выйти</a>
+                <a href="/api/logout" class="btn btn-outline-light btn-sm fw-bold">ВЫЙТИ</a>
             </div>
         </div>
     </nav>

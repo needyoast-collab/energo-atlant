@@ -37,39 +37,51 @@ function renderProjects(projects) {
 
     if (!projects || projects.length === 0) {
         container.innerHTML = `
-            <div class="alert alert-info">
-                📋 У вас пока нет назначенных проектов
-            </div>
-        `;
+            <div class="col-12 text-center py-5">
+                <div class="alert bg-elevated border-secondary text-muted py-5 rounded-0">
+                    <i class="bi bi-folder-x display-1 mb-3 d-block opacity-25"></i>
+                    <h4 class="fw-bold">ОБЪЕКТЫ ОТСУТСТВУЮТ</h4>
+                    <p>Введите код доступа от менеджера в верхней панели, чтобы присоединиться к объекту.</p>
+                </div>
+            </div>`;
         return;
     }
 
-    let html = '<div class="row">';
-
+    let html = '<div class="row g-4">';
     projects.forEach(project => {
         html += `
-            <div class="col-md-6 mb-3">
-                <div class="card h-100">
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color);">
+                    <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                         <div class="d-flex flex-column">
+                            <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${project.title}">${project.title}</h5>
+                            <small class="text-muted"><i class="bi bi-hash"></i> ${project.id}</small>
+                         </div>
+                         ${getStatusBadge(project.status)}
+                    </div>
                     <div class="card-body">
-                        <h5 class="card-title">${project.title}</h5>
-                        <p class="text-muted">${project.address || ''}</p>
-                        <hr>
-                        <p><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
-                        <p><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
-                        <p><strong>Прораб:</strong> ${project.foreman_name || '-'}</p>
-                        
-                        <button class="btn btn-primary w-100 mb-2" onclick="viewProjectDetails(${project.id})">
-                            👁️ Просмотр этапов
-                        </button>
-                        <button class="btn btn-success w-100" onclick="showUploadDocumentsModal(${project.id})">
-                            📤 Загрузить ИД
-                        </button>
+                        <div class="mb-3 d-flex flex-wrap gap-2">
+                             <span class="badge border border-info text-info bg-transparent"><i class="bi bi-person"></i> МЕНЕДЖЕР: ${project.manager_name || '-'}</span>
+                             <span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools"></i> ПРОРАБ: ${project.foreman_name || '-'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
+                            <span class="text-white">${project.address || '<span class="text-muted">-</span>'}</span>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-info w-100 py-2 fw-bold" onclick="viewProjectDetails(${project.id})">
+                                 <i class="bi bi-eye"></i> ПРОСМОТР ЭТАПОВ
+                            </button>
+                            <button class="btn btn-success w-100 py-2 fw-bold" onclick="showUploadDocumentsModal(${project.id})">
+                                 <i class="bi bi-upload"></i> ЗАГРУЗИТЬ ИД
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
-
     html += '</div>';
     container.innerHTML = html;
 }

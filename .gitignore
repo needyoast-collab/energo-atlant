@@ -3,3 +3,5 @@ node_modules
 energo.db
 uploads/
 projects/
+.env
+server.log

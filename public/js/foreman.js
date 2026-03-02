@@ -41,46 +41,60 @@ function renderProjects(projects) {
 
     if (!projects || projects.length === 0) {
         container.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-info">
-                    <h5>📋 Объекты отсутствуют</h5>
-                    <p class="mb-0">Введите код доступа от менеджера чтобы присоединиться к объекту.</p>
+            <div class="col-12 text-center py-5">
+                <div class="alert bg-elevated border-secondary text-muted py-5 rounded-0">
+                    <i class="bi bi-folder-x display-1 mb-3 d-block opacity-25"></i>
+                    <h4 class="fw-bold">ОБЪЕКТЫ ОТСУТСТВУЮТ</h4>
+                    <p>Введите код доступа от менеджера в верхней панели, чтобы присоединиться к объекту.</p>
                 </div>
             </div>`;
         return;
     }
 
-    container.innerHTML = projects.map(project => {
+    let html = '<div class="row g-4">';
+    projects.forEach(project => {
         const deadline = new Date(project.stages_deadline);
         const now = new Date();
         const isExpired = deadline < now;
         const hoursLeft = Math.max(0, Math.round((deadline - now) / (1000 * 60 * 60)));
 
-        return `
-            <div class="col-md-6">
-                <div class="card h-100 shadow-sm ${isExpired && project.status === 'stages_pending' ? 'border-danger' : ''}">
+        html += `
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color);">
+                    <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                         <div class="d-flex flex-column">
+                            <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${project.title}">${project.title}</h5>
+                            <small class="text-muted"><i class="bi bi-hash"></i> ${project.id}</small>
+                         </div>
+                         ${getStatusBadge(project.status)}
+                    </div>
                     <div class="card-body">
-                        <h5 class="card-title fw-bold">${project.title}</h5>
-                        <p class="text-muted small">${project.address || ''}</p>
-                        <hr>
-                        <p class="mb-1"><strong>Статус:</strong> ${getStatusBadge(project.status)}</p>
-                        <p class="mb-1"><strong>Менеджер:</strong> ${project.manager_name || '-'}</p>
-                        <p class="mb-2"><strong>Снабженец:</strong> ${project.supplier_name || 'Не назначен'}</p>
-
+                        <div class="mb-3 d-flex flex-wrap gap-2">
+                             <span class="badge border border-info text-info bg-transparent"><i class="bi bi-person"></i> МЕНЕДЖЕР: ${project.manager_name || '-'}</span>
+                             <span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-truck"></i> СНАБЖЕНЕЦ: ${project.supplier_name || 'НЕ НАЗНАЧЕН'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
+                            <span class="text-white">${project.address || '<span class="text-muted">-</span>'}</span>
+                        </div>
+                        
                         ${project.status === 'stages_pending' ? `
-                            <div class="alert ${isExpired ? 'alert-danger' : 'alert-warning'} py-2 mb-2 small">
-                                ⏰ ${isExpired
-                                    ? 'Дедлайн истёк! Создание этапов недоступно'
-                                    : `Осталось ${hoursLeft} ч. для создания этапов`}
+                            <div class="alert ${isExpired ? 'alert-danger bg-danger bg-opacity-10 border-danger' : 'alert-warning bg-warning bg-opacity-10 border-warning'} py-2 mb-0 border small">
+                                <i class="bi bi-clock-history"></i> ${isExpired
+                    ? 'ДЕДЛАЙН ИСТЁК! Создание этапов недоступно'
+                    : `Осталось ${hoursLeft} ч. для создания этапов`}
                             </div>` : ''}
-
-                        <button class="btn btn-warning w-100 fw-bold" onclick="openProjectModal(${project.id})">
-                            <i class="bi bi-folder2-open"></i> Открыть объект
+                    </div>
+                    <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                        <button class="btn btn-warning w-100 py-2 fw-bold" onclick="openProjectModal(${project.id})">
+                             <i class="bi bi-folder2-open"></i> ОТКРЫТЬ ОБЪЕКТ
                         </button>
                     </div>
                 </div>
             </div>`;
-    }).join('');
+    });
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 // =============================================================================
@@ -176,8 +190,8 @@ function renderStage(stage) {
                 </h6>
                 <div class="d-flex gap-2 align-items-center">
                     ${done
-                        ? `<small>Завершён ${formatDateShort(stage.completed_at)}</small>`
-                        : `<button class="btn btn-sm btn-success" onclick="completeStage(${stage.id})">
+            ? `<small>Завершён ${formatDateShort(stage.completed_at)}</small>`
+            : `<button class="btn btn-sm btn-success" onclick="completeStage(${stage.id})">
                                ✔️ Завершить
                            </button>`}
                     <button class="btn btn-sm ${done ? 'btn-outline-light' : 'btn-outline-secondary'}"
@@ -205,9 +219,9 @@ function renderStage(stage) {
                             </thead>
                             <tbody>
                                 ${stage.materials.map(mat => {
-                                    const received = parseFloat(mat.quantity_received || 0);
-                                    const used = parseFloat(mat.quantity_used || 0);
-                                    return `
+                const received = parseFloat(mat.quantity_received || 0);
+                const used = parseFloat(mat.quantity_used || 0);
+                return `
                                         <tr>
                                             <td>${mat.material_name}</td>
                                             <td>${mat.unit || '-'}</td>
@@ -232,7 +246,7 @@ function renderStage(stage) {
                                                 </button>
                                             </td>
                                         </tr>`;
-                                }).join('')}
+            }).join('')}
                             </tbody>
                         </table>
                     </div>` : '<p class="text-muted small mb-0">Материалы не добавлены</p>'}
@@ -311,11 +325,11 @@ async function loadAllMaterials() {
                             </thead>
                             <tbody>
                                 ${group.items.map(mat => {
-                                    const received = parseFloat(mat.quantity_received || 0);
-                                    const used = parseFloat(mat.quantity_used || 0);
-                                    const deficit = parseFloat(mat.quantity_planned) - received;
+            const received = parseFloat(mat.quantity_received || 0);
+            const used = parseFloat(mat.quantity_used || 0);
+            const deficit = parseFloat(mat.quantity_planned) - received;
 
-                                    return `
+            return `
                                         <tr>
                                             <td><strong>${mat.material_name}</strong></td>
                                             <td><small class="text-muted">${mat.stage_name}</small></td>
@@ -335,10 +349,10 @@ async function loadAllMaterials() {
                                             </td>
                                             <td>
                                                 ${received === 0
-                                                    ? '<span class="badge bg-secondary">Ожидается</span>'
-                                                    : used >= received
-                                                        ? '<span class="badge bg-danger">Всё списано</span>'
-                                                        : '<span class="badge bg-success">На складе</span>'}
+                    ? '<span class="badge bg-secondary">Ожидается</span>'
+                    : used >= received
+                        ? '<span class="badge bg-danger">Всё списано</span>'
+                        : '<span class="badge bg-success">На складе</span>'}
                                             </td>
                                             <td>
                                                 <button class="btn btn-sm btn-primary"
@@ -348,7 +362,7 @@ async function loadAllMaterials() {
                                                 </button>
                                             </td>
                                         </tr>`;
-                                }).join('')}
+        }).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -371,7 +385,7 @@ async function updateMaterialFromTab(materialId) {
         return;
     }
 
-    const result = await apiRequest(`/api/foreman/materials/${materialId}`, 'PUT', { quantityUsed });
+    const result = await apiRequest(`/api/foreman/materials/${materialId}/usage`, 'PUT', { quantityUsed });
 
     if (result.success) {
         showSuccess('Расход сохранён');
@@ -408,6 +422,18 @@ function showCreateStageModal() {
                             </div>
 
                             <hr>
+                            <datalist id="unitOptions">
+                                <option value="м">
+                                <option value="пог.м">
+                                <option value="кв.м">
+                                <option value="куб.м">
+                                <option value="шт">
+                                <option value="кг">
+                                <option value="т">
+                                <option value="компл">
+                                <option value="упак">
+                                <option value="рулон">
+                            </datalist>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0">📦 Материалы этапа</h6>
                                 <button type="button" class="btn btn-sm btn-outline-primary"
@@ -434,16 +460,30 @@ function showCreateStageModal() {
         e.preventDefault();
 
         const materials = [];
+        let hasValidationError = false;
         document.querySelectorAll('.material-row').forEach(row => {
             const inputs = row.querySelectorAll('input');
-            if (inputs[0].value) {
+            const name = inputs[0].value;
+            const unit = inputs[1].value;
+            let quantity = parseFloat(inputs[2].value) || 0;
+
+            if (name) {
+                // Валидация целых чисел для штучных товаров
+                const wholeUnits = ['шт', 'шт.', 'упак', 'упак.', 'компл', 'компл.'];
+                if (wholeUnits.includes(unit.toLowerCase().trim()) && !Number.isInteger(quantity)) {
+                    showError(`Количество для "${name}" (${unit}) должно быть целым числом!`);
+                    hasValidationError = true;
+                }
+
                 materials.push({
-                    name: inputs[0].value,
-                    unit: inputs[1].value,
-                    quantity: parseFloat(inputs[2].value) || 0
+                    name,
+                    unit,
+                    quantity
                 });
             }
         });
+
+        if (hasValidationError) return;
 
         const result = await apiRequest('/api/foreman/stages', 'POST', {
             projectId: currentProject.id,
@@ -473,10 +513,10 @@ function addMaterialRow() {
                 <input type="text" class="form-control form-control-sm" placeholder="Название материала">
             </div>
             <div class="col-2">
-                <input type="text" class="form-control form-control-sm" placeholder="Ед. (м, шт, кг)">
+                <input type="text" class="form-control form-control-sm unit-input" placeholder="Ед. (м, шт, кг)" list="unitOptions">
             </div>
             <div class="col-3">
-                <input type="number" class="form-control form-control-sm" placeholder="Кол-во" step="0.1" min="0">
+                <input type="number" class="form-control form-control-sm qty-input" placeholder="Кол-во" step="any" min="0">
             </div>
             <div class="col-2">
                 <button type="button" class="btn btn-sm btn-outline-danger w-100"
@@ -500,7 +540,7 @@ async function updateMaterial(materialId) {
         return;
     }
 
-    const result = await apiRequest(`/api/foreman/materials/${materialId}`, 'PUT', { quantityUsed });
+    const result = await apiRequest(`/api/foreman/materials/${materialId}/usage`, 'PUT', { quantityUsed });
 
     if (result.success) {
         showSuccess('Расход обновлён');
@@ -638,9 +678,9 @@ async function loadMaterialApprovals() {
     }
 
     const statusMap = {
-        pending:   { label: 'Ожидает',    cls: 'warning text-dark' },
-        approved:  { label: 'Согласовано', cls: 'success' },
-        rejected:  { label: 'Отклонено',  cls: 'danger' },
+        pending: { label: 'Ожидает', cls: 'warning text-dark' },
+        approved: { label: 'Согласовано', cls: 'success' },
+        rejected: { label: 'Отклонено', cls: 'danger' },
         delivered: { label: 'Доставлено', cls: 'info' }
     };
 
@@ -745,6 +785,18 @@ function showRequestMaterialModal(projectId) {
                     </div>
                     <form id="requestMaterialForm">
                         <div class="modal-body">
+                            <datalist id="reqUnitOptions">
+                                <option value="м">
+                                <option value="пог.м">
+                                <option value="кв.м">
+                                <option value="куб.м">
+                                <option value="шт">
+                                <option value="кг">
+                                <option value="т">
+                                <option value="компл">
+                                <option value="упак">
+                                <option value="рулон">
+                            </datalist>
                             <div class="alert alert-info small">
                                 Запрос уйдёт снабженцу — он подтвердит и доставит материал
                             </div>
@@ -757,12 +809,12 @@ function showRequestMaterialModal(projectId) {
                                 <div class="col-6">
                                     <label class="form-label">Единица</label>
                                     <input type="text" class="form-control" id="req_mat_unit"
-                                        placeholder="м, шт, кг...">
+                                        placeholder="м, шт, кг..." list="reqUnitOptions">
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label fw-bold">Количество *</label>
                                     <input type="number" class="form-control" id="req_mat_qty"
-                                        step="0.1" min="0" required>
+                                        step="any" min="0" required>
                                 </div>
                             </div>
                             <div class="mb-3 mt-3">
@@ -792,11 +844,22 @@ function showRequestMaterialModal(projectId) {
         const btn = e.target.querySelector('[type=submit]');
         btn.disabled = true;
 
+        const unit = document.getElementById('req_mat_unit').value;
+        const quantity = parseFloat(document.getElementById('req_mat_qty').value);
+        const name = document.getElementById('req_mat_name').value;
+
+        // Валидация целых чисел
+        const wholeUnits = ['шт', 'шт.', 'упак', 'упак.', 'компл', 'компл.'];
+        if (wholeUnits.includes(unit.toLowerCase().trim()) && !Number.isInteger(quantity)) {
+            btn.disabled = false;
+            return showError(`Количество для "${name}" (${unit}) должно быть целым числом!`);
+        }
+
         const data = await apiRequest('/api/foreman/material-requests', 'POST', {
             projectId,
-            materialName: document.getElementById('req_mat_name').value,
-            unit: document.getElementById('req_mat_unit').value,
-            quantity: parseFloat(document.getElementById('req_mat_qty').value),
+            materialName: name,
+            unit: unit,
+            quantity: quantity,
             reason: document.getElementById('req_mat_reason').value
         });
 

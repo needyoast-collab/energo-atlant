@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <title>Личный кабинет | ЭнергоАтлант</title>
@@ -17,49 +18,298 @@
             transition: 0.3s;
             font-size: 16px;
         }
+
         .sidebar-menu a:hover {
             background: rgba(255, 255, 255, 0.1);
             color: white;
         }
+
         .sidebar-menu a.active {
             background: #ff9800;
             color: white;
         }
+
         /* Спец-кнопка для менеджера */
         .manager-link {
             border: 1px solid #ff9800;
             color: #ff9800 !important;
             font-weight: bold;
         }
+
         .manager-link:hover {
             background: #ff9800 !important;
             color: white !important;
         }
+
         /* Кнопка выхода */
         .logout-link {
-            margin-top: auto; /* Прижимает кнопку к низу, если sidebar flex */
+            margin-top: auto;
+            /* Прижимает кнопку к низу, если sidebar flex */
             color: #ff6b6b !important;
             border: 1px solid rgba(255, 107, 107, 0.3);
         }
+
         .logout-link:hover {
             background: #ff6b6b !important;
             color: white !important;
         }
+
+        /* NEW INDUSTRIAL STYLES FOR PROJECT CARDS */
+        .project-summary-card {
+            background: #111418;
+            border: 1px solid #2d333b;
+            border-radius: 4px;
+            padding: 24px;
+            color: white;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .project-summary-card:hover {
+            border-color: #444;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .summary-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            color: #8b949e;
+        }
+
+        .status-badge {
+            background: #1a8754;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-badge.stages_pending {
+            background: #9a6700;
+        }
+
+        .status-badge.new {
+            background: #0969da;
+        }
+
+        .project-name-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .project-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+            color: #e6edf3;
+        }
+
+        .progress-percent {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: #e6edf3;
+        }
+
+        .custom-progress {
+            height: 4px;
+            background: #21262d;
+            border-radius: 2px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .custom-progress-bar {
+            height: 100%;
+            background: #3fb950;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .stats-box {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.2s;
+            text-decoration: none;
+            color: white;
+        }
+
+        .stats-box:hover {
+            border-color: #ff9800;
+            background: rgba(255, 152, 0, 0.05);
+        }
+
+        .stats-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: #ff9800;
+            display: block;
+        }
+
+        .stats-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #8b949e;
+            display: block;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .stats-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #e6edf3;
+        }
+
+        /* Modal Styles */
+        .custom-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            padding: 20px;
+        }
+
+        .modal-content-box {
+            background: #161b22;
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header-box {
+            padding: 20px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body-box {
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .doc-category {
+            margin-bottom: 24px;
+        }
+
+        .category-title {
+            font-size: 0.9rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .doc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            text-decoration: none;
+            color: #c9d1d9;
+            transition: 0.2s;
+        }
+
+        .doc-item:hover {
+            border-color: #58a6ff;
+            background: rgba(88, 166, 255, 0.05);
+            color: #58a6ff;
+        }
+
+        .doc-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .doc-icon {
+            color: #58a6ff;
+            font-size: 1.2rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 1.8rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: white;
+        }
     </style>
 </head>
+
 <body class="dashboard-body">
     <div class="dashboard-container">
         <aside class="sidebar" style="display:flex; flex-direction:column; justify-content:space-between;">
             <div>
                 <div class="sidebar-logo">ЭНЕРГО<span>АТЛАНТ</span></div>
-                
+
                 <nav class="sidebar-menu" id="dynamicMenu">
                     <a href="#" class="active"><i class="fas fa-chart-pie"></i> Мой Кабинет</a>
-                    </nav>
+                </nav>
             </div>
 
             <div style="padding: 20px;">
-                <a href="/api/logout" class="sidebar-menu logout-link" style="display:block; text-align:center; padding:10px; border-radius:8px; text-decoration:none;">
+                <a href="/api/logout" class="sidebar-menu logout-link"
+                    style="display:block; text-align:center; padding:10px; border-radius:8px; text-decoration:none;">
                     <i class="fas fa-sign-out-alt"></i> Выход
                 </a>
             </div>
@@ -69,7 +319,8 @@
             <header class="top-bar">
                 <h2 id="userNameDisplay">Личный кабинет</h2>
                 <div class="user-info">
-                    <span id="userRoleDisplay" style="background:#333; padding:5px 10px; border-radius:15px; font-size:0.8em;">Загрузка...</span>
+                    <span id="userRoleDisplay"
+                        style="background:#333; padding:5px 10px; border-radius:15px; font-size:0.8em;">Загрузка...</span>
                 </div>
             </header>
 
@@ -77,8 +328,10 @@
                 <h3 style="margin-top:0; color:#ff9800;">🔗 Добавить проект</h3>
                 <p>Введите код, полученный от менеджера:</p>
                 <div style="display:flex; gap:10px;">
-                    <input type="text" id="projectCodeInput" placeholder="Например: PRJ-7788" style="padding:10px; flex:1; background:#111; border:1px solid #444; color:white;">
-                    <button onclick="claimProject()" style="padding:10px 20px; background:#ff9800; border:none; color:white; cursor:pointer;">ОК</button>
+                    <input type="text" id="projectCodeInput" placeholder="Например: PRJ-7788"
+                        style="padding:10px; flex:1; background:#111; border:1px solid #444; color:white;">
+                    <button onclick="claimProject()"
+                        style="padding:10px 20px; background:#ff9800; border:none; color:white; cursor:pointer;">ОК</button>
                 </div>
             </div>
 
@@ -97,9 +350,9 @@
             try {
                 const res = await fetch('/api/user/me');
                 if (!res.ok) window.location.href = 'login.html'; // Если не залогинен - выкидываем
-                
+
                 const user = await res.json();
-                
+
                 // Отображаем имя и роль
                 document.getElementById('userNameDisplay').innerText = `Привет, ${user.name || user.login}`;
                 document.getElementById('userRoleDisplay').innerText = user.role.toUpperCase();
@@ -122,7 +375,7 @@
                     loadCustomerProjects();
                 } else if (user.role === 'foreman') {
                     // Прораба лучше сразу кидать в его дашборд, но можно показать проекты и здесь
-                    window.location.href = '/dashboard'; 
+                    window.location.href = '/dashboard';
                 } else {
                     // Если менеджер зашел в ЛК, покажем ему проекты (опционально)
                     document.getElementById('projects-container').innerHTML = "<p>Перейдите в панель управления для работы.</p>";
@@ -135,40 +388,159 @@
 
         // 2. ЗАГРУЗКА ПРОЕКТОВ ЗАКАЗЧИКА
         async function loadCustomerProjects() {
-            const res = await fetch('/api/customer/my-projects');
+            const res = await fetch('/api/customer/projects');
             const data = await res.json();
             const container = document.getElementById('projects-container');
 
-            if (data.projects.length === 0) {
+            if (!data.projects || data.projects.length === 0) {
                 container.innerHTML = "<p style='color:#777'>У вас пока нет активных проектов.</p>";
                 return;
             }
 
-            container.innerHTML = data.projects.map(p => `
-                <div class="card feature-card">
-                    <h3 style="color:#ff9800">${p.title}</h3>
-                    <p style="color:#ccc"><i class="fas fa-map-marker-alt"></i> ${p.address}</p>
-                    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #444;">
-                        Статус: <b>${p.status}</b>
-                        ${p.doc_link ? `<br><a href="${p.doc_link}" target="_blank" style="color:#58a6ff; float:right;">📂 Документы</a>` : ''}
+            container.innerHTML = data.projects.map(p => {
+                const progress = p.total_stages > 0
+                    ? Math.round((p.completed_stages / p.total_stages) * 100)
+                    : 0;
+
+                // Статусы на русском
+                const statusMap = {
+                    'new': 'НОВЫЙ',
+                    'in_progress': 'АКТИВНО',
+                    'stages_pending': 'ПЛАНИРОВАНИЕ',
+                    'completed': 'ЗАВЕРШЕН',
+                    'cancelled': 'ОТМЕНЕН'
+                };
+
+                return `
+                <div class="project-summary-card">
+                    <div class="summary-header">
+                        <div class="summary-title">
+                            <i class="fas fa-desktop"></i> СВОДКА ОБЪЕКТА
+                        </div>
+                        <div class="status-badge ${p.status}">
+                            ${statusMap[p.status] || p.status}
+                        </div>
+                    </div>
+
+                    <div class="project-name-row">
+                        <h4 class="project-name">${p.title}</h4>
+                        <div class="progress-percent">${progress}%</div>
+                    </div>
+
+                    <div class="custom-progress">
+                        <div class="custom-progress-bar" style="width: ${progress}%"></div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stats-box">
+                            <i class="fas fa-camera stats-icon"></i>
+                            <span class="stats-label">Новых фото</span>
+                            <span class="stats-value">${p.photo_count || 0}</span>
+                        </div>
+                        <div class="stats-box" onclick="viewDocuments(${p.id}, '${p.title.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-file-alt stats-icon"></i>
+                            <span class="stats-label">Документация</span>
+                            <span class="stats-value">ОТКРЫТЬ</span>
+                        </div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
+
+        // 2.1 ПРОСМОТР ДОКУМЕНТОВ
+        async function viewDocuments(projectId, title) {
+            const modal = document.getElementById('docsModal');
+            const titleEl = document.getElementById('modalProjectTitle');
+            const body = document.getElementById('modalDocsBody');
+
+            titleEl.innerText = title;
+            body.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Загрузка документов...</div>';
+            modal.style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/projects/${projectId}/documents`);
+                const data = await res.json();
+
+                if (!data.success || !data.documents || data.documents.length === 0) {
+                    body.innerHTML = '<div style="text-align:center; padding:40px; color:#8b949e;">Документы пока не загружены для этого проекта.</div>';
+                    return;
+                }
+
+                // Группировка
+                const categories = {
+                    'rd': { name: 'РД (Рабочая документация)', items: [], icon: 'fa-pencil-ruler' },
+                    'estimate': { name: 'Сметы', items: [], icon: 'fa-file-invoice-dollar' },
+                    'act': { name: 'Акты', items: [], icon: 'fa-file-signature' },
+                    'contract': { name: 'Договоры', items: [], icon: 'fa-file-contract' },
+                    'tz': { name: 'ТЗ (Техническое задание)', items: [], icon: 'fa-clipboard-list' },
+                    'other': { name: 'Прочее', items: [], icon: 'fa-folder' }
+                };
+
+                // Вспомогательная карта для старых типов
+                const typeMap = {
+                    'initial': 'rd',
+                    'executive': 'act'
+                };
+
+                data.documents.forEach(doc => {
+                    let type = doc.document_type;
+                    if (typeMap[type]) type = typeMap[type];
+                    if (!categories[type]) type = 'other';
+                    categories[type].items.push(doc);
+                });
+
+                let html = '';
+                for (const [key, cat] of Object.entries(categories)) {
+                    if (cat.items.length === 0) continue;
+
+                    html += `
+                        <div class="doc-category">
+                            <div class="category-title"><i class="fas ${cat.icon}"></i> ${cat.name}</div>
+                            ${cat.items.map(d => `
+                                <a href="/${d.file_path}" target="_blank" class="doc-item">
+                                    <div class="doc-info">
+                                        <i class="fas fa-file-pdf doc-icon"></i>
+                                        <span>${d.file_name}</span>
+                                    </div>
+                                    <i class="fas fa-download" style="font-size:0.8rem; opacity:0.5;"></i>
+                                </a>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                body.innerHTML = html || '<div style="text-align:center; padding:40px; color:#8b949e;">Документы пока не загружены.</div>';
+
+            } catch (err) {
+                body.innerHTML = '<div style="color:red; text-align:center; padding:40px;">Ошибка при загрузке документов.</div>';
+            }
+        }
+
+        function closeDocsModal() {
+            document.getElementById('docsModal').style.display = 'none';
+        }
+
+        // Закрытие по клику вне модалки
+        window.onclick = function (event) {
+            const modal = document.getElementById('docsModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
 
         // 3. ФУНКЦИЯ ДОБАВЛЕНИЯ ПРОЕКТА ПО КОДУ
         async function claimProject() {
             const code = document.getElementById('projectCodeInput').value;
-            if(!code) return alert("Введите код!");
+            if (!code) return alert("Введите код!");
 
             const res = await fetch('/api/customer/claim', {
-                method: 'POST', 
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({code})
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
             });
             const json = await res.json();
-            
-            if(json.success) {
+
+            if (json.success) {
                 alert("✅ Проект добавлен!");
                 loadCustomerProjects(); // Обновляем список без перезагрузки
                 document.getElementById('projectCodeInput').value = '';
@@ -180,5 +552,17 @@
         // Запуск при загрузке
         initCabinet();
     </script>
+    <div id="docsModal" class="custom-modal">
+        <div class="modal-content-box">
+            <div class="modal-header-box">
+                <h3 style="margin:0; font-size:1.1rem; color:#fff;" id="modalProjectTitle">Проект</h3>
+                <button class="close-btn" onclick="closeDocsModal()">&times;</button>
+            </div>
+            <div class="modal-body-box" id="modalDocsBody">
+                <!-- Контент загрузится через JS -->
+            </div>
+        </div>
+    </div>
 </body>
+
 </html>

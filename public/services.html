@@ -10,11 +10,25 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Custom CSS (Industrial Dark Design System + Neon) -->
     <link href="/css/style.css" rel="stylesheet">
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <style>
         .page-header {
-            padding: 120px 0 60px;
-            background-color: var(--bg-surface);
+            position: relative;
+            padding: 160px 0 100px;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/img/services/hero.png') center/cover no-repeat;
             border-bottom: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(to top, var(--bg-dark), transparent);
         }
 
         .navbar-custom {
@@ -58,19 +72,52 @@
             padding-top: 1.5rem;
             border-top: 1px dashed var(--border-color);
         }
+
+        .service-carousel {
+            height: 100%;
+            min-height: 400px;
+        }
+
+        .service-carousel .carousel-inner,
+        .service-carousel .carousel-item {
+            height: 100%;
+        }
+
+        .service-carousel .carousel-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        .carousel-indicators [data-bs-target] {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin: 0 5px;
+            background-color: var(--primary-color);
+            border: 1px solid rgba(0, 0, 0, 0.5);
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 8%;
+            filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5));
+        }
     </style>
 </head>
 
 <body>
     <!-- Прелоадер -->
     <div class="preloader" id="preloader">
-        <div class="preloader-logo">Энерго<span>Атлант</span></div>
+        <img src="/img/logo.png" alt="ЭнергоАтлант" class="preloader-logo-img">
     </div>
 
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
         <div class="container">
-            <a class="navbar-brand text-uppercase" href="/index.html">Энерго<span>Атлант</span></a>
+            <a class="navbar-brand" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
+                    style="height: 40px; object-fit: contain;"></a>
             <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
                 data-bs-target="#navbarNav">
                 <i class="bi bi-list fs-2 text-white"></i>
@@ -85,22 +132,22 @@
                 </ul>
                 <div class="d-flex align-items-center gap-4">
                     <div class="contact-info d-none d-xl-block">
-                        <a href="tel:+74950000000" class="text-white text-decoration-none fw-bold">+7 (921)
-                            000-00-00</a>
+                        <a href="tel:+79939074577" class="text-white text-decoration-none fw-bold">+7 993 907-45-77</a>
                     </div>
-                    <a href="/login.html" class="btn btn-primary text-black fw-bold">КАБИНЕТ</a>
+                    <a href="/login.html" class="btn btn-primary fw-bold">КАБИНЕТ</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Заголовок страницы -->
-    <section class="page-header">
-        <div class="container">
-            <h1 class="display-4 fw-bold text-uppercase mb-3">Наши услуги</h1>
-            <p class="lead text-muted max-w-75">
-                Мы предлагаем полный спектр услуг по проектированию, строительству и реконструкции объектов энергетики.
-                Гарантируем соблюдение сроков, использование современных материалов и прозрачную отчетность.
+    <section class="page-header text-center">
+        <div class="container position-relative z-1" data-aos="fade-up">
+            <h1 class="display-3 fw-bold text-uppercase mb-3 tracking-wider">Наши услуги</h1>
+            <div class="mx-auto bg-primary mb-4" style="width: 80px; height: 4px;"></div>
+            <p class="lead text-white-50 mx-auto max-w-75 fs-4">
+                Полный цикл электроснабжения: от получения ТУ до ввода в эксплуатацию.
+                Работаем по всей России с объектами любой сложности.
             </p>
         </div>
     </section>
@@ -108,82 +155,387 @@
     <!-- Услуги Подробно -->
     <section class="py-5 bg-dark">
         <div class="container py-5">
-            <div class="row g-4">
-                <!-- Услуга 1 -->
-                <div class="col-lg-6">
-                    <div class="card service-card">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <i class="bi bi-bezier2 service-icon"></i>
-                            <span class="badge bg-primary text-black rounded-0 fs-6">ХИТ</span>
+            <!-- Навигация по табам -->
+            <ul class="nav nav-tabs nav-fill mb-5" id="servicesTabs" role="tablist"
+                style="border-bottom: 2px solid var(--border-color);">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold text-uppercase py-3 fs-5" id="lep-tab" data-bs-toggle="tab"
+                        data-bs-target="#lep" type="button" role="tab" aria-controls="lep" aria-selected="true">
+                        <i class="bi bi-bezier2 me-2"></i>ЛЭП и ВЛ
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-uppercase py-3 fs-5" id="ktp-tab" data-bs-toggle="tab"
+                        data-bs-target="#ktp" type="button" role="tab" aria-controls="ktp" aria-selected="false">
+                        <i class="bi bi-lightning-charge me-2"></i>КТП / РТП
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-uppercase py-3 fs-5" id="inner-tab" data-bs-toggle="tab"
+                        data-bs-target="#inner" type="button" role="tab" aria-controls="inner" aria-selected="false">
+                        <i class="bi bi-house-gear me-2"></i>Внутр. ЭС
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-uppercase py-3 fs-5" id="gnb-tab" data-bs-toggle="tab"
+                        data-bs-target="#gnb" type="button" role="tab" aria-controls="gnb" aria-selected="false">
+                        <i class="bi bi-cone-striped me-2"></i>ГНБ
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-uppercase py-3 fs-5" id="project-tab" data-bs-toggle="tab"
+                        data-bs-target="#project" type="button" role="tab" aria-controls="project"
+                        aria-selected="false">
+                        <i class="bi bi-building-add me-2"></i>Проект
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Контент табов -->
+            <div class="tab-content" id="servicesTabsContent">
+
+                <!-- Таб 1: ЛЭП -->
+                <div class="tab-pane fade show active" id="lep" role="tabpanel" aria-labelledby="lep-tab">
+                    <div class="row g-4 align-items-stretch" data-aos="fade-up">
+                        <div class="col-lg-7">
+                            <div class="card service-card shadow-lg bg-surface border-0 h-100">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <i class="bi bi-bezier2 service-icon"></i>
+                                    <span class="badge bg-primary text-black rounded-0 fs-6">ХИТ</span>
+                                </div>
+                                <h3 class="mb-4">СТРОИТЕЛЬСТВО ЛЭП И ВЛ</h3>
+                                <p class="text-muted mb-4 fs-5">Проектирование и монтаж воздушных и кабельных линий
+                                    электропередач напряжением от 0.4 кВ до 110 кВ под ключ.</p>
+                                <ul class="check-list mb-auto">
+                                    <li>Монтаж опор (СВ-95, СВ-105, СВ-110, металлические решетчатые опоры)</li>
+                                    <li>Подвес провода СИП и неизолированных проводов</li>
+                                    <li>Прокладка кабельных линий в траншее и кабельных сооружениях</li>
+                                    <li>Реконструкция существующих линий</li>
+                                    <li>Получение разрешительной документации</li>
+                                </ul>
+                                <div class="service-price">От 500 000 ₽</div>
+                            </div>
                         </div>
-                        <h3 class="mb-4">СТРОИТЕЛЬСТВО ЛЭП И ВЛ</h3>
-                        <p class="text-muted mb-4 fs-5">Проектирование и монтаж воздушных и кабельных линий
-                            электропередач напряжением от 0.4 кВ до 110 кВ под ключ.</p>
-                        <ul class="check-list mb-auto">
-                            <li>Монтаж опор (СВ-95, СВ-105, СВ-110, металлические решетчатые опоры)</li>
-                            <li>Подвес провода СИП и неизолированных проводов</li>
-                            <li>Прокладка кабельных линий в траншее и кабельных сооружениях</li>
-                            <li>Реконструкция существующих линий</li>
-                            <li>Получение разрешительной документации</li>
-                        </ul>
-                        <div class="service-price">От 500 000 ₽</div>
+                        <div class="col-lg-5">
+                            <div id="carouselLep" class="carousel slide service-carousel shadow-lg"
+                                data-bs-ride="carousel" data-bs-touch="true">
+                                <div class="carousel-indicators">
+                                    <button type="button" data-bs-target="#carouselLep" data-bs-slide-to="0"
+                                        class="active"></button>
+                                    <button type="button" data-bs-target="#carouselLep" data-bs-slide-to="1"></button>
+                                    <button type="button" data-bs-target="#carouselLep" data-bs-slide-to="2"></button>
+                                    <button type="button" data-bs-target="#carouselLep" data-bs-slide-to="3"></button>
+                                </div>
+                                <div class="carousel-inner">
+                                    <div class="carousel-item active"><img src="/img/services/lep_1.png" alt="ЛЭП 1">
+                                    </div>
+                                    <div class="carousel-item"><img src="/img/services/lep_2.png" alt="ЛЭП 2"></div>
+                                    <div class="carousel-item"><img src="/img/services/lep_3.png" alt="ЛЭП 3"></div>
+                                    <div class="carousel-item"><img src="/img/services/lep_4.png" alt="ЛЭП 4"></div>
+                                </div>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselLep"
+                                    data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carouselLep"
+                                    data-bs-slide="next">
+                                    <span class="carousel-control-next-icon"></span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Услуга 2 -->
-                <div class="col-lg-6">
-                    <div class="card service-card">
-                        <i class="bi bi-lightning-charge service-icon"></i>
-                        <h3 class="mb-4">МОНТАЖ И ПУСКОНАЛАДКА КТП / РТП</h3>
-                        <p class="text-muted mb-4 fs-5">Комплексные работы по установке трансформаторных подстанций
-                            различных типов и мощностей.</p>
-                        <ul class="check-list mb-auto">
-                            <li>Установка киосковых, мачтовых и столбовых КТП</li>
-                            <li>Строительство и монтаж закрытых подстанций (ЗТП, РТП)</li>
-                            <li>Сборка ячеек КРУ, КСО, ЩО-70</li>
-                            <li>Проведение полного комплекса пусконаладочных работ с выдачей протоколов лаборатории</li>
-                        </ul>
-                        <div class="service-price">От 850 000 ₽</div>
+                <!-- Таб 2: КТП / РТП -->
+                <div class="tab-pane fade" id="ktp" role="tabpanel" aria-labelledby="ktp-tab">
+                    <div class="row g-4 align-items-stretch" data-aos="fade-up">
+                        <div class="col-lg-5 order-2 order-lg-1">
+                            <div id="carouselKtp" class="carousel slide service-carousel shadow-lg"
+                                data-bs-ride="carousel" data-bs-touch="true">
+                                <div class="carousel-indicators">
+                                    <button type="button" data-bs-target="#carouselKtp" data-bs-slide-to="0"
+                                        class="active"></button>
+                                    <button type="button" data-bs-target="#carouselKtp" data-bs-slide-to="1"></button>
+                                    <button type="button" data-bs-target="#carouselKtp" data-bs-slide-to="2"></button>
+                                    <button type="button" data-bs-target="#carouselKtp" data-bs-slide-to="3"></button>
+                                </div>
+                                <div class="carousel-inner">
+                                    <div class="carousel-item active"><img src="/img/services/ktp_1.png" alt="КТП 1">
+                                    </div>
+                                    <div class="carousel-item"><img src="/img/services/ktp_2.png" alt="КТП 2"></div>
+                                    <div class="carousel-item"><img src="/img/services/ktp_3.png" alt="КТП 3"></div>
+                                    <div class="carousel-item"><img src="/img/services/ktp_4.png" alt="КТП 4"></div>
+                                </div>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselKtp"
+                                    data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carouselKtp"
+                                    data-bs-slide="next">
+                                    <span class="carousel-control-next-icon"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-lg-7 order-1 order-lg-2">
+                            <div class="card service-card shadow-lg bg-surface border-0 h-100">
+                                <i class="bi bi-lightning-charge service-icon"></i>
+                                <h3 class="mb-4">МОНТАЖ И ПУСКОНАЛАДКА КТП / РТП</h3>
+                                <p class="text-muted mb-4 fs-5">Комплексные работы по установке трансформаторных
+                                    подстанций
+                                    различных типов и мощностей.</p>
+                                <ul class="check-list mb-auto">
+                                    <li>Установка киосковых, мачтовых и столбовых КТП</li>
+                                    <li>Строительство и монтаж закрытых подстанций (ЗТП, РТП)</li>
+                                    <li>Сборка ячеек КРУ, КСО, ЩО-70</li>
+                                    <li>Проведение полного комплекса пусконаладочных работ с выдачей протоколов
+                                        лаборатории</li>
+                                </ul>
+                                <div class="service-price">От 850 000 ₽</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Услуга 3 -->
-                <div class="col-lg-6">
-                    <div class="card service-card">
-                        <i class="bi bi-cone-striped service-icon"></i>
-                        <h3 class="mb-4">ГОРИЗОНТАЛЬНО-НАПРАВЛЕННОЕ БУРЕНИЕ (ГНБ)</h3>
-                        <p class="text-muted mb-4 fs-5">Бестраншейная прокладка коммуникаций под автомобильными
-                            дорогами, реками и другими преградами.</p>
-                        <ul class="check-list mb-auto">
-                            <li>Бурение пилотной скважины</li>
-                            <li>Последовательное расширение скважины до нужного диаметра</li>
-                            <li>Затягивание трубопровода ПНД для кабельных линий</li>
-                            <li>Сварка ПНД труб встык и электромуфтовая сварка</li>
-                        </ul>
-                        <div class="service-price">От 2 500 ₽ / метр</div>
+                <!-- Таб 3: Внутренние ЭС -->
+                <div class="tab-pane fade" id="inner" role="tabpanel" aria-labelledby="inner-tab">
+                    <div class="row g-4 align-items-stretch" data-aos="fade-up">
+                        <div class="col-lg-7">
+                            <div class="card service-card shadow-lg bg-surface border-0 h-100">
+                                <i class="bi bi-house-gear service-icon"></i>
+                                <h3 class="mb-4">ВНУТРЕННЕЕ ЭЛЕКТРОСНАБЖЕНИЕ</h3>
+                                <p class="text-muted mb-4 fs-5">Проектирование и электромонтажные работы внутри
+                                    промышленных, коммерческих и складских комплексов.</p>
+                                <ul class="check-list mb-auto">
+                                    <li>Монтаж внутренних кабельных трасс, лотков, коробов</li>
+                                    <li>Сборка и установка розеточных сетей и освещения</li>
+                                    <li>Сборка и монтаж щитов распределительных (ГРЩ, ВРУ, ЩО, ЩС)</li>
+                                    <li>Подключение промышленного и технологического оборудования</li>
+                                    <li>Монтаж систем заземления и молниезащиты зданий</li>
+                                </ul>
+                                <div class="service-price">От 150 000 ₽</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div id="carouselInner" class="carousel slide service-carousel shadow-lg"
+                                data-bs-ride="carousel" data-bs-touch="true">
+                                <div class="carousel-indicators">
+                                    <button type="button" data-bs-target="#carouselInner" data-bs-slide-to="0"
+                                        class="active"></button>
+                                    <button type="button" data-bs-target="#carouselInner" data-bs-slide-to="1"></button>
+                                    <button type="button" data-bs-target="#carouselInner" data-bs-slide-to="2"></button>
+                                    <button type="button" data-bs-target="#carouselInner" data-bs-slide-to="3"></button>
+                                </div>
+                                <div class="carousel-inner">
+                                    <div class="carousel-item active"><img src="/img/services/inner_1.png"
+                                            alt="Внутр ЭС 1"></div>
+                                    <div class="carousel-item"><img src="/img/services/inner_2.png" alt="Внутр ЭС 2">
+                                    </div>
+                                    <div class="carousel-item"><img src="/img/services/inner_3.png" alt="Внутр ЭС 3">
+                                    </div>
+                                    <div class="carousel-item"><img src="/img/services/inner_4.png" alt="Внутр ЭС 4">
+                                    </div>
+                                </div>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselInner"
+                                    data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carouselInner"
+                                    data-bs-slide="next">
+                                    <span class="carousel-control-next-icon"></span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Услуга 4 -->
-                <div class="col-lg-6">
-                    <div class="card service-card">
-                        <i class="bi bi-building-add service-icon"></i>
-                        <h3 class="mb-4">ПРОЕКТИРОВАНИЕ ОБЪЕКТОВ ЭНЕРГЕТИКИ</h3>
-                        <p class="text-muted mb-4 fs-5">Разработка проектной и рабочей документации на строительство и
-                            реконструкцию.</p>
-                        <ul class="check-list mb-auto">
-                            <li>Сбор исходно-разрешительной документации</li>
-                            <li>Проведение инженерных изысканий (геодезия, геология)</li>
-                            <li>Разработка стадий "П" (Проект) и "Р" (Рабочая документация)</li>
-                            <li>Согласование проекта во всех инстанциях и прохождение экспертизы</li>
-                        </ul>
-                        <div class="service-price">Индивидуальный расчет</div>
+                <!-- Таб 4: ГНБ -->
+                <div class="tab-pane fade" id="gnb" role="tabpanel" aria-labelledby="gnb-tab">
+                    <div class="row g-4 align-items-stretch" data-aos="fade-up">
+                        <div class="col-lg-5 order-2 order-lg-1">
+                            <div id="carouselGnb" class="carousel slide service-carousel shadow-lg"
+                                data-bs-ride="carousel" data-bs-touch="true">
+                                <div class="carousel-indicators">
+                                    <button type="button" data-bs-target="#carouselGnb" data-bs-slide-to="0"
+                                        class="active"></button>
+                                    <button type="button" data-bs-target="#carouselGnb" data-bs-slide-to="1"></button>
+                                    <button type="button" data-bs-target="#carouselGnb" data-bs-slide-to="2"></button>
+                                    <button type="button" data-bs-target="#carouselGnb" data-bs-slide-to="3"></button>
+                                </div>
+                                <div class="carousel-inner">
+                                    <div class="carousel-item active"><img src="/img/services/gnb_1.png" alt="ГНБ 1">
+                                    </div>
+                                    <div class="carousel-item"><img src="/img/services/gnb_2.png" alt="ГНБ 2"></div>
+                                    <div class="carousel-item"><img src="/img/services/gnb_3.png" alt="ГНБ 3"></div>
+                                    <div class="carousel-item"><img src="/img/services/gnb_4.png" alt="ГНБ 4"></div>
+                                </div>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselGnb"
+                                    data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carouselGnb"
+                                    data-bs-slide="next">
+                                    <span class="carousel-control-next-icon"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-lg-7 order-1 order-lg-2">
+                            <div class="card service-card shadow-lg bg-surface border-0 h-100">
+                                <i class="bi bi-cone-striped service-icon"></i>
+                                <h3 class="mb-4">ГОРИЗОНТАЛЬНО-НАПРАВЛЕННОЕ БУРЕНИЕ (ГНБ)</h3>
+                                <p class="text-muted mb-4 fs-5">Бестраншейная прокладка коммуникаций под автомобильными
+                                    дорогами, реками и другими преградами.</p>
+                                <ul class="check-list mb-auto">
+                                    <li>Бурение пилотной скважины</li>
+                                    <li>Последовательное расширение скважины до нужного диаметра</li>
+                                    <li>Затягивание трубопровода ПНД для кабельных линий</li>
+                                    <li>Сварка ПНД труб встык и электромуфтовая сварка</li>
+                                </ul>
+                                <div class="service-price">От 2 500 ₽ / метр</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Таб 5: Проектирование -->
+                <div class="tab-pane fade" id="project" role="tabpanel" aria-labelledby="project-tab">
+                    <div class="row g-4 align-items-stretch" data-aos="fade-up">
+                        <div class="col-lg-7">
+                            <div class="card service-card shadow-lg bg-surface border-0 h-100">
+                                <i class="bi bi-building-add service-icon"></i>
+                                <h3 class="mb-4">ПРОЕКТИРОВАНИЕ ОБЪЕКТОВ ЭНЕРГЕТИКИ</h3>
+                                <p class="text-muted mb-4 fs-5">Разработка проектной и рабочей документации на
+                                    строительство и
+                                    реконструкцию.</p>
+                                <ul class="check-list mb-auto">
+                                    <li>Сбор исходно-разрешительной документации</li>
+                                    <li>Проведение инженерных изысканий (геодезия, геология)</li>
+                                    <li>Разработка стадий "П" (Проект) и "Р" (Рабочая документация)</li>
+                                    <li>Согласование проекта во всех инстанциях и прохождение экспертизы</li>
+                                </ul>
+                                <div class="service-price">Индивидуальный расчет</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div id="carouselProject" class="carousel slide service-carousel shadow-lg"
+                                data-bs-ride="carousel" data-bs-touch="true">
+                                <div class="carousel-indicators">
+                                    <button type="button" data-bs-target="#carouselProject" data-bs-slide-to="0"
+                                        class="active"></button>
+                                    <button type="button" data-bs-target="#carouselProject"
+                                        data-bs-slide-to="1"></button>
+                                    <button type="button" data-bs-target="#carouselProject"
+                                        data-bs-slide-to="2"></button>
+                                    <button type="button" data-bs-target="#carouselProject"
+                                        data-bs-slide-to="3"></button>
+                                </div>
+                                <div class="carousel-inner">
+                                    <div class="carousel-item active"><img src="/img/services/project_1.png"
+                                            alt="Проект 1"></div>
+                                    <div class="carousel-item"><img src="/img/services/project_2.png" alt="Проект 2">
+                                    </div>
+                                    <div class="carousel-item"><img src="/img/services/project_3.png" alt="Проект 3">
+                                    </div>
+                                    <div class="carousel-item"><img src="/img/services/project_4.png" alt="Проект 4">
+                                    </div>
+                                </div>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselProject"
+                                    data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carouselProject"
+                                    data-bs-slide="next">
+                                    <span class="carousel-control-next-icon"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div class="mt-5 text-center">
                 <a href="/contact.html" class="btn btn-primary btn-lg">ОСТАВИТЬ ЗАЯВКУ НА РАСЧЕТ</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Преимущества -->
+    <section class="py-5 bg-surface border-top border-bottom border-secondary border-opacity-10">
+        <div class="container py-5">
+            <div class="row g-5 text-center">
+                <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="display-4 fw-bold text-primary mb-3">15+</div>
+                    <h5 class="text-uppercase mb-3">Лет на рынке</h5>
+                    <p class="text-muted">Проверенная временем надежность и глубокая экспертиза в энергетике.</p>
+                </div>
+                <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="display-4 fw-bold text-primary mb-3">200+</div>
+                    <h5 class="text-uppercase mb-3">Объектов сдано</h5>
+                    <p class="text-muted">От частных подстанций до федеральных магистральных линий.</p>
+                </div>
+                <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="display-4 fw-bold text-primary mb-3">110 кВ</div>
+                    <h5 class="text-uppercase mb-3">Допуск работ</h5>
+                    <p class="text-muted">Лицензии и допуски СРО на работу с высоковольтным оборудованием.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Почему мы -->
+    <section class="py-5 bg-dark hero-dots">
+        <div class="container py-5">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6" data-aos="fade-right">
+                    <h2 class="display-5 fw-bold text-uppercase mb-4">Почему выбирают <span
+                            class="text-primary">ЭнергоАтлант</span>?</h2>
+                    <p class="text-muted mb-5 fs-5">Мы не просто строим — мы создаем надежную инфраструктуру для вашего
+                        бизнеса. Используем передовые технологии мониторинга и прозрачного управления проектами.</p>
+
+                    <div class="d-flex gap-4 mb-4">
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle"
+                            style="width: 60px; height: 60px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-shield-check text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-uppercase mb-2">Безопасность и ГОСТ</h5>
+                            <p class="text-muted">Строгое соблюдение ПУЭ, СНиП и всех государственных стандартов
+                                безопасности.</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-4 mb-4">
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle"
+                            style="width: 60px; height: 60px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-speedometer2 text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-uppercase mb-2">Соблюдение сроков</h5>
+                            <p class="text-muted">Четкое планирование этапов и контроль дедлайнов в реальном времени.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-4">
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle"
+                            style="width: 60px; height: 60px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-graph-up-arrow text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-uppercase mb-2">Оптимизация затрат</h5>
+                            <p class="text-muted">Подбор оптимальных технических решений без потери качества.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6" data-aos="fade-left">
+                    <div class="position-relative">
+                        <img src="/img/services/substation.png" alt="Работа на объекте" class="img-fluid shadow-lg">
+                        <div class="position-absolute bottom-0 start-0 bg-primary p-4 text-black fw-bold text-uppercase shadow-lg d-none d-md-block"
+                            style="translate: -20px 20px;">
+                            Работаем под ключ
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -206,7 +558,15 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
+        // AOS
+        AOS.init({
+            duration: 1000,
+            once: true,
+            offset: 100
+        });
+
         // Прелоадер
         window.addEventListener('load', function () {
             setTimeout(function () {
@@ -214,6 +574,13 @@
             }, 500);
         });
     </script>
+    <!-- Глобальная кнопка Позвонить -->
+    <div class="float-btn-container">
+        <a href="tel:+79939074577" class="float-btn">
+            <i class="bi bi-telephone-outbound-fill"></i> Позвонить
+        </a>
+    </div>
+
 </body>
 
 </html>

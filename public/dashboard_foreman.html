@@ -14,24 +14,25 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-secondary mb-4 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#">
-                ⚡ ЭнергоАтлант
-                <span class="badge bg-warning text-dark ms-2">Прораб</span>
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+                <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;" class="me-2">
+                <span class="badge bg-warning text-dark ms-1 align-middle d-none d-sm-inline"
+                    style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">ПРОРАБ</span>
             </a>
 
             <div class="d-flex align-items-center gap-2">
                 <!-- Ввод кода проекта прямо в navbar -->
                 <div class="input-group input-group-sm d-none d-md-flex" style="width:260px;">
                     <input type="text" id="joinCode" class="form-control" placeholder="Код проекта (PRJ-XXXX)"
-                        style="text-transform:uppercase; letter-spacing:1px;">
+                        style="background-color: var(--bg-elevated); border-color: var(--border-color); color: white; text-transform:uppercase; letter-spacing:1px;">
                     <button class="btn btn-warning fw-bold" onclick="joinProject()">
-                        <i class="bi bi-link-45deg"></i> Добавить
+                        <i class="bi bi-link-45deg"></i> ДОБАВИТЬ
                     </button>
                 </div>
                 <span class="text-white me-2 d-none d-md-inline small">
                     <i class="bi bi-person-fill"></i> <span id="userName">...</span>
                 </span>
-                <a href="/api/logout" class="btn btn-outline-light btn-sm fw-bold">Выйти</a>
+                <a href="/api/logout" class="btn btn-outline-light btn-sm fw-bold">ВЫЙТИ</a>
             </div>
         </div>
     </nav>

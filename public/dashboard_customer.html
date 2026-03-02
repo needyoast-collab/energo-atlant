@@ -7,48 +7,51 @@
     <title>Кабинет заказчика - ЭнергоАтлант</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="/css/style.css" rel="stylesheet">
 </head>
 
 <body>
 
     <!-- NAVBAR с постоянными кнопками -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm"
+        style="background-color: var(--bg-surface) !important; border-bottom: 1px solid var(--border-color);">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#">⚡ ЭнергоАтлант</a>
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+                <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;" class="me-2">
+                <span class="badge bg-warning text-dark ms-1 align-middle d-none d-sm-inline"
+                    style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">В ЛИЧНОМ КАБИНЕТЕ</span>
+            </a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-                <!-- Постоянные кнопки действий -->
-                <div class="d-flex gap-2 ms-3 me-auto">
-                    <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal"
+                <div class="d-flex gap-3 ms-lg-4 me-auto my-3 my-lg-0">
+                    <button class="btn btn-success btn-sm fw-bold px-3 py-2" data-bs-toggle="modal"
                         data-bs-target="#createRequestModal">
-                        <i class="bi bi-plus-circle-fill"></i> Создать заявку
+                        <i class="bi bi-plus-circle-fill me-1"></i> СОЗДАТЬ ЗАЯВКУ
                     </button>
-                    <button class="btn btn-outline-light btn-sm fw-bold" data-bs-toggle="modal"
+                    <button class="btn btn-outline-light btn-sm fw-bold px-3 py-2" data-bs-toggle="modal"
                         data-bs-target="#joinProjectModal">
-                        <i class="bi bi-link-45deg"></i> Присоединиться к проекту
+                        <i class="bi bi-link-45deg me-1"></i> ПРИСОЕДИНИТЬСЯ
                     </button>
                 </div>
 
                 <ul class="navbar-nav align-items-center">
-                    <li class="nav-item me-3">
-                        <span class="text-white small">
-                            <i class="bi bi-person-circle"></i> <span id="userName">Загрузка...</span>
-                        </span>
+                    <li class="nav-item me-lg-3 mb-2 mb-lg-0 text-white opacity-75 small">
+                        <i class="bi bi-person-circle me-1"></i> <span id="userName">Загрузка...</span>
                     </li>
                     <li class="nav-item">
-                        <a href="/api/logout" class="btn btn-danger btn-sm fw-bold">Выйти</a>
+                        <a href="/api/logout" class="btn btn-outline-danger btn-sm fw-bold">ВЫЙТИ</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container-fluid px-4">
 
         <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
@@ -65,7 +68,7 @@
             </li>
         </ul>
 
-        <div class="tab-content bg-white p-4 rounded shadow-sm border" id="myTabContent">
+        <div class="tab-content p-4 rounded" id="myTabContent">
 
             <!-- Проекты -->
             <div class="tab-pane fade show active" id="projectsTab" role="tabpanel">
@@ -118,7 +121,14 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">Контактный телефон *</label>
                             <input type="tel" class="form-control" id="req_contact" placeholder="+79991234567" required>
-                            <small class="text-muted">Формат: +79991234567 или 89991234567</small>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="useProfilePhone">
+                                <label class="form-check-label text-muted small" for="useProfilePhone"
+                                    style="cursor: pointer;">
+                                    Использовать телефон из профиля
+                                </label>
+                            </div>
+                            <small class="text-muted mt-1 d-block">Формат: +79991234567 или 89991234567</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Документы (ТЗ, планы, схемы)</label>
@@ -196,8 +206,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/customer.js"></script>
+    <script src="/js/api.js?v=2"></script>
+    <script src="/js/customer.js?v=2"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -206,10 +216,30 @@
                 const data = await res.json();
                 if (data.success) {
                     document.getElementById('userName').innerText = data.user.full_name || data.user.login;
+                    window.currentUserPhone = data.user.phone || '';
                 }
             } catch (e) { console.error(e); }
         });
     </script>
+    <div id="docsModal" class="custom-modal">
+        <div class="modal-content-box">
+            <div class="modal-header-box">
+                <h3 style="margin:0; font-size:1.1rem; color:#fff;" id="modalProjectTitle">Проект</h3>
+                <button class="close-btn" onclick="closeDocsModal()">&times;</button>
+            </div>
+            <div class="modal-body-box" id="modalDocsBody">
+                <!-- Контент загрузится через JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Глобальная кнопка Позвонить -->
+    <div class="float-btn-container">
+        <a href="tel:+79939074577" class="float-btn">
+            <i class="bi bi-telephone-outbound-fill"></i> Позвонить
+        </a>
+    </div>
+
 </body>
 
 </html>

@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Custom CSS (Industrial Dark) -->
     <link href="/css/style.css" rel="stylesheet">
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <style>
         .page-header {
             padding: 120px 0 60px;
@@ -97,13 +99,14 @@
 <body>
     <!-- Прелоадер -->
     <div class="preloader" id="preloader">
-        <div class="preloader-logo">Энерго<span>Атлант</span></div>
+        <img src="/img/logo.png" alt="ЭнергоАтлант" class="preloader-logo-img">
     </div>
 
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
         <div class="container">
-            <a class="navbar-brand text-uppercase" href="/index.html">Энерго<span>Атлант</span></a>
+            <a class="navbar-brand" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
+                    style="height: 40px; object-fit: contain;"></a>
             <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
                 data-bs-target="#navbarNav">
                 <i class="bi bi-list fs-2 text-white"></i>
@@ -118,18 +121,17 @@
                 </ul>
                 <div class="d-flex align-items-center gap-4">
                     <div class="contact-info d-none d-xl-block">
-                        <a href="tel:+74950000000" class="text-white text-decoration-none fw-bold">+7 (921)
-                            000-00-00</a>
+                        <a href="tel:+79939074577" class="text-white text-decoration-none fw-bold">+7 993 907-45-77</a>
                     </div>
-                    <a href="/login.html" class="btn btn-primary text-black fw-bold">КАБИНЕТ</a>
+                    <a href="/login.html" class="btn btn-primary fw-bold">КАБИНЕТ</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Заголовок страницы -->
-    <section class="page-header">
-        <div class="container">
+    <section class="page-header" data-aos="fade-in">
+        <div class="container" data-aos="fade-up">
             <h1 class="display-4 fw-bold text-uppercase mb-3">О компании & Проекты</h1>
             <p class="lead text-muted max-w-75">
                 Мы — команда инженеров, строителей и проектировщиков. Наша цель — строить надежные электросети с
@@ -142,20 +144,24 @@
     <section class="py-5 bg-dark border-bottom" style="border-color: rgba(255,255,255,0.05) !important;">
         <div class="container py-4">
             <div class="row g-4 text-center">
-                <div class="col-md-3 col-6">
-                    <h2 class="display-4 fw-bold" style="color: var(--primary-color);">15+</h2>
+                <div class="col-md-3 col-6" data-aos="fade-up" data-aos-delay="100">
+                    <h2 class="display-4 fw-bold counter-value" data-target="15" style="color: var(--primary-color);">0
+                    </h2>
                     <p class="text-muted text-uppercase fw-bold small">Лет опыта</p>
                 </div>
-                <div class="col-md-3 col-6">
-                    <h2 class="display-4 fw-bold" style="color: var(--primary-color);">120</h2>
+                <div class="col-md-3 col-6" data-aos="fade-up" data-aos-delay="200">
+                    <h2 class="display-4 fw-bold counter-value" data-target="120" style="color: var(--primary-color);">0
+                    </h2>
                     <p class="text-muted text-uppercase fw-bold small">Объектов сдано</p>
                 </div>
-                <div class="col-md-3 col-6">
-                    <h2 class="display-4 fw-bold" style="color: var(--primary-color);">10K</h2>
+                <div class="col-md-3 col-6" data-aos="fade-up" data-aos-delay="300">
+                    <h2 class="display-4 fw-bold counter-value" data-target="10" data-suffix="K"
+                        style="color: var(--primary-color);">0</h2>
                     <p class="text-muted text-uppercase fw-bold small">КМ линий построено</p>
                 </div>
-                <div class="col-md-3 col-6">
-                    <h2 class="display-4 fw-bold" style="color: var(--primary-color);">100%</h2>
+                <div class="col-md-3 col-6" data-aos="fade-up" data-aos-delay="400">
+                    <h2 class="display-4 fw-bold counter-value" data-target="100" data-suffix="%"
+                        style="color: var(--primary-color);">0</h2>
                     <p class="text-muted text-uppercase fw-bold small">Гарантия сроков</p>
                 </div>
             </div>
@@ -179,10 +185,9 @@
 
             <div class="row g-4">
                 <!-- Проект 1 -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6" data-aos="fade-up">
                     <div class="portfolio-card">
-                        <div class="portfolio-img"
-                            style="background-image: url('https://images.unsplash.com/photo-1473663675003-8869c9eb1cc8?auto=format&fit=crop&q=80&w=1600');">
+                        <div class="portfolio-img" style="background-image: url('/img/projects/1.jpg');">
                         </div>
                         <div class="portfolio-badge">ЗАВЕРШЕН</div>
                         <div class="p-4 flex-grow-1 d-flex flex-column">
@@ -199,10 +204,9 @@
                 </div>
 
                 <!-- Проект 2 -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
                     <div class="portfolio-card">
-                        <div class="portfolio-img"
-                            style="background-image: url('https://images.unsplash.com/photo-1413881728562-b9cf6d78ae71?auto=format&fit=crop&q=80&w=1600');">
+                        <div class="portfolio-img" style="background-image: url('/img/projects/2.jpg');">
                         </div>
                         <div class="portfolio-badge">ЗАВЕРШЕН</div>
                         <div class="p-4 flex-grow-1 d-flex flex-column">
@@ -219,10 +223,9 @@
                 </div>
 
                 <!-- Проект 3 -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
                     <div class="portfolio-card">
-                        <div class="portfolio-img"
-                            style="background-image: url('https://images.unsplash.com/photo-1541888086026-6f8c2b73ee34?auto=format&fit=crop&q=80&w=1600');">
+                        <div class="portfolio-img" style="background-image: url('/img/projects/3.jpg');">
                         </div>
                         <div class="portfolio-badge bg-info text-dark">В РАБОТЕ</div>
                         <div class="p-4 flex-grow-1 d-flex flex-column">
@@ -237,11 +240,69 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Проект 4 -->
+                <div class="col-lg-4 col-md-6" data-aos="fade-up">
+                    <div class="portfolio-card">
+                        <div class="portfolio-img" style="background-image: url('/img/projects/4.jpg');">
+                        </div>
+                        <div class="portfolio-badge">ЗАВЕРШЕН</div>
+                        <div class="p-4 flex-grow-1 d-flex flex-column">
+                            <h4 class="mb-3 text-uppercase fw-bold">КТП 10/0.4 кВ</h4>
+                            <p class="text-muted mb-4 pb-3 border-bottom"
+                                style="font-size: 0.95rem; border-color: rgba(255,255,255,0.05) !important;">
+                                Монтаж и пусконаладка комплектной трансформаторной подстанции для складов.</p>
+                            <div class="mt-auto row text-muted small text-uppercase" style="letter-spacing: 0.05em;">
+                                <div class="col-6"><strong>Сроки:</strong> 2 мес</div>
+                                <div class="col-6 text-end"><strong>Заказчик:</strong> ГК Самолет</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Проект 5 -->
+                <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
+                    <div class="portfolio-card">
+                        <div class="portfolio-img" style="background-image: url('/img/projects/5.jpg');">
+                        </div>
+                        <div class="portfolio-badge">ЗАВЕРШЕН</div>
+                        <div class="p-4 flex-grow-1 d-flex flex-column">
+                            <h4 class="mb-3 text-uppercase fw-bold">ВЛ 0.4 кВ СНТ "Ромашка"</h4>
+                            <p class="text-muted mb-4 pb-3 border-bottom"
+                                style="font-size: 0.95rem; border-color: rgba(255,255,255,0.05) !important;">
+                                Реконструкция внутренних электросетей СНТ, подвес СИП, замена опор.</p>
+                            <div class="mt-auto row text-muted small text-uppercase" style="letter-spacing: 0.05em;">
+                                <div class="col-6"><strong>Сроки:</strong> 1 мес</div>
+                                <div class="col-6 text-end"><strong>Заказчик:</strong> Частное СНТ</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Проект 6 -->
+                <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
+                    <div class="portfolio-card">
+                        <div class="portfolio-img" style="background-image: url('/img/projects/6.jpg');">
+                        </div>
+                        <div class="portfolio-badge bg-info text-dark">В РАБОТЕ</div>
+                        <div class="p-4 flex-grow-1 d-flex flex-column">
+                            <h4 class="mb-3 text-uppercase fw-bold">РТП 10 кВ "Гринвуд"</h4>
+                            <p class="text-muted mb-4 pb-3 border-bottom"
+                                style="font-size: 0.95rem; border-color: rgba(255,255,255,0.05) !important;">
+                                Масштабный проект по строительству распределительной трансформаторной подстанции.</p>
+                            <div class="mt-auto row text-muted small text-uppercase" style="letter-spacing: 0.05em;">
+                                <div class="col-6"><strong>Сроки:</strong> Текущий</div>
+                                <div class="col-6 text-end"><strong>Заказчик:</strong> Индустриальный Парк</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Лицензии и Допуски -->
+    <!-- 
+    Скрыто по ТЗ (Лицензии и Допуски)
     <section class="py-5 bg-dark">
         <div class="container py-5">
             <h2 class="fw-bold text-uppercase mb-5 text-center">ЛИЦЕНЗИИ И ДОПУСКИ СРО</h2>
@@ -262,6 +323,7 @@
             </div>
         </div>
     </section>
+    -->
 
     <!-- Footer -->
     <footer class="bg-surface py-4 border-top" style="border-color: var(--border-color) !important;">
@@ -277,14 +339,70 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
-        // Прелоадер
-        window.addEventListener('load', function () {
-            setTimeout(function () {
-                document.getElementById('preloader').classList.add('preloader-hidden');
-            }, 500);
-        });
+        // Init AOS
+        AOS.init({ once: true });
+
+        // Counter Animation Logic
+        function animateCounters() {
+            const counters = document.querySelectorAll('.counter-value');
+            const speed = 200;
+
+            const observerOptions = {
+                threshold: 0.5
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const target = entry.target;
+                        const targetValue = parseInt(target.getAttribute('data-target'));
+                        const suffix = target.getAttribute('data-suffix') || '';
+                        let count = 0;
+                        const increment = targetValue / speed;
+
+                        const updateCount = () => {
+                            if (count < targetValue) {
+                                count += increment;
+                                target.innerText = Math.ceil(count) + suffix;
+                                setTimeout(updateCount, 10);
+                            } else {
+                                target.innerText = targetValue + suffix;
+                            }
+                        };
+                        updateCount();
+                        observer.unobserve(target); // Only animate once
+                    }
+                });
+            }, observerOptions);
+
+            counters.forEach(counter => observer.observe(counter));
+        }
+
+        document.addEventListener('DOMContentLoaded', animateCounters);
+
+        // Умный прелоадер: скрываем либо по полной загрузке, либо принудительно через 1.2 сек
+        function hidePreloader() {
+            const preloader = document.getElementById('preloader');
+            if (preloader && !preloader.classList.contains('preloader-hidden')) {
+                preloader.classList.add('preloader-hidden');
+            }
+        }
+
+        // Если страница и все картинки загрузились быстро
+        window.addEventListener('load', hidePreloader);
+
+        // Страховочный таймер (на случай медленных внешних ресурсов)
+        setTimeout(hidePreloader, 1200);
     </script>
+    <!-- Глобальная кнопка Позвонить -->
+    <div class="float-btn-container">
+        <a href="tel:+79939074577" class="float-btn">
+            <i class="bi bi-telephone-outbound-fill"></i> Позвонить
+        </a>
+    </div>
+
 </body>
 
 </html>

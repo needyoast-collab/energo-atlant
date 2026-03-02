@@ -4,15 +4,18 @@ const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const session = require('express-session');
-const bcrypt = require('bcrypt');
+const argon2 = require('argon2');
+const bcrypt = require('bcrypt'); // Оставляем для обратной совместимости старых юзеров
+const { z } = require('zod');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const { OpenAI } = require("openai");
+const pdfParse = require('pdf-parse');
 
 const openai = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
-    apiKey: "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"
+    apiKey: process.env.OPENROUTER_API_KEY
 });
 
 const {
@@ -90,9 +93,40 @@ app.use(session({
 // Rate limiting для защиты от брутфорса
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 минут
-    max: 1000, // Много попыток для разработки
+    max: 10, // Строгий лимит на 10 попыток
     skipSuccessfulRequests: true, // НЕ считать успешные попытки
     message: { success: false, message: "Слишком много попыток входа. Попробуйте позже." }
+});
+
+const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 час
+    max: 5, // Не более 5 регистраций в час с одного IP
+    message: { success: false, message: "Превышен лимит регистраций. Попробуйте позже." }
+});
+
+// Zod схемы для валидации
+const loginSchema = z.object({
+    login: z.string().min(1, "Введите логин"),
+    password: z.string().min(1, "Введите пароль")
+});
+
+const registerSchema = z.object({
+    login: z.string().min(3, "Логин должен быть от 3 символов").max(50),
+    password: z.string().min(6, "Пароль должен быть от 6 символов"),
+    email: z.string().email("Неверный формат email").optional().or(z.literal('')),
+    phone: z.string().regex(/^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/, "Неверный формат телефона").optional().or(z.literal('')),
+    fullName: z.string().min(2, "ФИО слишком короткое").max(100),
+    organization: z.string().max(100).optional().or(z.literal(''))
+});
+
+const adminCreateUserSchema = z.object({
+    login: z.string().min(3, "Логин должен быть от 3 символов").max(50),
+    password: z.string().min(6, "Пароль должен быть от 6 символов"),
+    role: z.enum(['admin', 'manager', 'foreman', 'supplier', 'pto', 'customer', 'partner']),
+    full_name: z.string().min(2, "ФИО слишком короткое").max(100),
+    email: z.string().email("Неверный формат email").optional().or(z.literal('')),
+    phone: z.string().regex(/^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/, "Неверный формат телефона").optional().or(z.literal('')),
+    organization: z.string().max(100).optional().or(z.literal(''))
 });
 
 // === НАСТРОЙКА ЗАГРУЗКИ ФАЙЛОВ ===
@@ -108,7 +142,9 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const safeName = `${Date.now()}-${file.originalname}`;
+        const utf8Name = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        const safeOriginalName = utf8Name.replace(/[^a-zA-Z0-9а-яА-Я._-]/g, '_');
+        const safeName = `${Date.now()}-${safeOriginalName}`;
         cb(null, safeName);
     }
 });
@@ -153,14 +189,14 @@ app.get('/dashboard', requireAuth, (req, res) => {
 // Вход в систему (С ИСПРАВЛЕНИЕМ ПАРОЛЕЙ)
 app.post('/api/login', loginLimiter, async (req, res) => {
     try {
-        const { login, password } = req.body;
-
-        if (!login || !password) {
+        const parseResult = loginSchema.safeParse(req.body);
+        if (!parseResult.success) {
             return res.status(400).json({
                 success: false,
-                message: "Заполните все поля"
+                message: parseResult.error.errors[0].message
             });
         }
+        const { login, password } = parseResult.data;
 
         // Поиск по логину, email или телефону
         const user = await dbGet(
@@ -175,6 +211,15 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             });
         }
 
+        // --- ПРОВЕРКА ВЕРИФИКАЦИИ ---
+        // Админ пускаем всегда, остальных только если is_verified = 1
+        if (user.role !== 'admin' && user.is_verified === 0) {
+            return res.status(403).json({
+                success: false,
+                message: "Ваш аккаунт находится на модерации. Ожидайте подтверждения."
+            });
+        }
+
         // === НАЧАЛО ИЗМЕНЕНИЙ: ГИБРИДНАЯ ПРОВЕРКА ===
         let passwordMatch = false;
 
@@ -182,9 +227,22 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         if (user.password === password) {
             passwordMatch = true;
         }
-        // 2. Если нет, проверяем как хеш (bcrypt)
+        // 2. Если хеш Argon2
+        else if (user.password.startsWith('$argon2')) {
+            try {
+                passwordMatch = await argon2.verify(user.password, password);
+            } catch (err) { }
+        }
+        // 3. Если старый хеш Bcrypt (мигрируем бесшовно)
         else {
-            passwordMatch = await bcrypt.compare(password, user.password);
+            try {
+                passwordMatch = await bcrypt.compare(password, user.password);
+                if (passwordMatch) {
+                    const newHash = await argon2.hash(password);
+                    await dbRun("UPDATE users SET password = ? WHERE id = ?", [newHash, user.id]);
+                    console.log(`✅ Пользователь ${user.login} мигрирован на Argon2`);
+                }
+            } catch (err) { }
         }
         // === КОНЕЦ ИЗМЕНЕНИЙ ===
 
@@ -224,17 +282,16 @@ app.get('/api/logout', (req, res) => {
     });
 });
 // Регистрация (только для заказчиков)
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
     try {
-        const { login, password, email, phone, fullName, organization } = req.body;
-
-        // Валидация
-        if (!login || !password || !fullName) {
+        const parseResult = registerSchema.safeParse(req.body);
+        if (!parseResult.success) {
             return res.status(400).json({
                 success: false,
-                message: "Заполните обязательные поля"
+                message: parseResult.error.errors[0].message
             });
         }
+        const { login, password, email, phone, fullName, organization } = parseResult.data;
 
         // Проверка существования
         const existing = await dbGet(
@@ -249,16 +306,16 @@ app.post('/api/register', async (req, res) => {
             });
         }
 
-        // Хеширование пароля
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Хеширование пароля (теперь Argon2)
+        const hashedPassword = await argon2.hash(password);
 
-        // Создание пользователя
+        // Создание пользователя (is_verified по умолчанию 0 в БД, но мы явно укажем 0)
         await dbRun(
-            "INSERT INTO users (login, password, email, phone, full_name, organization, role) VALUES (?, ?, ?, ?, ?, ?, 'customer')",
+            "INSERT INTO users (login, password, email, phone, full_name, organization, role, is_verified) VALUES (?, ?, ?, ?, ?, ?, 'customer', 0)",
             [login, hashedPassword, email, phone, fullName, organization]
         );
 
-        console.log(`✅ Регистрация: ${login}`);
+        console.log(`✅ Регистрация: ${login} (Ожидает верификации)`);
 
         res.json({ success: true, message: "Регистрация успешна" });
 
@@ -268,6 +325,42 @@ app.post('/api/register', async (req, res) => {
             success: false,
             message: "Ошибка сервера"
         });
+    }
+});
+
+// Публичная заявка с сайта (для гостей)
+app.post('/api/public/request', upload.array('documents', 10), async (req, res) => {
+    try {
+        const { fullName, phone, email, organization, description } = req.body;
+
+        if (!fullName || !phone) {
+            return res.status(400).json({
+                success: false,
+                message: "Имя и телефон обязательны"
+            });
+        }
+
+        // Базовая проверка формата телефона
+        if (!/^(\+7|8).*$/.test(phone) || phone.length < 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Некорректный формат телефона"
+            });
+        }
+
+        const documentPaths = req.files ? req.files.map(f => f.path).join(',') : null;
+
+        await dbRun(
+            "INSERT INTO public_requests (full_name, phone, email, organization, description, documents) VALUES (?, ?, ?, ?, ?, ?)",
+            [fullName, phone, email || null, organization || null, description || null, documentPaths]
+        );
+
+        console.log(`📩 Новая гостевая заявка от ${fullName} (${phone})`);
+        res.json({ success: true, message: "Заявка принята" });
+
+    } catch (error) {
+        console.error('Ошибка создания гостевой заявки:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
     }
 });
 
@@ -302,7 +395,7 @@ const requireAdmin = (req, res, next) => {
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
     try {
         const users = await dbAll(
-            "SELECT id, login, email, phone, role, full_name, organization, is_active, created_at FROM users ORDER BY id DESC"
+            "SELECT id, login, email, phone, role, full_name, organization, is_active, is_verified, created_at FROM users ORDER BY id DESC"
         );
         res.json({ success: true, users });
     } catch (error) {
@@ -314,22 +407,23 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
 // Создание нового пользователя администратором
 app.post('/api/admin/users', requireAdmin, async (req, res) => {
     try {
-        const { login, password, email, phone, role, full_name, organization } = req.body;
-
-        if (!login || !password || !full_name || !role) {
-            return res.status(400).json({ success: false, message: "Заполните обязательные поля" });
+        const parseResult = adminCreateUserSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
         }
+
+        const { login, password, email, phone, role, full_name, organization } = parseResult.data;
 
         const existingUser = await dbGet("SELECT id FROM users WHERE login = ?", [login]);
         if (existingUser) {
             return res.status(400).json({ success: false, message: "Пользователь с таким логином уже существует" });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await argon2.hash(password);
 
         await dbRun(
-            `INSERT INTO users (login, password, email, phone, role, full_name, organization) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO users (login, password, email, phone, role, full_name, organization, is_verified) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
             [login, hashedPassword, email || null, phone || null, role, full_name, organization || null]
         );
 
@@ -344,21 +438,32 @@ app.post('/api/admin/users', requireAdmin, async (req, res) => {
 app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
     try {
         const userId = req.params.id;
-        const { full_name, role, is_active } = req.body;
+        const { full_name, role, is_active, email } = req.body;
 
         if (!full_name || !role) {
             return res.status(400).json({ success: false, message: "Заполните обязательные поля ФИО и Роль" });
         }
 
-        // Если передали пароль (необязательно, можно добавить позже. Сейчас только ФИО, Роль, is_active)
+        // Обновляем данные (включая is_verified и email, если передали)
         await dbRun(
-            "UPDATE users SET full_name = ?, role = ?, is_active = ? WHERE id = ?",
-            [full_name, role, is_active !== undefined ? is_active : 1, userId]
+            "UPDATE users SET full_name = ?, role = ?, is_active = ?, is_verified = COALESCE(?, is_verified), email = ? WHERE id = ?",
+            [full_name, role, is_active !== undefined ? is_active : 1, req.body.is_verified, email || null, userId]
         );
 
         res.json({ success: true, message: "Данные пользователя обновлены" });
     } catch (error) {
         console.error('Ошибка обновления пользователя:', error);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+});
+
+// Верификация пользователя (одобрение)
+app.post('/api/admin/users/:id/verify', requireAdmin, async (req, res) => {
+    try {
+        await dbRun("UPDATE users SET is_verified = 1 WHERE id = ?", [req.params.id]);
+        res.json({ success: true, message: "Пользователь успешно верифицирован" });
+    } catch (error) {
+        console.error('Ошибка верификации пользователя:', error);
         res.status(500).json({ success: false, message: "Ошибка сервера" });
     }
 });
@@ -452,24 +557,33 @@ app.post('/api/manager/projects', requireManagerOrAdmin, upload.array('documents
 // ============================================================
 app.post('/api/manager/ai-analyze', requireManagerOrAdmin, upload.single('document'), async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ success: false, message: "Файл не загружен" });
+        let filePath, originalName, mimeType;
 
-        console.log(`[ИИ] Нейросеть OpenRouter анализирует файл: ${req.file.originalname}`);
+        if (req.body.documentId) {
+            // Анализ существующего документа
+            const doc = await dbGet("SELECT file_path, file_name FROM project_documents WHERE id = ?", [req.body.documentId]);
+            if (!doc) return res.status(404).json({ success: false, message: "Документ не найден" });
 
-        const mimeType = req.file.mimetype;
-        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-
-        if (mimeType === 'application/pdf') {
-            return res.status(400).json({ success: false, message: "Пожалуйста, загрузите картинку (JPG/PNG). OpenRouter временно не принимает PDF напрямую." });
+            filePath = path.join(__dirname, doc.file_path);
+            originalName = doc.file_name;
+            mimeType = originalName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'; // Упрощенное определение
+        } else if (req.file) {
+            // Анализ загруженного файла
+            filePath = req.file.path;
+            originalName = req.file.originalname;
+            mimeType = req.file.mimetype;
+        } else {
+            return res.status(400).json({ success: false, message: "Файл не загружен или не выбран" });
         }
-        if (!validTypes.includes(mimeType)) {
-            return res.status(400).json({ success: false, message: "ИИ поддерживает только изображения (JPG, PNG)" });
-        }
 
-        // Читаем файл в base64
-        const fileData = fs.readFileSync(req.file.path);
-        const base64Data = Buffer.from(fileData).toString("base64");
-        const dataUrl = `data:${mimeType};base64,${base64Data}`;
+        console.log(`[ИИ] Нейросеть OpenRouter анализирует файл: ${originalName}`);
+
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        const isPdf = mimeType === 'application/pdf';
+
+        if (!isPdf && !validImageTypes.includes(mimeType)) {
+            return res.status(400).json({ success: false, message: "ИИ поддерживает только изображения (JPG, PNG) и PDF" });
+        }
 
         const prompt = `Ты - опытный инженер-сметчик и снабженец строительной компании. 
 Твоя задача: изучить предоставленный файл (это может быть проектная документация, чертёж спецификации, смета или список).
@@ -487,9 +601,30 @@ app.post('/api/manager/ai-analyze', requireManagerOrAdmin, upload.single('docume
   ]
 }`;
 
-        const response = await openai.chat.completions.create({
-            model: "google/gemma-3-27b-it:free",
-            messages: [
+        let apiMessages = [];
+
+        if (isPdf) {
+            // Парсинг текста из PDF
+            const pdfData = await pdfParse(fs.readFileSync(filePath));
+            const pdfText = pdfData.text.replace(/\s+/g, ' ').trim();
+
+            if (!pdfText || pdfText.length < 10) {
+                return res.status(400).json({ success: false, message: "Не удалось извлечь текст из PDF. Возможно, это скан без слоя текста (картинка)." });
+            }
+
+            apiMessages = [
+                {
+                    role: "user",
+                    content: prompt + "\n\nВот текст документа для анализа:\n" + pdfText.substring(0, 15000) // Ограничиваем длину текста
+                }
+            ];
+        } else {
+            // Читаем картинку в base64
+            const fileData = fs.readFileSync(filePath);
+            const base64Data = Buffer.from(fileData).toString("base64");
+            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+
+            apiMessages = [
                 {
                     role: "user",
                     content: [
@@ -497,7 +632,12 @@ app.post('/api/manager/ai-analyze', requireManagerOrAdmin, upload.single('docume
                         { type: "image_url", image_url: { url: dataUrl } }
                     ]
                 }
-            ]
+            ];
+        }
+
+        const response = await openai.chat.completions.create({
+            model: process.env.AI_MODEL || "openai/gpt-4o-mini",
+            messages: apiMessages
         });
 
         let jsonText = response.choices[0].message.content.trim();
@@ -663,15 +803,24 @@ app.post('/api/manager/projects/:id/documents', requireManagerOrAdmin, upload.si
     }
 });
 
-// Просмотр заявок от клиентов
+// Просмотр заявок от клиентов (и публичных гостей)
 app.get('/api/manager/requests', requireManagerOrAdmin, async (req, res) => {
     try {
         const requests = await dbAll(
-            `SELECT pr.*, u.full_name as customer_name, u.email, u.phone
+            `SELECT pr.id, pr.title, pr.description, pr.documents, pr.contact_info, pr.status, pr.created_at, 
+                    u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
              FROM project_requests pr
              JOIN users u ON pr.customer_id = u.id
              WHERE pr.status = 'pending'
-             ORDER BY pr.created_at DESC`
+             
+             UNION ALL
+             
+             SELECT id, organization as title, description, documents, NULL as contact_info, status, created_at,
+                    full_name as customer_name, email, phone, 'public' as request_type
+             FROM public_requests
+             WHERE status = 'pending'
+             
+             ORDER BY created_at DESC`
         );
 
         res.json({ success: true, requests });
@@ -684,12 +833,19 @@ app.get('/api/manager/requests', requireManagerOrAdmin, async (req, res) => {
 // Рассмотрение заявки
 app.put('/api/manager/requests/:id', requireManagerOrAdmin, async (req, res) => {
     try {
-        const { status, notes } = req.body; // status: 'reviewed', 'accepted', 'rejected'
+        const { status, notes, requestType } = req.body; // status: 'reviewed', 'accepted', 'rejected'
 
-        await dbRun(
-            "UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?",
-            [status, notes, req.session.userId, req.params.id]
-        );
+        if (requestType === 'public') {
+            await dbRun(
+                "UPDATE public_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?",
+                [status, notes, req.params.id]
+            );
+        } else {
+            await dbRun(
+                "UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?",
+                [status, notes, req.session.userId, req.params.id]
+            );
+        }
 
         res.json({ success: true, message: "Заявка обработана" });
     } catch (error) {
@@ -1643,7 +1799,12 @@ app.get('/api/customer/projects', requireCustomer, async (req, res) => {
             `SELECT p.*, 
                     um.full_name as manager_name, 
                     um.email as manager_email, 
-                    um.phone as manager_phone
+                    um.phone as manager_phone,
+                    (SELECT COUNT(*) FROM project_stages ps WHERE ps.project_id = p.id) as total_stages,
+                    (SELECT COUNT(*) FROM project_stages ps WHERE ps.project_id = p.id AND ps.is_completed = 1) as completed_stages,
+                    (SELECT COUNT(*) FROM project_stage_photos psp 
+                     JOIN project_stages ps ON psp.stage_id = ps.id 
+                     WHERE ps.project_id = p.id) as photo_count
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              WHERE p.customer_id = ?
@@ -1746,22 +1907,8 @@ app.get('/api/projects/:id/documents', requireAuth, async (req, res) => {
 });
 
 // ============================================================
-// ЗАПУСК СЕРВЕРА
+// ЗАПУСК СЕРВЕРА И ОБРАБОТЧИКИ ОШИБОК БУДУТ НИЖЕ
 // ============================================================
-
-// Обработка 404
-app.use((req, res) => {
-    res.status(404).json({ success: false, message: "Endpoint not found" });
-});
-
-// Обработка ошибок
-app.use((err, req, res, next) => {
-    console.error('Ошибка сервера:', err);
-    res.status(500).json({
-        success: false,
-        message: "Внутренняя ошибка сервера"
-    });
-});
 // ==========================================
 // НОВЫЕ API: ПРИСОЕДИНЕНИЕ ПО КОДУ (СНАБЖЕНЕЦ И ПТО)
 // ==========================================
@@ -1825,16 +1972,20 @@ app.get('/api/foreman/materials', requireForeman, async (req, res) => {
 app.get('/api/manager/requests/archive', requireManagerOrAdmin, async (req, res) => {
     try {
         const requests = await dbAll(
-            `SELECT pr.*, 
-                    u.full_name as customer_name, 
-                    u.email, 
-                    u.phone,
-                    rv.full_name as reviewer_name
+            `SELECT pr.id, pr.title, pr.description, pr.status, pr.created_at, pr.reviewed_at, pr.notes,
+                    u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
              FROM project_requests pr
              JOIN users u ON pr.customer_id = u.id
-             LEFT JOIN users rv ON pr.reviewer_id = rv.id
              WHERE pr.status IN ('accepted', 'rejected', 'reviewed')
-             ORDER BY pr.reviewed_at DESC`,
+             
+             UNION ALL
+             
+             SELECT id, organization as title, description, status, created_at, reviewed_at, notes,
+                    full_name as customer_name, email, phone, 'public' as request_type
+             FROM public_requests
+             WHERE status IN ('accepted', 'rejected', 'reviewed')
+             
+             ORDER BY reviewed_at DESC`,
             []
         );
 
@@ -1843,6 +1994,20 @@ app.get('/api/manager/requests/archive', requireManagerOrAdmin, async (req, res)
         console.error('Ошибка получения архива:', error);
         res.status(500).json({ success: false, message: 'Ошибка сервера' });
     }
+});
+
+// Обработка 404
+app.use((req, res) => {
+    res.status(404).json({ success: false, message: "Endpoint not found" });
+});
+
+// Обработка ошибок
+app.use((err, req, res, next) => {
+    console.error('Ошибка сервера:', err);
+    res.status(500).json({
+        success: false,
+        message: "Внутренняя ошибка сервера"
+    });
 });
 
 app.listen(PORT, () => {

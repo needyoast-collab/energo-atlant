@@ -39,29 +39,41 @@ async function loadProjects() {
         return;
     }
 
-    container.innerHTML = data.projects.map(p => `
-        <div class="col-md-6 col-xl-4">
-            <div class="card h-100 shadow-sm" style="cursor:pointer;" onclick="openProject(${p.id})">
-                <div class="card-body">
-                    <h5 class="card-title fw-bold">${p.title}</h5>
-                    <p class="text-muted small mb-2">
-                        <i class="bi bi-geo-alt"></i> ${p.address || 'Адрес не указан'}
-                    </p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        ${getStatusBadge(p.status)}
-                        <small class="text-muted">${formatDateShort(p.created_at)}</small>
+    let html = '<div class="row g-4">';
+    data.projects.forEach(p => {
+        html += `
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color); cursor:pointer;" onclick="openProject(${p.id})">
+                    <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                         <div class="d-flex flex-column">
+                            <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${p.title}">${p.title}</h5>
+                            <small class="text-muted"><i class="bi bi-hash"></i> ${p.id}</small>
+                         </div>
+                         ${getStatusBadge(p.status)}
                     </div>
-                    ${p.manager_name ? `<p class="mt-2 mb-0 small"><strong>Менеджер:</strong> ${p.manager_name}</p>` : ''}
-                    ${p.foreman_name ? `<p class="mb-0 small"><strong>Прораб:</strong> ${p.foreman_name}</p>` : ''}
+                    <div class="card-body">
+                        <div class="mb-3 d-flex flex-wrap gap-2">
+                             <span class="badge border border-info text-info bg-transparent"><i class="bi bi-person"></i> МЕНЕДЖЕР: ${p.manager_name || '-'}</span>
+                             <span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools"></i> ПРОРАБ: ${p.foreman_name || 'НЕ НАЗНАЧЕН'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
+                            <span class="text-white">${p.address || '<span class="text-muted">-</span>'}</span>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="bi bi-calendar3"></i> Создан: ${formatDateShort(p.created_at)}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                        <button class="btn btn-primary w-100 py-2 fw-bold" onclick="event.stopPropagation(); openProject(${p.id})">
+                             <i class="bi bi-folder2-open"></i> ОТКРЫТЬ ПРОЕКТ
+                        </button>
+                    </div>
                 </div>
-                <div class="card-footer bg-transparent border-0 pt-0">
-                    <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="event.stopPropagation(); openProject(${p.id})">
-                        <i class="bi bi-folder2-open"></i> Открыть проект
-                    </button>
-                </div>
-            </div>
-        </div>`).join('');
+            </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 // =============================================================================

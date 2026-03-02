@@ -1,6 +1,7 @@
 // =============================================================================
 // CUSTOMER.JS - Логика кабинета заказчика
 // =============================================================================
+console.log('--- CUSTOMER JS LOADED (V2 - NEW DESIGN) ---');
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadProjects();
@@ -11,6 +12,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Подгружаем заявки при переключении на вкладку
     document.getElementById('requests-tab').addEventListener('shown.bs.tab', loadRequests);
+
+    // Чекбокс использования телефона из профиля
+    const useProfilePhoneBtn = document.getElementById('useProfilePhone');
+    if (useProfilePhoneBtn) {
+        useProfilePhoneBtn.addEventListener('change', function () {
+            const phoneInput = document.getElementById('req_contact');
+            if (this.checked) {
+                if (window.currentUserPhone) {
+                    phoneInput.value = window.currentUserPhone;
+                } else {
+                    showError('Телефон в профиле не указан');
+                    this.checked = false;
+                }
+            } else {
+                phoneInput.value = '';
+            }
+        });
+    }
 });
 
 // =============================================================================
@@ -51,28 +70,132 @@ async function loadProjects() {
         return;
     }
 
-    container.innerHTML = data.projects.map(p => `
-        <div class="col-md-6">
-            <div class="card h-100 shadow-sm project-card" style="cursor:pointer;" onclick="viewProject(${p.id})">
-                <div class="card-body">
-                    <h5 class="card-title fw-bold">${p.title}</h5>
-                    <p class="text-muted small mb-2">
-                        <i class="bi bi-geo-alt"></i> ${p.address || 'Адрес не указан'}
-                    </p>
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        ${getStatusBadge(p.status)}
-                        <small class="text-muted">${formatDateShort(p.created_at)}</small>
+    let html = '<div class="row g-4">';
+    data.projects.forEach(p => {
+        const progress = p.total_stages > 0
+            ? Math.round((p.completed_stages / p.total_stages) * 100)
+            : 0;
+
+        const statusMap = {
+            'new': 'НОВЫЙ',
+            'in_progress': 'В РАБОТЕ',
+            'stages_pending': 'ПЛАНИРОВАНИЕ',
+            'completed': 'ЗАВЕРШЕН',
+            'cancelled': 'ОТМЕНЕН'
+        };
+
+        html += `
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="project-summary-card">
+                    <div class="summary-header">
+                        <div class="summary-title">
+                            <i class="fas fa-desktop"></i> СВОДКА ОБЪЕКТА
+                        </div>
+                        <div class="status-badge ${p.status}">
+                            ${statusMap[p.status] || p.status}
+                        </div>
                     </div>
-                    ${p.manager_name ? `<p class="mt-2 mb-0 small"><strong>Менеджер:</strong> ${p.manager_name}</p>` : ''}
+
+                    <div class="project-name-row" onclick="viewProject(${p.id})" style="cursor:pointer">
+                        <h4 class="project-name text-truncate" title="${p.title}">${p.title}</h4>
+                        <div class="progress-percent">${progress}%</div>
+                    </div>
+
+                    <div class="custom-progress" onclick="viewProject(${p.id})" style="cursor:pointer">
+                        <div class="custom-progress-bar" style="width: ${progress}%"></div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stats-box" onclick="viewProject(${p.id})">
+                            <i class="fas fa-camera stats-icon"></i>
+                            <span class="stats-label">Новых фото</span>
+                            <span class="stats-value">${p.photo_count || 0}</span>
+                        </div>
+                        <div class="stats-box" onclick="viewDocuments(${p.id}, '${p.title.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-file-alt stats-icon"></i>
+                            <span class="stats-label">Документация</span>
+                            <span class="stats-value">ОТКРЫТЬ</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-footer bg-transparent border-0">
-                    <small class="text-primary"><i class="bi bi-eye"></i> Нажмите для просмотра</small>
-                </div>
-            </div>
-        </div>
-    `).join('');
+            </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
 }
+
+// Просмотр документов (категоризированный)
+async function viewDocuments(projectId, title) {
+    const modal = document.getElementById('docsModal');
+    const titleEl = document.getElementById('modalProjectTitle');
+    const body = document.getElementById('modalDocsBody');
+
+    titleEl.innerText = title;
+    body.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin"></i> Загрузка документов...</div>';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await fetch(`/api/projects/${projectId}/documents`);
+        const data = await res.json();
+
+        if (!data.success || !data.documents || data.documents.length === 0) {
+            body.innerHTML = '<div style="text-align:center; padding:40px; color:#8b949e;">Документы пока не загружены для этого проекта.</div>';
+            return;
+        }
+
+        // Группировка
+        const categories = {
+            'rd': { name: 'РД (Рабочая документация)', items: [], icon: 'fa-pencil-ruler' },
+            'estimate': { name: 'Сметы', items: [], icon: 'fa-file-invoice-dollar' },
+            'act': { name: 'Акты', items: [], icon: 'fa-file-signature' },
+            'contract': { name: 'Договоры', items: [], icon: 'fa-file-contract' },
+            'tz': { name: 'ТЗ (Техническое задание)', items: [], icon: 'fa-clipboard-list' },
+            'other': { name: 'Прочее', items: [], icon: 'fa-folder' }
+        };
+
+        const typeMap = { 'initial': 'rd', 'executive': 'act' };
+
+        data.documents.forEach(doc => {
+            let type = doc.document_type;
+            if (typeMap[type]) type = typeMap[type];
+            if (!categories[type]) type = 'other';
+            categories[type].items.push(doc);
+        });
+
+        let html = '';
+        for (const [key, cat] of Object.entries(categories)) {
+            if (cat.items.length === 0) continue;
+            html += `
+                <div class="doc-category">
+                    <div class="category-title"><i class="fas ${cat.icon}"></i> ${cat.name}</div>
+                    ${cat.items.map(d => `
+                        <a href="/${d.file_path}" target="_blank" class="doc-item">
+                            <div class="doc-info">
+                                <i class="fas fa-file-pdf doc-icon"></i>
+                                <span>${d.file_name}</span>
+                            </div>
+                            <i class="fas fa-download" style="font-size:0.8rem; opacity:0.5;"></i>
+                        </a>
+                    `).join('')}
+                </div>`;
+        }
+        body.innerHTML = html;
+    } catch (err) {
+        body.innerHTML = '<div style="color:red; text-align:center; padding:40px;">Ошибка при загрузке документов.</div>';
+    }
+}
+
+function closeDocsModal() {
+    document.getElementById('docsModal').style.display = 'none';
+}
+
+// Закрытие по клику вне модалки
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('docsModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+});
 
 async function viewProject(projectId) {
     document.getElementById('projectDetailTitle').textContent = 'Загрузка...';
@@ -118,20 +241,20 @@ async function viewProject(projectId) {
                                 ${done ? 'bg-success text-white' : 'bg-light'}">
                         <span>${done ? '✅' : '🔨'} Этап ${stage.stage_number}: ${stage.name}</span>
                         ${done
-                            ? `<small>Завершён ${formatDateShort(stage.completed_at)}</small>`
-                            : '<span class="badge bg-warning text-dark">В работе</span>'}
+                    ? `<small>Завершён ${formatDateShort(stage.completed_at)}</small>`
+                    : '<span class="badge bg-warning text-dark">В работе</span>'}
                     </div>
                     <div class="card-body">
                         ${stage.description ? `<p class="text-muted">${stage.description}</p>` : ''}
                         ${stage.photos && stage.photos.length > 0
-                            ? `<div class="photo-grid">
+                    ? `<div class="photo-grid">
                                 ${stage.photos.map(ph => `
                                     <a href="/${ph.file_path}" target="_blank">
                                         <img src="/${ph.file_path}" class="img-thumbnail"
                                              style="height:100px;object-fit:cover;">
                                     </a>`).join('')}
                                </div>`
-                            : '<small class="text-muted">Фото ещё не загружены</small>'}
+                    : '<small class="text-muted">Фото ещё не загружены</small>'}
                     </div>
                 </div>`;
         });
@@ -184,10 +307,10 @@ async function loadRequests() {
     }
 
     const statusMap = {
-        pending:  { label: 'На рассмотрении', cls: 'warning text-dark' },
-        reviewed: { label: 'Рассмотрено',     cls: 'info text-dark' },
-        accepted: { label: 'Принято',          cls: 'success' },
-        rejected: { label: 'Отклонено',        cls: 'danger' }
+        pending: { label: 'На рассмотрении', cls: 'warning text-dark' },
+        reviewed: { label: 'Рассмотрено', cls: 'info text-dark' },
+        accepted: { label: 'Принято', cls: 'success' },
+        rejected: { label: 'Отклонено', cls: 'danger' }
     };
 
     container.innerHTML = `<div class="list-group">${data.requests.map(r => {
@@ -201,19 +324,19 @@ async function loadRequests() {
                 </div>
                 <small class="text-muted">${formatDate(r.created_at)}</small>
                 ${r.notes
-                    ? `<p class="mt-1 mb-0 small text-muted">
+                ? `<p class="mt-1 mb-0 small text-muted">
                             <strong>Ответ:</strong> ${r.notes}</p>`
-                    : ''}
+                : ''}
             </div>`;
     }).join('')}</div>`;
 }
 
 function viewRequest(request) {
     const statusMap = {
-        pending:  { label: 'На рассмотрении', cls: 'warning text-dark' },
-        reviewed: { label: 'Рассмотрено',     cls: 'info text-dark' },
-        accepted: { label: 'Принято',          cls: 'success' },
-        rejected: { label: 'Отклонено',        cls: 'danger' }
+        pending: { label: 'На рассмотрении', cls: 'warning text-dark' },
+        reviewed: { label: 'Рассмотрено', cls: 'info text-dark' },
+        accepted: { label: 'Принято', cls: 'success' },
+        rejected: { label: 'Отклонено', cls: 'danger' }
     };
     const st = statusMap[request.status] || { label: request.status, cls: 'secondary' };
 
@@ -278,6 +401,7 @@ async function submitRequest(e) {
         showSuccess('Заявка отправлена! Менеджер свяжется с вами.');
         bootstrap.Modal.getInstance(document.getElementById('createRequestModal')).hide();
         e.target.reset();
+        if (document.getElementById('useProfilePhone')) document.getElementById('useProfilePhone').checked = false;
         await loadRequests();
         document.getElementById('requests-tab').click();
     } else {

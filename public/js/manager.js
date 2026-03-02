@@ -76,6 +76,7 @@ async function loadProjects() {
     if (data.success) {
         currentProjects = data.projects;
         renderProjects(data.projects);
+        renderFunnel(data.projects); // Отрисовка Канбан-доски (Воронка)
     } else {
         container.innerHTML = `<div class="alert alert-danger">Ошибка: ${data.message}</div>`;
     }
@@ -88,64 +89,71 @@ function renderProjects(projects) {
         return;
     }
 
+    // Очистка перед перерисовкой
+    container.innerHTML = '';
+
     // Показываем только не завершённые в активной вкладке
     const active = projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled');
     const completed = projects.filter(p => p.status === 'completed');
 
     // ДОБАВИЛ КОЛОНКУ "ЗАКАЗЧИК"
-    let html = `
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>Название</th>
-                    <th>Заказчик</th>
-                    <th>Адрес</th>
-                    <th>Код доступа</th>
-                    <th>Прораб</th>
-                    <th>Статус</th>
-                    <th class="text-end">Действия</th>
-                </tr>
-            </thead>
-            <tbody>`;
+    let html = '<div class="row g-4">';
 
     active.forEach(p => {
         // Определяем имя заказчика для красивого вывода
         const clientDisplay = p.customer_name
-            ? `<span class="badge bg-info text-dark">${p.customer_name}</span>`
-            : (p.client_name || '<span class="text-muted">-</span>');
+            ? `<span class="badge bg-info text-dark border"><i class="bi bi-person-circle"></i> ${p.customer_name}</span>`
+            : (p.client_name ? `<span class="badge bg-secondary border"><i class="bi bi-person"></i> ${p.client_name}</span>` : '<span class="text-muted small">Заказчик не назначен</span>');
+
+        const foremanDisplay = p.foreman_name
+            ? `<span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools"></i> ${p.foreman_name}</span>`
+            : `<span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-exclamation-triangle"></i> Прораб не назначен</span>`;
 
         html += `
-            <tr>
-                <td class="text-muted small">${p.id}</td>
-                <td class="fw-bold">${p.title}</td>
-                <td>${clientDisplay}</td>
-                <td class="small text-muted">${p.address || '-'}</td>
-                <td><code class="user-select-all bg-light px-2 py-1 rounded">${p.access_code}</code></td>
-                <td>${p.foreman_name || '<span class="text-muted">–</span>'}</td>
-                <td>${getStatusBadge(p.status)}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-warning me-1" onclick="editProject(${p.id})"
-                        title="Редактировать">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-info me-1" onclick="showProjectDocs(${p.id})"
-                        title="Документы">
-                        <i class="bi bi-file-earmark-text"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="showAIModal(${p.id})"
-                        title="✨ ИИ: Составить Смету (ВОР/ВОМ)">
-                        ✨ ИИ
-                    </button>
-                    <button class="btn btn-sm btn-success" onclick="showCompleteProjectModal(${p.id})"
-                        title="Завершить проект (требуется акт)">
-                        ✅ Завершить
-                    </button>
-                </td>
-            </tr>`;
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color);">
+                    <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                         <div class="d-flex flex-column">
+                            <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${p.title}">${p.title}</h5>
+                            <small class="text-muted"><i class="bi bi-hash"></i> ${p.id}</small>
+                         </div>
+                         ${getStatusBadge(p.status)}
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3 d-flex flex-wrap gap-2">
+                             ${clientDisplay}
+                             ${foremanDisplay}
+                        </div>
+                        <div class="mb-3">
+                            <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
+                            <span class="text-white">${p.address || '<span class="text-muted">-</span>'}</span>
+                        </div>
+                        <div class="mb-2">
+                             <p class="mb-1 text-muted small"><i class="bi bi-key"></i> Код доступа</p>
+                             <code class="user-select-all px-2 py-1 rounded" style="background-color: var(--bg-elevated); color: var(--primary-color); border: 1px solid var(--border-color);">${p.access_code}</code>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                        <div class="d-flex justify-content-between gap-2 mb-3">
+                            <button class="btn btn-sm btn-outline-warning flex-grow-1" onclick="editProject(${p.id})">
+                                <i class="bi bi-pencil-square"></i> ИЗМЕНИТЬ
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="showProjectDocs(${p.id})">
+                                <i class="bi bi-folder2-open"></i> DOCS
+                            </button>
+                            <button class="btn btn-sm btn-ai-glow" onclick="showAIModal(${p.id})">
+                                <i class="bi bi-stars"></i> ✨ ИИ
+                            </button>
+                        </div>
+                        <button class="btn btn-sm btn-success w-100 py-2 fw-bold" onclick="showCompleteProjectModal(${p.id})">
+                             <i class="bi bi-check2-square"></i> ЗАВЕРШИТЬ ПРОЕКТ
+                        </button>
+                    </div>
+                </div>
+            </div>`;
     });
 
-    html += '</tbody></table>';
+    html += '</div>';
     container.innerHTML = html;
 
     // Если есть завершённые — показываем счётчик
@@ -158,6 +166,72 @@ function renderProjects(projects) {
                 </a>
             </div>`);
     }
+}
+
+// =============================================================================
+// ВОРОНКА ОБЪЕКТОВ (KANBAN BOARD)
+// =============================================================================
+function renderFunnel(projects) {
+    const container = document.getElementById('funnelBoard');
+    if (!container) return;
+
+    if (!projects || projects.length === 0) {
+        container.innerHTML = '<div class="text-muted text-center w-100 py-4 mt-5">Нет проектов для отображения</div>';
+        return;
+    }
+
+    // Определяем колонки
+    const stages = [
+        { id: 'new', name: 'Новые', color: 'primary' },
+        { id: 'in_progress', name: 'В работе', color: 'info' },
+        { id: 'stages_pending', name: 'Ожидают действий', color: 'warning' },
+        { id: 'completed', name: 'Реализованы', color: 'success' } //completed и cancelled вместе
+    ];
+
+    let html = '';
+
+    stages.forEach(stage => {
+        // Фильтруем проекты
+        let stageProjects = [];
+        if (stage.id === 'completed') {
+            stageProjects = projects.filter(p => p.status === 'completed' || p.status === 'cancelled');
+        } else {
+            stageProjects = projects.filter(p => p.status === stage.id);
+        }
+
+        html += `
+            <div class="col-12 col-md-3" style="min-width: 280px;">
+                <div class="card bg-transparent border-0 shadow-sm h-100">
+                    <div class="card-header border-bottom-0 pt-3 pb-2 bg-transparent d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0 text-${stage.color} text-uppercase" style="font-size: 0.85rem;">
+                            ${stage.name}
+                        </h6>
+                        <span class="badge bg-${stage.color} rounded-pill">${stageProjects.length}</span>
+                    </div>
+                    <div class="card-body p-2 rounded" style="background-color: var(--bg-surface); min-height: 50vh;">
+                        ${stageProjects.map(p => `
+                            <div class="card border-0 shadow-sm mb-2 shadow-hover bg-dark" style="cursor: pointer; border-left: 4px solid var(--bs-${stage.color}) !important" onclick="editProject(${p.id})">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small class="text-muted">#${p.id}</small>
+                                    </div>
+                                    <h6 class="fw-bold fs-6 mb-1 text-truncate" title="${p.title}">${p.title}</h6>
+                                    <div class="small text-muted mb-2 text-truncate">
+                                        <i class="bi bi-geo-alt"></i> ${p.address || 'Адрес не указан'}
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                        <span class="badge bg-transparent text-muted border border-secondary"><i class="bi bi-person"></i> ${p.customer_name || '—'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
 }
 
 // Завершение проекта — требует загрузки акта
@@ -292,9 +366,12 @@ async function showProjectDocs(projectId) {
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <select class="form-select" id="docType" required>
-                                        <option value="initial">РД (Рабочая документация)</option>
+                                        <option value="rd">РД (Рабочая документация)</option>
+                                        <option value="estimate">Смета</option>
+                                        <option value="act">Акты выполненных работ</option>
+                                        <option value="tz">ТЗ (Техническое задание)</option>
                                         <option value="contract">Договор</option>
-                                        <option value="act">Акт выполненных работ</option>
+                                        <option value="ds">ДС (Доп. соглашение)</option>
                                         <option value="other">Прочее</option>
                                     </select>
                                 </div>
@@ -362,7 +439,18 @@ async function loadProjectDocsArray(projectId) {
     }
 
     container.innerHTML = data.documents.map(d => {
-        const typeNames = { 'initial': 'РД', 'contract': 'Договор', 'act': 'Акт', 'executive': 'ИД', 'other': 'Прочее' };
+        const typeNames = {
+            'rd': 'РД',
+            'estimate': 'Смета',
+            'act': 'Акты',
+            'tz': 'ТЗ',
+            'contract': 'Договор',
+            'ds': 'ДС',
+            'other': 'Прочее',
+            // Старые типы для обратной совместимости
+            'initial': 'РД (стар.)',
+            'executive': 'ИД'
+        };
         return `
         <a href="/${d.file_path}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center pb-2">
             <div>
@@ -459,9 +547,18 @@ async function showAIModal(projectId) {
                                 <p class="text-muted small mb-0">Загрузите файл с чертежами или проектной документацией (PDF/Скан). Нейросеть проанализирует документ и извлечет необходимые этапы работ (ВОР) и список материалов (ВОМ).</p>
                             </div>
                             <div class="col-md-5">
-                                <form id="aiUploadForm" class="d-flex gap-2">
-                                    <input type="file" class="form-control" id="aiDoc" accept=".pdf,.jpg,.jpeg,.png,.webp" required>
-                                    <button class="btn btn-primary fw-bold text-nowrap" type="submit">
+                                <form id="aiUploadForm" class="d-flex flex-column gap-3">
+                                    <div>
+                                        <label class="form-label mb-1 fw-bold text-secondary text-uppercase" style="font-size:0.75rem; letter-spacing:0.05em">ВЫБРАТЬ ИЗ ЗАГРУЖЕННЫХ</label>
+                                        <select class="form-select" id="aiDocSelect">
+                                            <option value="">-- Загрузить новый файл --</option>
+                                        </select>
+                                    </div>
+                                    <div id="aiFileContainer">
+                                        <label class="form-label mb-1 fw-bold text-secondary text-uppercase" style="font-size:0.75rem; letter-spacing:0.05em">ИЛИ ЗАГРУЗИТЬ НОВЫЙ</label>
+                                        <input type="file" class="form-control" id="aiDoc" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    </div>
+                                    <button class="btn btn-primary fw-bold w-100" type="submit">
                                         ✨ Читать файл
                                     </button>
                                 </form>
@@ -510,13 +607,49 @@ async function showAIModal(projectId) {
     const modal = new bootstrap.Modal(document.getElementById('aiModal'));
     modal.show();
 
+    // Загружаем существующие документы проекта
+    try {
+        const docsRes = await apiRequest(`/api/manager/projects/${projectId}/documents`);
+        if (docsRes.success && docsRes.documents.length > 0) {
+            const select = document.getElementById('aiDocSelect');
+            docsRes.documents.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = `${doc.file_name} (${doc.document_type})`;
+                select.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки документов для ИИ', e);
+    }
+
+    // Скрываем/показываем инпут файла в зависимости от выбора
+    document.getElementById('aiDocSelect').addEventListener('change', (e) => {
+        const fileContainer = document.getElementById('aiFileContainer');
+        const fileInput = document.getElementById('aiDoc');
+        if (e.target.value) {
+            fileContainer.style.display = 'none';
+            fileInput.removeAttribute('required');
+        } else {
+            fileContainer.style.display = 'block';
+            fileInput.setAttribute('required', 'true');
+        }
+    });
+    // Вызываем сразу, чтобы повесить required
+    document.getElementById('aiDocSelect').dispatchEvent(new Event('change'));
+
     let aiData = null;
 
     document.getElementById('aiUploadForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const file = document.getElementById('aiDoc').files[0];
-        if (!file) return;
+        const fileInput = document.getElementById('aiDoc');
+        const file = fileInput.files[0];
+        const docId = document.getElementById('aiDocSelect').value;
+
+        if (!file && !docId) {
+            return showError('Выберите документ');
+        }
 
         const btn = e.target.querySelector('button[type="submit"]');
         const originalText = btn.innerHTML;
@@ -527,7 +660,11 @@ async function showAIModal(projectId) {
         document.getElementById('aiResultContainer').classList.add('d-none');
 
         const formData = new FormData();
-        formData.append('document', file);
+        if (docId) {
+            formData.append('documentId', docId);
+        } else if (file) {
+            formData.append('document', file);
+        }
 
         try {
             const res = await apiRequest(`/api/manager/ai-analyze`, 'POST', formData);
@@ -598,7 +735,7 @@ async function editProject(id) {
     if (old) old.remove();
 
     const modalHtml = `
-            < div class= "modal fade" id = "editModal" tabindex = "-1" >
+            <div class= "modal fade" id = "editModal" tabindex = "-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -625,6 +762,10 @@ async function editProject(id) {
                                 <div class="col-12">
                                     <label class="form-label">Адрес</label>
                                     <input class="form-control" id="e_address" value="${p.address || ''}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Описание / Пометки</label>
+                                    <textarea class="form-control" id="e_description" rows="3">${p.description || ''}</textarea>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Прораб</label>
@@ -663,7 +804,7 @@ async function editProject(id) {
                     </form>
                 </div>
             </div>
-        </div > `;
+        </div> `;
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const modal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -672,11 +813,11 @@ async function editProject(id) {
     document.getElementById('editForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const res = await apiRequest(`/ api / manager / projects / ${id} `, 'PUT', {
+        const res = await apiRequest(`/api/manager/projects/${id}`, 'PUT', {
             title: document.getElementById('e_title').value,
             address: document.getElementById('e_address').value,
             status: document.getElementById('e_status').value,
-            description: p.description,
+            description: document.getElementById('e_description').value,
             clientName: p.client_name,
             clientOrganization: p.client_organization,
             foremanId: document.getElementById('e_foreman').value,
@@ -721,10 +862,13 @@ function renderRequests(requests) {
     }
 
     container.innerHTML = requests.map(r => `
-            < div class="card mb-3 shadow-sm border-start border-4 border-primary" >
+            <div class="card mb-3 shadow-sm border-start border-4 border-primary">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
-                        <h5 class="card-title text-primary">${r.title || 'Заявка #' + r.id}</h5>
+                        <div>
+                            <h5 class="card-title text-primary d-inline-block me-2">${r.title || 'Заявка #' + r.id}</h5>
+                            ${r.request_type === 'public' ? '<span class="badge bg-warning text-dark"><i class="bi bi-globe"></i> ГОСТЬ С САЙТА</span>' : '<span class="badge bg-info text-dark"><i class="bi bi-person-fill"></i> КЛИЕНТ</span>'}
+                        </div>
                         <small class="text-muted">${formatDateShort(r.created_at)}</small>
                     </div>
                     <p class="card-text">${r.description || '-'}</p>
@@ -734,6 +878,19 @@ function renderRequests(requests) {
                         ${r.phone ? ` | <a href="tel:${r.phone}">${r.phone}</a>` : ''}
                         ${r.contact_info ? `<br><strong>Контакт из заявки:</strong> ${r.contact_info}` : ''}
                     </div>
+
+                    ${r.documents ? `
+                    <div class="mb-3">
+                        <strong class="small text-muted mb-1 d-block">📄 Прикрепленные файлы:</strong>
+                        <div class="d-flex flex-wrap gap-2">
+                            ${r.documents.split(',').map(doc => `
+                                <a href="/${doc.replace(/\\/g, '/')}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-file-earmark-text"></i> Скачать файл
+                                </a>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-primary btn-sm" onclick="createProjectFromRequest(${r.id})">
@@ -747,7 +904,7 @@ function renderRequests(requests) {
                         </button>
                     </div>
                 </div>
-        </div > `).join('');
+        </div>`).join('');
 }
 
 function createProjectFromRequest(reqId) {
@@ -777,10 +934,14 @@ function createProjectFromRequest(reqId) {
 async function acceptRequest(id) {
     if (!confirm('Принять заявку и отправить в архив?')) return;
 
+    const req = currentRequests.find(r => r.id === id);
+    if (!req) return;
+
     // ИСПРАВЛЕН ПУТЬ АПИ (Убрано /review)
-    const res = await apiRequest(`/ api / manager / requests / ${id} `, 'PUT', {
+    const res = await apiRequest(`/api/manager/requests/${id}`, 'PUT', {
         status: 'accepted',
-        notes: 'Заявка принята менеджером'
+        notes: 'Заявка принята менеджером',
+        requestType: req.request_type
     });
 
     if (res.success) {
@@ -795,10 +956,14 @@ async function rejectRequest(id) {
     const reason = prompt('Укажите причину отказа:');
     if (reason === null) return; // Нажал Отмена
 
+    const req = currentRequests.find(r => r.id === id);
+    if (!req) return;
+
     // ИСПРАВЛЕН ПУТЬ АПИ (Убрано /review)
-    const res = await apiRequest(`/ api / manager / requests / ${id} `, 'PUT', {
+    const res = await apiRequest(`/api/manager/requests/${id}`, 'PUT', {
         status: 'rejected',
-        notes: reason || 'Отклонено менеджером'
+        notes: reason || 'Отклонено менеджером',
+        requestType: req.request_type
     });
 
     if (res.success) {
@@ -825,10 +990,10 @@ async function loadArchive() {
     const container = document.getElementById('archiveList'); // ИСПРАВЛЕН ID (был archiveContent)
     if (!container) return;
 
-    container.innerHTML = `< div class="text-center py-4" >
+    container.innerHTML = `<div class="text-center py-4">
         <div class="spinner-border text-primary"></div>
         <p class="mt-2 text-muted">Загрузка архива...</p>
-    </div > `;
+    </div>`;
 
     const [projData, reqData] = await Promise.all([
         apiRequest('/api/manager/projects'),
@@ -839,7 +1004,7 @@ async function loadArchive() {
 
     // Завершённые проекты
     const completedProjects = (projData.projects || []).filter(p => p.status === 'completed');
-    html += `< h5 class="border-bottom pb-2 mb-3" >✅ Завершённые проекты(${completedProjects.length})</h5 > `;
+    html += `<h5 class="border-bottom pb-2 mb-3">✅ Завершённые проекты (${completedProjects.length})</h5>`;
 
     if (completedProjects.length === 0) {
         html += '<p class="text-muted">Завершённых проектов пока нет</p>';
@@ -847,21 +1012,21 @@ async function loadArchive() {
         html += '<div class="list-group mb-4">';
         completedProjects.forEach(p => {
             html += `
-            < div class="list-group-item" >
+            <div class="list-group-item">
                     <div class="d-flex justify-content-between">
                         <strong>${p.title}</strong>
                         <span class="badge bg-success">Завершён</span>
                     </div>
                     <small class="text-muted">${p.address || '-'}</small>
                     ${p.foreman_name ? `<br><small>Прораб: ${p.foreman_name}</small>` : ''}
-                </div > `;
+                </div> `;
         });
         html += '</div>';
     }
 
     // Обработанные заявки
     const archivedRequests = reqData.requests || [];
-    html += `< h5 class="border-bottom pb-2 mb-3" >📬 Обработанные заявки(${archivedRequests.length})</h5 > `;
+    html += `<h5 class="border-bottom pb-2 mb-3">📬 Обработанные заявки(${archivedRequests.length})</h5> `;
 
     if (archivedRequests.length === 0) {
         html += '<p class="text-muted">Обработанных заявок пока нет</p>';
@@ -871,7 +1036,7 @@ async function loadArchive() {
             const statusCls = r.status === 'accepted' ? 'success' : r.status === 'rejected' ? 'danger' : 'info';
             const statusLabel = r.status === 'accepted' ? 'Принята' : r.status === 'rejected' ? 'Отклонена' : 'Рассмотрено';
             html += `
-            < div class="list-group-item" >
+            <div class="list-group-item">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <strong>${r.title || 'Заявка #' + r.id}</strong>
@@ -882,7 +1047,7 @@ async function loadArchive() {
                     </div>
                     <span class="badge bg-${statusCls}">${statusLabel}</span>
                 </div>
-                </div > `;
+                </div> `;
         });
         html += '</div>';
     }
@@ -899,7 +1064,7 @@ function showAccessCodeModal(code) {
     if (old) old.remove();
 
     document.body.insertAdjacentHTML('beforeend', `
-            < div class="modal fade" id = "codeModal" tabindex = "-1" >
+            <div class="modal fade" id = "codeModal" tabindex = "-1">
                 <div class="modal-dialog">
                     <div class="modal-content text-center">
                         <div class="modal-header bg-success text-white justify-content-center">
@@ -919,7 +1084,7 @@ function showAccessCodeModal(code) {
                         </div>
                     </div>
                 </div>
-        </div > `);
+        </div> `);
 
     const modal = new bootstrap.Modal(document.getElementById('codeModal'));
     modal.show();
@@ -936,7 +1101,7 @@ function getStatusBadge(status) {
         'completed': '<span class="badge bg-success">Завершён</span>',
         'cancelled': '<span class="badge bg-danger">Отменён</span>'
     };
-    return map[status] || `< span class="badge bg-secondary" > ${status}</span > `;
+    return map[status] || `<span class="badge bg-secondary"> ${status}</span> `;
 }
 
 function formatDateShort(dateStr) {

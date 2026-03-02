@@ -22,8 +22,8 @@
 
     --text-main: #ffffff;
     /* Основной белый текст */
-    --text-muted: #f0f6fc;
-    /* Светло-светло серый/белый текст для описаний */
+    --text-muted: rgba(255, 255, 255, 0.55);
+    /* Правильный серый для описаний (читаемый на черном) */
 
     --border-color: rgba(255, 255, 255, 0.08);
     /* Тонкие границы */
@@ -49,9 +49,27 @@ body {
     letter-spacing: -0.01em;
 }
 
-/* Переписываем стандартный бутстраповский text-muted, чтобы текст был белым (или очень светлым) */
+/* Переписываем стандартные бутстраповские классы для темной темы */
 .text-muted {
     color: var(--text-muted) !important;
+}
+
+/* Спасаем темный текст, если он оказался на темном фоне. Кнопки исключаем! */
+:not(.btn)>.text-dark,
+:not(.btn)>.text-black,
+.badge.text-dark,
+.card .text-dark,
+.card .text-black,
+.table .text-dark,
+.list-group-item .text-dark {
+    color: var(--bg-dark) !important;
+}
+
+/* Форсируем темные фоны для светлых классов, чтобы не было 'светлое на светлом' или 'слепых зон' */
+.bg-light,
+.bg-white {
+    background-color: transparent !important;
+    color: var(--text-main) !important;
 }
 
 /* Прелоадер (Пульсирующее лого) */
@@ -189,47 +207,93 @@ h6 {
 
 /* Формы */
 .form-control,
-.form-select {
+.form-select,
+.form-control:focus,
+.form-select:focus {
     font-family: var(--app-font);
-    border-radius: 0;
+    border-radius: 4px;
+    /* Легкое скругление для форм */
     padding: 0.85rem 1rem;
-    background-color: var(--bg-elevated);
-    border: 1px solid var(--border-color);
-    color: var(--text-main);
+    background-color: var(--bg-elevated) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--text-main) !important;
     transition: all 0.3s ease;
 }
 
 .form-control:focus,
 .form-select:focus {
-    background-color: #111;
-    border-color: var(--primary-color);
-    color: var(--text-main);
-    box-shadow: 0 0 0 1px var(--primary-color);
+    background-color: var(--bg-surface) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 1px var(--primary-color) !important;
     /* Резкий контур фокуса */
 }
 
 /* Заглушка (Placeholder) цвета */
 .form-control::placeholder {
-    color: var(--text-muted);
+    color: var(--text-muted) !important;
+    opacity: 1;
+    /* Для Firefox */
+}
+
+/* Заблокированные поля (disabled / readonly) */
+.form-control:disabled,
+.form-control[readonly],
+.form-select:disabled {
+    background-color: #111111 !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Floating labels (Исправление для светлых полей внутри плавающих лейблов) */
+.form-floating>label {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.form-floating>.form-control:focus~label,
+.form-floating>.form-control:not(:placeholder-shown)~label {
+    color: var(--primary-color) !important;
+    background: transparent !important;
 }
 
 /* Таблицы (Для админки/дашборда - адаптируем под темную тему) */
 .table {
-    color: var(--text-main);
     border-color: var(--border-color);
+    color: var(--text-main);
 }
 
-.table>thead {
+.table> :not(caption)>*>* {
     background-color: var(--bg-surface);
-}
-
-.table>tbody>tr>td {
-    border-color: var(--border-color);
-}
-
-.table-hover tbody tr:hover {
-    background-color: var(--bg-elevated);
     color: var(--text-main);
+    border-bottom-color: var(--border-color);
+}
+
+.table-light,
+.table>thead {
+    --bs-table-bg: var(--bg-elevated);
+    --bs-table-color: var(--text-muted);
+}
+
+.table-light th,
+.table>thead>tr>th {
+    color: var(--text-muted) !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--border-color) !important;
+    background-color: var(--bg-elevated) !important;
+}
+
+.table-hover>tbody>tr:hover>* {
+    background-color: rgba(255, 152, 0, 0.05) !important;
+    color: var(--text-main) !important;
+}
+
+.table-responsive {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    background-color: var(--bg-surface);
 }
 
 /* Модальные окна */
@@ -252,10 +316,15 @@ h6 {
 .badge {
     font-weight: 600;
     padding: 0.4em 0.8em;
-    border-radius: 2px;
+    border-radius: 4px;
+    /* Менее острые углы */
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    font-size: 0.7rem;
+}
+
+.bg-warning {
+    background-color: #ffb74d !important;
+    color: #000000 !important;
 }
 
 /* Прогресс-бары */
@@ -263,7 +332,7 @@ h6 {
     border-radius: 0.5rem;
 }
 
-/* Алерты */
+/* Алерты — сохраняем видимость текста в тёмной теме */
 .alert {
     border: none;
     border-left: 4px solid;
@@ -271,32 +340,221 @@ h6 {
 
 .alert-success {
     border-left-color: var(--success-color);
-    background-color: #d1e7dd;
+    background-color: rgba(46, 160, 67, 0.15);
+    color: #8fffb4;
 }
 
 .alert-danger {
     border-left-color: var(--danger-color);
-    background-color: #f8d7da;
+    background-color: rgba(248, 81, 73, 0.15);
+    color: #ffb3b0;
 }
 
 .alert-warning {
     border-left-color: var(--warning-color);
-    background-color: #fff3cd;
+    background-color: rgba(210, 153, 34, 0.15);
+    color: #ffe48f;
 }
 
 .alert-info {
     border-left-color: var(--info-color);
-    background-color: #cff4fc;
+    background-color: rgba(88, 166, 255, 0.12);
+    color: #b3d9ff;
 }
 
-/* Toast уведомления */
-#toastContainer {
-    max-width: 400px;
+/* Tab-content — принудительно тёмный фон (Заказчик использовал bg-white, там текст пропадал) */
+.tab-content {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-main) !important;
 }
 
-.toast {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+/* Модалки уже переопределены ниже */
+
+/* Карточки — принудительно тёмные (Прораб: чёрные плитки на чёрном) */
+.card {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
 }
+
+.card-header {
+    background-color: var(--bg-elevated) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+/* Исключение: цветные шапки модалок/карточек должны оставаться яркими */
+.card-header.bg-success,
+.card-header.bg-danger,
+.card-header.bg-primary,
+.card-header.bg-warning,
+.card-header.bg-info,
+.modal-header.bg-success,
+.modal-header.bg-danger,
+.modal-header.bg-primary,
+.modal-header.bg-warning,
+.modal-header.bg-info {
+    background-color: inherit !important;
+}
+
+/* Таблицы Bootstrap — принудительно тёмный фон заголовка */
+.table-light,
+.table-light>th,
+.table-light>td,
+thead.table-light>tr>th {
+    background-color: var(--bg-elevated) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Удален дубль .text-dark из-за глобального переопределения выше */
+
+/* list-group-item в тёмной теме */
+.list-group-item {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+.list-group-item:hover {
+    background-color: var(--bg-elevated) !important;
+    border-left-color: var(--primary-color);
+}
+
+.list-group-item.active {
+    background-color: var(--bg-elevated) !important;
+    border-left-color: var(--primary-color);
+}
+
+/* Регистрация: форма поверх тёмного фона */
+.card.shadow-lg {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-main) !important;
+}
+
+.form-label {
+    color: var(--text-main) !important;
+}
+
+.form-check-label {
+    color: var(--text-muted) !important;
+}
+
+/* small-текст под полями */
+small.text-muted,
+.small.text-muted {
+    color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Кнопки outline — более заметная рамка */
+.btn-outline-light {
+    border: 2px solid rgba(255, 255, 255, 0.4) !important;
+    color: var(--text-main);
+    background: transparent;
+    border-radius: 4px !important;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.7) !important;
+    color: #fff;
+}
+
+.btn-outline-secondary,
+.btn-outline-primary,
+.btn-outline-warning,
+.btn-outline-danger,
+.btn-outline-success,
+.btn-outline-info {
+    border-width: 2px !important;
+    border-radius: 4px !important;
+}
+
+/* Кнопки — скруглённые углы (не острые, как раньше) */
+.btn {
+    border-radius: 6px !important;
+}
+
+/* Прелоадер — с картинкой логотипа вместо текста */
+.preloader-logo-img {
+    width: 180px;
+    max-width: 80vw;
+    filter: drop-shadow(0px 0px 4px rgba(255, 152, 0, 0.4));
+    height: auto;
+    display: block;
+    animation: neon-pulse-img 2s infinite alternate;
+}
+
+@keyframes neon-pulse-img {
+    0% {
+        filter: drop-shadow(0 0 8px rgba(255, 152, 0, 0.4)) drop-shadow(0 0 16px rgba(255, 152, 0, 0.2));
+    }
+
+    100% {
+        filter: drop-shadow(0 0 20px rgba(255, 152, 0, 0.9)) drop-shadow(0 0 40px rgba(255, 152, 0, 0.6));
+    }
+}
+
+/* Прораб/Менеджер: плитки-статы с читаемым фоном */
+.stat-card {
+    background-color: var(--bg-elevated) !important;
+    border: 1px solid var(--border-color);
+    color: var(--text-main) !important;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 152, 0, 0.3);
+}
+
+/* Модальные окна */
+.modal-content {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-main);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+/* Nav-tabs: тёмный стиль */
+.nav-tabs {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    border-radius: 0 !important;
+    font-weight: 500;
+    font-size: 1.1rem;
+    padding: 1rem 1.5rem;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: rgba(255, 152, 0, 0.4);
+    color: var(--primary-hover);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent !important;
+    border-bottom-color: var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
 
 /* Спиннеры загрузки */
 .spinner-border {
@@ -304,19 +562,26 @@ h6 {
     height: 3rem;
 }
 
-/* Sidebar */
+/* Sidebar & Lists */
 .list-group-item {
-    border-left: 3px solid transparent;
+    background-color: transparent !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+    border-left: 3px solid transparent !important;
     transition: all 0.2s;
 }
 
 .list-group-item:hover {
-    background-color: var(--light-color);
-    border-left-color: var(--primary-color);
+    background-color: var(--bg-elevated) !important;
+    border-left-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
 }
 
 .list-group-item.active {
-    border-left-color: var(--primary-color);
+    background-color: rgba(255, 152, 0, 0.1) !important;
+    border-left-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+    font-weight: 600;
 }
 
 /* Изображения */
@@ -330,23 +595,7 @@ h6 {
 }
 
 /* Tabs */
-.nav-tabs .nav-link {
-    border: none;
-    border-bottom: 3px solid transparent;
-    color: var(--secondary-color);
-    transition: all 0.2s;
-}
-
-.nav-tabs .nav-link:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-.nav-tabs .nav-link.active {
-    border-bottom-color: var(--primary-color);
-    color: var(--primary-color);
-    font-weight: 600;
-}
+/* Tabs (removed duplicating style since it breaks dark tech styling) */
 
 /* Footer */
 footer {
@@ -541,4 +790,326 @@ footer {
 .form-floating>.form-control:not(:placeholder-shown)~label {
     color: var(--primary-color);
     opacity: 0.9;
+}
+
+/* =============================================================================
+   ГЛОБАЛЬНАЯ КНОПКА "ЗАКАЗАТЬ ЗВОНОК"
+   ============================================================================= */
+.float-btn-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: neon-pulse 2s infinite alternate;
+    border-radius: 50px;
+}
+
+.float-btn {
+    background-color: var(--primary-color);
+    color: #000;
+    font-weight: 700;
+    padding: 15px 25px;
+    border-radius: 50px;
+    text-transform: uppercase;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+    transition: all 0.3s ease;
+}
+
+.float-btn:hover {
+    transform: scale(1.05);
+    background-color: var(--primary-hover);
+    color: #000;
+    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.6);
+}
+
+.btn-ai-glow {
+    position: relative;
+    border: 1px solid var(--info-color) !important;
+    color: var(--info-color) !important;
+    background: rgba(88, 166, 255, 0.05) !important;
+    box-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+    transition: all 0.3s ease;
+    animation: blue-pulse-btn 2s infinite alternate;
+}
+
+.btn-ai-glow:hover {
+    background: rgba(88, 166, 255, 0.2) !important;
+    box-shadow: 0 0 20px rgba(88, 166, 255, 0.7);
+    transform: scale(1.03);
+}
+
+@keyframes blue-pulse-btn {
+    from {
+        box-shadow: 0 0 5px rgba(88, 166, 255, 0.2);
+    }
+
+    to {
+        box-shadow: 0 0 15px rgba(88, 166, 255, 0.6);
+    }
+}
+
+.float-btn i {
+    font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+    .float-btn-container {
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .float-btn {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+/* =============================================================================
+   NEW INDUSTRIAL PROJECT CARD STYLES
+   ============================================================================= */
+
+.project-summary-card {
+    background: #111418;
+    border: 1px solid #2d333b;
+    border-radius: 4px;
+    padding: 24px;
+    color: white;
+    transition: 0.3s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.project-summary-card:hover {
+    border-color: #444;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.summary-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    color: #8b949e;
+}
+
+.status-badge {
+    background: #1a8754;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-badge.stages_pending {
+    background: #9a6700;
+}
+
+.status-badge.new {
+    background: #0969da;
+}
+
+.project-name-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.project-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: #e6edf3;
+}
+
+.progress-percent {
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #e6edf3;
+}
+
+.custom-progress {
+    height: 4px;
+    background: #21262d;
+    border-radius: 2px;
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.custom-progress-bar {
+    height: 100%;
+    background: #3fb950;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.stats-box {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.2s;
+    text-decoration: none;
+    color: white;
+}
+
+.stats-box:hover {
+    border-color: #ff9800;
+    background: rgba(255, 152, 0, 0.05);
+}
+
+.stats-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    color: #ff9800;
+    display: block;
+}
+
+.stats-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #8b949e;
+    display: block;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.stats-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #e6edf3;
+}
+
+/* Modal Styles for Documentation */
+.custom-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+    padding: 20px;
+}
+
+.modal-content-box {
+    background: #161b22;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header-box {
+    padding: 20px;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body-box {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.doc-category {
+    margin-bottom: 24px;
+}
+
+.category-title {
+    font-size: 0.9rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.doc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: #c9d1d9;
+    transition: 0.2s;
+}
+
+.doc-item:hover {
+    border-color: #58a6ff;
+    background: rgba(88, 166, 255, 0.05);
+    color: #58a6ff;
+}
+
+.doc-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.doc-icon {
+    color: #58a6ff;
+    font-size: 1.2rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    color: white;
 }
