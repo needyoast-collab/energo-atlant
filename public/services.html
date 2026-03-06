@@ -31,24 +31,6 @@
             background: linear-gradient(to top, var(--bg-dark), transparent);
         }
 
-        .navbar-custom {
-            background-color: rgba(5, 5, 5, 0.95);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1rem 0;
-            transition: all 0.3s ease;
-        }
-
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: var(--text-main) !important;
-            letter-spacing: 0.05em;
-        }
-
-        .navbar-brand span {
-            color: var(--text-muted);
-        }
-
         .service-card {
             height: 100%;
             padding: 2.5rem 2rem;
@@ -115,26 +97,31 @@
 
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand me-0" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
                     style="height: 40px; object-fit: contain;"></a>
-            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-                <i class="bi bi-list fs-2 text-white"></i>
-            </button>
+
+            <div class="d-flex align-items-center gap-2 d-lg-none">
+                <a href="/login.html" class="btn btn-primary btn-sm fw-bold px-3">КАБИНЕТ</a>
+                <button class="navbar-toggler border-0 p-0" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav">
+                    <i class="bi bi-list fs-1 text-white"></i>
+                </button>
+            </div>
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center py-3 py-lg-0">
                     <li class="nav-item"><a class="nav-link" href="/index.html">Главная</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/services.html">Услуги</a></li>
                     <li class="nav-item"><a class="nav-link" href="/portfolio.html">Портфолио</a></li>
                     <li class="nav-item"><a class="nav-link" href="/partners.html">Партнерам</a></li>
                     <li class="nav-item"><a class="nav-link" href="/contact.html">Контакты</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-4">
-                    <div class="contact-info d-none d-xl-block">
+                <div class="d-none d-lg-flex align-items-center gap-4">
+                    <div class="contact-info">
                         <a href="tel:+79939074577" class="text-white text-decoration-none fw-bold">+7 993 907-45-77</a>
                     </div>
-                    <a href="/login.html" class="btn btn-primary fw-bold">КАБИНЕТ</a>
+                    <a href="/login.html" class="btn btn-primary fw-bold px-4">КАБИНЕТ</a>
                 </div>
             </div>
         </div>
@@ -530,10 +517,13 @@
                 <div class="col-lg-6" data-aos="fade-left">
                     <div class="position-relative">
                         <img src="/img/services/substation.png" alt="Работа на объекте" class="img-fluid shadow-lg">
-                        <div class="position-absolute bottom-0 start-0 bg-primary p-4 text-black fw-bold text-uppercase shadow-lg d-none d-md-block"
-                            style="translate: -20px 20px;">
-                            Работаем под ключ
-                        </div>
+                        <a href="/contact.html"
+                            class="position-absolute bottom-0 start-0 bg-primary p-4 text-black fw-bold text-uppercase shadow-lg d-none d-md-block text-decoration-none"
+                            style="translate: -20px 20px; transition: background 0.25s, transform 0.25s; letter-spacing:0.05em;"
+                            onmouseover="this.style.background='#fff'; this.style.transform='translate(-20px, 20px) scale(1.04)'"
+                            onmouseout="this.style.background=''; this.style.transform=''">
+                            Работаем под ключ <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
                     </div>
                 </div>
             </div>

@@ -5,3 +5,6 @@ uploads/
 projects/
 .env
 server.log
+database.db
+energoatlant.db
+*.log

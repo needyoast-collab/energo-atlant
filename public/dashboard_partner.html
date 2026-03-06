@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Личный кабинет Партнера</title>
+    <title>Личный кабинет Партнера - ЭнергоАтлант</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -17,49 +17,91 @@
             border-right: 1px solid var(--border-color);
         }
 
-        .sidebar .nav-link {
+        .sidebar .list-group-item {
             color: var(--text-muted);
-            padding: 0.8rem 1rem;
+            padding: 1rem 1.5rem;
             font-weight: 500;
-            border-radius: 0;
+            border: none;
+            background: transparent;
+            margin-bottom: 5px;
+            transition: all 0.2s ease;
+            position: relative;
         }
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
+        .sidebar .list-group-item:hover {
             color: var(--primary-color);
             background-color: rgba(255, 152, 0, 0.1);
         }
 
-        .sidebar .nav-link i {
-            margin-right: 10px;
+        .sidebar .list-group-item.active {
+            color: #000;
+            background-color: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .sidebar .list-group-item i {
+            margin-right: 12px;
+            font-size: 1.1rem;
+            vertical-align: middle;
         }
 
         .ref-link-box {
             background: var(--bg-elevated);
             border: 1px solid var(--border-color);
-            padding: 1rem;
-            margin-bottom: 2rem;
+            border-left: 4px solid var(--info-color);
+            padding: 1.5rem;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            margin-bottom: 2rem;
+            transition: transform 0.2s;
+        }
+
+        .ref-link-box:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-hover);
+        }
+
+        .partner-level-badge {
+            background: linear-gradient(135deg, var(--warning-color), var(--primary-color));
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
         }
     </style>
 </head>
 
-<body class="bg-dark text-white">
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm"
-        style="background-color: var(--bg-surface) !important; border-bottom: 1px solid var(--border-color);">
-        <div class="container-fluid">
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark"
+        style="background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color);">
+        <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
                 <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;" class="me-2">
                 <span class="badge bg-secondary text-white ms-1 align-middle d-none d-sm-inline"
-                    style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">ПАРТНЕР</span>
+                    style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">ПАРТНЁР</span>
             </a>
 
-            <div class="d-flex align-items-center">
-                <span class="text-white opacity-75 small me-3" id="userName">Партнер</span>
-                <button class="btn btn-outline-danger btn-sm fw-bold" onclick="logout()">ВЫЙТИ</button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3 text-white opacity-75 small">
+                        <i class="bi bi-person-badge me-1"></i> <span id="userName">Загрузка...</span>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#"
+                            onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');"
+                            class="btn btn-outline-danger btn-sm fw-bold">ВЫЙТИ</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -67,105 +109,190 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar">
-                <div class="nav flex-column nav-pills" role="tablist" aria-orientation="vertical">
-                    <a class="nav-link active" id="v-pills-dashboard-tab" data-bs-toggle="pill"
-                        href="#v-pills-dashboard">
-                        <i class="bi bi-speedometer2"></i> Дашборд
+            <div class="col-md-3 col-lg-2 p-0 sidebar">
+                <div class="list-group list-group-flush mx-2" id="partnerSidebar" role="tablist">
+                    <a class="list-group-item list-group-item-action active" id="pills-dash-tab" data-bs-toggle="pill"
+                        data-bs-target="#pills-dash" href="#pills-dash" role="tab" aria-controls="pills-dash"
+                        aria-selected="true">
+                        <i class="bi bi-speedometer2"></i>Сводка
                     </a>
-                    <a class="nav-link" id="v-pills-clients-tab" data-bs-toggle="pill" href="#v-pills-clients">
-                        <i class="bi bi-people"></i> Мои клиенты
+                    <a class="list-group-item list-group-item-action" id="pills-clients-tab" data-bs-toggle="pill"
+                        data-bs-target="#pills-clients" href="#pills-clients" role="tab" aria-controls="pills-clients"
+                        aria-selected="false">
+                        <i class="bi bi-people"></i>Мои клиенты
                     </a>
-                    <a class="nav-link" id="v-pills-finance-tab" data-bs-toggle="pill" href="#v-pills-finance">
-                        <i class="bi bi-wallet2"></i> Финансы и Выплаты
+                    <a class="list-group-item list-group-item-action" id="pills-finance-tab" data-bs-toggle="pill"
+                        data-bs-target="#pills-finance" href="#pills-finance" role="tab" aria-controls="pills-finance"
+                        aria-selected="false">
+                        <i class="bi bi-wallet2"></i>Выплаты
                     </a>
                 </div>
             </div>
 
             <!-- Main Content -->
-            <main class="col-md-9 col-lg-10 p-4">
-                <div class="tab-content" id="v-pills-tabContent">
+            <main class="col-md-9 col-lg-10 p-4 p-lg-5">
+                <div class="tab-content" id="pills-tabContent">
 
-                    <!-- Dashboard Tab -->
-                    <div class="tab-pane fade show active" id="v-pills-dashboard">
-                        <h2 class="mb-4 text-uppercase">Статистика Партнера</h2>
+                    <!-- РАЗДЕЛ: СВОДКА -->
+                    <div class="tab-pane fade show active" id="pills-dash" role="tabpanel"
+                        aria-labelledby="pills-dash-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="h3 fw-bold text-uppercase mb-0"><i
+                                    class="bi bi-activity text-warning me-2"></i>Сводка партнёра</h2>
+                            <span class="partner-level-badge"><i class="bi bi-star-fill me-1"></i> <span
+                                    id="partnerLevelName">Загрузка...</span></span>
+                        </div>
 
+                        <!-- РЕФЕРАЛЬНАЯ ССЫЛКА -->
                         <div class="ref-link-box">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-link-45deg fs-3 text-primary me-3"></i>
-                                <div>
-                                    <small class="text-muted text-uppercase d-block mb-1">Ваша реферальная
-                                        ссылка</small>
-                                    <code class="fs-5 text-white"
-                                        id="refLink">https://energoatlant.ru/ref/partner123</code>
+                            <div class="d-flex align-items-center flex-wrap gap-3">
+                                <div class="bg-dark rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 50px; height: 50px; border: 1px solid var(--info-color);">
+                                    <i class="bi bi-link-45deg fs-4 text-info"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <small class="text-uppercase text-muted fw-bold mb-1 d-block"
+                                        style="letter-spacing: 1px;">Ваша персональная реферальная ссылка</small>
+                                    <code
+                                        class="fs-5 text-white bg-dark px-3 py-1 rounded w-100 d-inline-block user-select-all"
+                                        style="border: 1px dashed var(--border-color);" id="refLink">Загрузка...</code>
                                 </div>
                             </div>
-                            <button class="btn btn-primary btn-sm rounded-0"
-                                onclick="navigator.clipboard.writeText(document.getElementById('refLink').innerText); alert('Ссылка скопирована!');">
-                                Копировать
+                            <button class="btn btn-info fw-bold btn-lg mt-3 mt-md-0" onclick="copyRefLink()">
+                                <i class="bi bi-files me-1"></i> СКОПИРОВАТЬ
                             </button>
                         </div>
 
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-4">
-                                <div class="card bg-surface border-secondary h-100 p-3">
-                                    <h6 class="text-muted text-uppercase mb-3">Текущий уровень</h6>
-                                    <h3 class="text-primary mb-0">Старт (7.5%)</h3>
-                                    <p class="small text-muted mt-2 mb-0">Приведите еще 2 клиентов для повышения до 10%
-                                    </p>
+                        <!-- ПРОГРЕСС И КОМИССИЯ -->
+                        <div class="card mb-4 pb-0"
+                            style="background: var(--bg-surface); border: 1px solid var(--border-color);">
+                            <div class="card-body">
+                                <div class="row align-items-center p-2">
+                                    <div
+                                        class="col-md-3 text-center text-md-start mb-3 mb-md-0 border-end border-secondary">
+                                        <div class="text-muted small text-uppercase mb-1">Ваша комиссия</div>
+                                        <div class="display-5 fw-bold text-warning" id="partnerCommission">0%</div>
+                                    </div>
+                                    <div class="col-md-9 ps-md-4">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="small text-muted fw-bold text-uppercase">Прогресс до
+                                                повышения</span>
+                                            <span class="small fw-bold text-white" id="levelProgressText">0%</span>
+                                        </div>
+                                        <div class="progress mb-2 bg-dark" style="height: 10px; border-radius: 10px;">
+                                            <div id="levelProgressBar"
+                                                class="progress-bar bg-warning progress-bar-striped progress-bar-animated"
+                                                role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0"
+                                                aria-valuemax="100"></div>
+                                        </div>
+                                        <div class="small text-secondary" id="partnerLevelNext">Загрузка...</div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="card bg-surface border-secondary h-100 p-3">
-                                    <h6 class="text-muted text-uppercase mb-3">Привлечено клиентов</h6>
-                                    <h3 class="text-white mb-0">0</h3>
+                        </div>
+
+                        <!-- КАРТОЧКИ -->
+                        <div class="row g-4">
+                            <div class="col-md-3">
+                                <div class="stat-card" style="border-left-color: var(--primary-color);">
+                                    <h6 class="text-muted text-uppercase mb-3 small">Клиенты (всего)</h6>
+                                    <h3 class="mb-0 fw-bold" id="statClients">0</h3>
+                                    <i class="bi bi-people position-absolute"
+                                        style="font-size: 4rem; right: 10px; bottom: -10px; opacity: 0.1;"></i>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="card bg-surface border-secondary h-100 p-3">
-                                    <h6 class="text-muted text-uppercase mb-3">Доступно к выплате</h6>
-                                    <h3 class="text-success mb-0">0 ₽</h3>
-                                    <button class="btn btn-outline-success btn-sm rounded-0 mt-2"
-                                        disabled>Запросить</button>
+                            <div class="col-md-3">
+                                <div class="stat-card" style="border-left-color: var(--info-color);">
+                                    <h6 class="text-muted text-uppercase mb-3 small">Успешные сделки</h6>
+                                    <h3 class="mb-0 fw-bold" id="statDeals">0</h3>
+                                    <i class="bi bi-briefcase position-absolute"
+                                        style="font-size: 4rem; right: 10px; bottom: -10px; opacity: 0.1;"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card" style="border-left-color: var(--success-color);">
+                                    <h6 class="text-muted text-uppercase mb-3 small">Выплачено всего</h6>
+                                    <h3 class="mb-0 fw-bold text-success" id="statPaid">0 ₽</h3>
+                                    <i class="bi bi-cash-stack position-absolute text-success"
+                                        style="font-size: 4rem; right: 10px; bottom: -10px; opacity: 0.1;"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card" style="border-left-color: var(--warning-color);">
+                                    <h6 class="text-muted text-uppercase mb-3 small">Доступно к выплате</h6>
+                                    <h3 class="mb-0 fw-bold text-warning" id="statPending">0 ₽</h3>
+                                    <i class="bi bi-piggy-bank position-absolute text-warning"
+                                        style="font-size: 4rem; right: 10px; bottom: -10px; opacity: 0.1;"></i>
+                                    <button class="btn btn-outline-warning btn-sm mt-3 w-100 fw-bold" id="payoutBtn"
+                                        onclick="showPayoutModal()" disabled>ЗАПРОСИТЬ</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- РАЗДЕЛ: КЛИЕНТЫ -->
+                    <div class="tab-pane fade" id="pills-clients" role="tabpanel" aria-labelledby="pills-clients-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="h3 fw-bold text-uppercase mb-0"><i
+                                    class="bi bi-people text-info me-2"></i>Привлечённые клиенты</h2>
+                        </div>
+                        <div class="card bg-surface border-secondary">
+                            <div class="card-body p-0" id="clientsTable">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Другие вкладки (заглушки) -->
-                    <div class="tab-pane fade" id="v-pills-clients">
-                        <h2 class="mb-4 text-uppercase">Мои Клиенты</h2>
-                        <p class="text-muted">Раздел находится в разработке (Перспективный модуль).</p>
+                    <!-- РАЗДЕЛ: ФИНАНСЫ И ВЫПЛАТЫ -->
+                    <div class="tab-pane fade" id="pills-finance" role="tabpanel" aria-labelledby="pills-finance-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-4 text-wrap">
+                            <h2 class="h3 fw-bold text-uppercase mb-0"><i
+                                    class="bi bi-wallet2 text-success me-2"></i>История выплат</h2>
+                            <div class="bg-dark px-3 py-2 border border-secondary rounded">
+                                <span class="small text-muted me-2">Текущий баланс:</span>
+                                <span class="fw-bold text-warning fs-5" id="pendingBalance">0 ₽</span>
+                            </div>
+                        </div>
+                        <div class="card bg-surface border-secondary">
+                            <div class="card-body p-0" id="payoutsHistory">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="tab-pane fade" id="v-pills-finance">
-                        <h2 class="mb-4 text-uppercase">Финансы</h2>
-                        <p class="text-muted">Раздел находится в разработке (Перспективный модуль).</p>
-                    </div>
                 </div>
             </main>
         </div>
     </div>
 
+    <!-- Модалки (рендерится через JS) -->
+
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/partner.js"></script>
+
     <script>
-        async function logout() {
-            await fetch('/api/logout');
-            window.location.href = '/login.html';
-        }
-
-        // Загрузка данных пользователя
-        async function loadUser() {
-            const res = await fetch('/api/user/me');
-            const data = await res.json();
-            if (data.success) {
-                document.getElementById('userName').textContent = data.user.full_name;
-                document.getElementById('refLink').textContent = `https://energoatlant.ru/ref/${data.user.id}`;
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            loadUser();
+        // Синхронизация табов
+        document.querySelectorAll('.sidebar .list-group-item').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const targetHref = link.getAttribute('href');
+                if (targetHref && targetHref.startsWith('#')) {
+                    e.preventDefault();
+                    // Удаляем active у всех
+                    document.querySelectorAll('.sidebar .list-group-item').forEach(el => el.classList.remove('active'));
+                    // Добавляем себе
+                    link.classList.add('active');
+                    // Показываем таб
+                    const tabEl = document.querySelector(`button[data-bs-target="${targetHref}"]`) || document.querySelector(`a[data-bs-target="${targetHref}"]`);
+                    if (tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
+                }
+            });
         });
     </script>
 </body>

@@ -5,6 +5,7 @@
 let currentProjects = [];
 let currentRequests = [];
 let staffList = [];
+let currentManagerViewedMessage = null;
 
 // =============================================================================
 // ИНИЦИАЛИЗАЦИЯ
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadStaff();
     await loadProjects();
     await loadRequests();
+    await loadManagerNotifications();
 
     const createForm = document.getElementById('createProjectForm');
     if (createForm) {
@@ -25,10 +27,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Загружаем архив когда переключаемся на вкладку
     document.getElementById('archive-tab')?.addEventListener('shown.bs.tab', loadArchive);
 
+    // Загружаем почту при переключении
+    document.getElementById('messages-tab')?.addEventListener('shown.bs.tab', loadManagerInbox);
+    document.getElementById('inbox-tab')?.addEventListener('shown.bs.tab', loadManagerInbox);
+    document.getElementById('sent-tab')?.addEventListener('shown.bs.tab', loadManagerSent);
+
     // Автообновление раз в 30 секунд
     setInterval(() => {
         loadProjects();
         loadRequests();
+        loadManagerNotifications();
     }, 30000);
 });
 
@@ -93,8 +101,8 @@ function renderProjects(projects) {
     container.innerHTML = '';
 
     // Показываем только не завершённые в активной вкладке
-    const active = projects.filter(p => p.status !== 'completed' && p.status !== 'cancelled');
-    const completed = projects.filter(p => p.status === 'completed');
+    const active = projects.filter(p => !['won', 'lost', 'postponed'].includes(p.status));
+    const completed = projects.filter(p => ['won', 'lost', 'postponed'].includes(p.status));
 
     // ДОБАВИЛ КОЛОНКУ "ЗАКАЗЧИК"
     let html = '<div class="row g-4">';
@@ -102,38 +110,37 @@ function renderProjects(projects) {
     active.forEach(p => {
         // Определяем имя заказчика для красивого вывода
         const clientDisplay = p.customer_name
-            ? `<span class="badge bg-info text-dark border"><i class="bi bi-person-circle"></i> ${p.customer_name}</span>`
-            : (p.client_name ? `<span class="badge bg-secondary border"><i class="bi bi-person"></i> ${p.client_name}</span>` : '<span class="text-muted small">Заказчик не назначен</span>');
+            ? `<span class="badge bg-info text-dark border"><i class="bi bi-person-circle me-1"></i>${p.customer_name}</span>`
+            : (p.client_name ? `<span class="badge bg-secondary border"><i class="bi bi-person me-1"></i>${p.client_name}</span>` : '<span class="text-muted small">Заказчик не назначен</span>');
 
         const foremanDisplay = p.foreman_name
-            ? `<span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools"></i> ${p.foreman_name}</span>`
-            : `<span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-exclamation-triangle"></i> Прораб не назначен</span>`;
+            ? `<span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools me-1"></i>${p.foreman_name}</span>`
+            : `<span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-exclamation-triangle me-1"></i>Прораб не назначен</span>`;
 
         html += `
             <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color);">
-                    <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                <div class="prj-card">
+                    <div class="prj-card-header">
                          <div class="d-flex flex-column">
-                            <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${p.title}">${p.title}</h5>
+                            <h5 class="prj-card-title mb-1" onclick="editProject(${p.id})" title="${p.title}">${p.title}</h5>
                             <small class="text-muted"><i class="bi bi-hash"></i> ${p.id}</small>
                          </div>
                          ${getStatusBadge(p.status)}
                     </div>
-                    <div class="card-body">
+                    <div class="prj-card-body">
                         <div class="mb-3 d-flex flex-wrap gap-2">
                              ${clientDisplay}
                              ${foremanDisplay}
                         </div>
-                        <div class="mb-3">
-                            <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
-                            <span class="text-white">${p.address || '<span class="text-muted">-</span>'}</span>
+                        <div class="prj-card-meta mb-3">
+                            <div><i class="bi bi-geo-alt"></i>${p.address || '-'}</div>
                         </div>
                         <div class="mb-2">
                              <p class="mb-1 text-muted small"><i class="bi bi-key"></i> Код доступа</p>
                              <code class="user-select-all px-2 py-1 rounded" style="background-color: var(--bg-elevated); color: var(--primary-color); border: 1px solid var(--border-color);">${p.access_code}</code>
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                    <div class="prj-card-body pt-0">
                         <div class="d-flex justify-content-between gap-2 mb-3">
                             <button class="btn btn-sm btn-outline-warning flex-grow-1" onclick="editProject(${p.id})">
                                 <i class="bi bi-pencil-square"></i> ИЗМЕНИТЬ
@@ -149,6 +156,7 @@ function renderProjects(projects) {
                              <i class="bi bi-check2-square"></i> ЗАВЕРШИТЬ ПРОЕКТ
                         </button>
                     </div>
+                    <div class="prj-card-footer-line"></div>
                 </div>
             </div>`;
     });
@@ -182,22 +190,25 @@ function renderFunnel(projects) {
 
     // Определяем колонки
     const stages = [
-        { id: 'new', name: 'Новые', color: 'primary' },
-        { id: 'in_progress', name: 'В работе', color: 'info' },
-        { id: 'stages_pending', name: 'Ожидают действий', color: 'warning' },
-        { id: 'completed', name: 'Реализованы', color: 'success' } //completed и cancelled вместе
+        { id: 'lead', name: 'Новый лид', color: 'primary' },
+        { id: 'qualification', name: 'Квалификация', color: 'info' },
+        { id: 'visit_scheduled', name: 'Выезд назначен', color: 'warning' },
+        { id: 'offer_in_progress', name: 'КП в работе', color: 'secondary' },
+        { id: 'offer_sent', name: 'КП отправлено', color: 'info' },
+        { id: 'negotiation', name: 'Переговоры', color: 'warning' },
+        { id: 'contract_signing', name: 'Договор на согласовании', color: 'secondary' },
+        { id: 'waiting_advance', name: 'Ожидание аванса', color: 'warning' },
+        { id: 'in_progress', name: 'В работе', color: 'success' },
+        { id: 'closing_docs', name: 'Закрытие документов', color: 'secondary' },
+        { id: 'won', name: 'Закрыт — выигран', color: 'success' },
+        { id: 'postponed', name: 'Отложен', color: 'dark' }
     ];
 
     let html = '';
 
     stages.forEach(stage => {
         // Фильтруем проекты
-        let stageProjects = [];
-        if (stage.id === 'completed') {
-            stageProjects = projects.filter(p => p.status === 'completed' || p.status === 'cancelled');
-        } else {
-            stageProjects = projects.filter(p => p.status === stage.id);
-        }
+        let stageProjects = projects.filter(p => p.status === stage.id);
 
         html += `
             <div class="col-12 col-md-3" style="min-width: 280px;">
@@ -486,6 +497,20 @@ async function handleCreateProject(e) {
     if (customerId) payload.append('customerId', customerId);
     if (requestId) payload.append('requestId', requestId);
 
+    // НОВЫЕ ПОЛЯ СДЕЛКИ
+    const newFields = [
+        'work_type', 'length_m', 'lead_source', 'offer_sum', 'visit_date',
+        'offer_sent_date', 'offer_valid_until', 'contract_date',
+        'advance_sum', 'advance_date', 'act_date', 'final_sum'
+    ];
+
+    newFields.forEach(field => {
+        const el = e.target.querySelector(`[name="${field}"]`);
+        if (el) {
+            payload.append(field, el.value);
+        }
+    });
+
     const fileInput = document.getElementById('p_files');
     if (fileInput) {
         for (let i = 0; i < fileInput.files.length; i++) {
@@ -731,112 +756,11 @@ async function editProject(id) {
     const p = currentProjects.find(x => x.id === id);
     if (!p) return;
 
-    const old = document.getElementById('editModal');
-    if (old) old.remove();
-
-    const modalHtml = `
-            <div class= "modal fade" id = "editModal" tabindex = "-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-pencil"></i> Редактировать: ${p.title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form id="editForm">
-                        <div class="modal-body">
-                            <div class="row g-3">
-                                <div class="col-md-8">
-                                    <label class="form-label">Название</label>
-                                    <input class="form-control" id="e_title" value="${p.title}" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Статус</label>
-                                    <select class="form-select" id="e_status">
-                                        <option value="new" ${p.status === 'new' ? 'selected' : ''}>Новый</option>
-                                        <option value="stages_pending" ${p.status === 'stages_pending' ? 'selected' : ''}>Ожидание этапов</option>
-                                        <option value="in_progress" ${p.status === 'in_progress' ? 'selected' : ''}>В работе</option>
-                                        <option value="cancelled" ${p.status === 'cancelled' ? 'selected' : ''}>Отменён</option>
-                                    </select>
-                                    <small class="text-muted">Для завершения используйте кнопку "✅ Завершить"</small>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Адрес</label>
-                                    <input class="form-control" id="e_address" value="${p.address || ''}">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Описание / Пометки</label>
-                                    <textarea class="form-control" id="e_description" rows="3">${p.description || ''}</textarea>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Прораб</label>
-                                    <select class="form-select" id="e_foreman">
-                                        <option value="">-- Не назначен --</option>
-                                        ${staffList.filter(s => s.role === 'foreman').map(s =>
-        `<option value="${s.id}" ${p.foreman_id === s.id ? 'selected' : ''}>${s.full_name}</option>`
-    ).join('')}
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Снабженец</label>
-                                    <select class="form-select" id="e_supplier">
-                                        <option value="">-- Не назначен --</option>
-                                        ${staffList.filter(s => s.role === 'supplier').map(s =>
-        `<option value="${s.id}" ${p.supplier_id === s.id ? 'selected' : ''}>${s.full_name}</option>`
-    ).join('')}
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Инженер ПТО</label>
-                                    <select class="form-select" id="e_pto">
-                                        <option value="">-- Не назначен --</option>
-                                        ${staffList.filter(s => s.role === 'pto').map(s =>
-        `<option value="${s.id}" ${p.pto_id === s.id ? 'selected' : ''}>${s.full_name}</option>`
-    ).join('')}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-link text-muted text-decoration-none"
-                                data-bs-dismiss="modal">Отмена</button>
-                            <button type="submit" class="btn btn-primary fw-bold">Сохранить</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div> `;
-
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const modal = new bootstrap.Modal(document.getElementById('editModal'));
-    modal.show();
-
-    document.getElementById('editForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const res = await apiRequest(`/api/manager/projects/${id}`, 'PUT', {
-            title: document.getElementById('e_title').value,
-            address: document.getElementById('e_address').value,
-            status: document.getElementById('e_status').value,
-            description: document.getElementById('e_description').value,
-            clientName: p.client_name,
-            clientOrganization: p.client_organization,
-            foremanId: document.getElementById('e_foreman').value,
-            supplierId: document.getElementById('e_supplier').value,
-            ptoId: document.getElementById('e_pto').value
-        });
-
-        if (res.success) {
-            modal.hide();
-            showSuccess('Проект обновлён');
-            loadProjects();
-        } else {
-            showError(res.message);
-        }
-    });
-
-    document.getElementById('editModal').addEventListener('hidden.bs.modal', function () {
-        this.remove();
-    });
+    if (window.sharedEditProject) {
+        window.sharedEditProject(p, loadProjects);
+    } else {
+        showError('Компонент редактирования временно недоступен.');
+    }
 }
 
 // =============================================================================
@@ -1003,19 +927,19 @@ async function loadArchive() {
     let html = '';
 
     // Завершённые проекты
-    const completedProjects = (projData.projects || []).filter(p => p.status === 'completed');
-    html += `<h5 class="border-bottom pb-2 mb-3">✅ Завершённые проекты (${completedProjects.length})</h5>`;
+    const completedProjects = (projData.projects || []).filter(p => ['won', 'lost', 'postponed'].includes(p.status));
+    html += `<h5 class="border-bottom pb-2 mb-3">✅ Архив проектов (${completedProjects.length})</h5>`;
 
     if (completedProjects.length === 0) {
-        html += '<p class="text-muted">Завершённых проектов пока нет</p>';
+        html += '<p class="text-muted">Архивных проектов пока нет</p>';
     } else {
         html += '<div class="list-group mb-4">';
         completedProjects.forEach(p => {
             html += `
-            <div class="list-group-item">
+            <div class="list-group-item bg-dark border-secondary text-white">
                     <div class="d-flex justify-content-between">
                         <strong>${p.title}</strong>
-                        <span class="badge bg-success">Завершён</span>
+                        ${getStatusBadge(p.status)}
                     </div>
                     <small class="text-muted">${p.address || '-'}</small>
                     ${p.foreman_name ? `<br><small>Прораб: ${p.foreman_name}</small>` : ''}
@@ -1104,7 +1028,83 @@ function getStatusBadge(status) {
     return map[status] || `<span class="badge bg-secondary"> ${status}</span> `;
 }
 
-function formatDateShort(dateStr) {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ru-RU');
+
+
+// =============================================================================
+// ПОЧТА (ОФИЦИАЛЬНАЯ ПЕРЕПИСКА)
+// =============================================================================
+
+// ===========================================
+// ПОЧТА (ИСПОЛЬЗУЕМ SHARED)
+// ===========================================
+
+async function loadManagerInbox() {
+    await sharedLoadInbox('inboxList', 'viewManagerMessage');
+}
+
+async function loadManagerSent() {
+    await sharedLoadSent('sentList', 'viewManagerMessage');
+}
+
+async function viewManagerMessage(id, type, cardElement) {
+    // В менеджере мы используем стандартный просмотрщик из shared
+    // Но если нужно добавить специфику (например, кнопку reply), передаем текущие данные
+    await sharedViewMessage(id, type, cardElement);
+}
+
+function composeManagerReply() {
+    if (!currentSharedViewedMessage) return;
+
+    const msg = currentSharedViewedMessage;
+    const detailModal = bootstrap.Modal.getInstance(document.getElementById('messageDetailModal'));
+    if (detailModal) detailModal.hide();
+
+    showManagerComposeModal();
+
+    const select = document.getElementById('composeReceiver');
+    // Попробуем найти и выбрать того же заказчика
+    for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].text.includes(msg.partner)) {
+            select.options[i].selected = true;
+            break;
+        }
+    }
+
+    let subject = msg.subject.startsWith('RE:') ? msg.subject : 'RE: ' + msg.subject;
+    document.getElementById('composeSubject').value = subject;
+
+    const quote = `\n\n--- В ответ на сообщение от ${msg.partner} (${msg.date}) ---\n> ${msg.body.replace(/<[^>]*>/g, '').replace(/\n/g, '\n> ')}`;
+    document.getElementById('composeBody').value = quote;
+}
+
+// ===========================================
+// УВЕДОМЛЕНИЯ МЕНЕДЖЕРА
+// ===========================================
+
+async function loadManagerNotifications() {
+    await sharedLoadNotifications({
+        badgeId: 'mgrNotifBadge',
+        listId: 'mgrNotifList',
+        persistentListId: 'persistentNotifList',
+        persistentContainerId: 'persistentNotifications',
+        onMarkRead: 'markManagerNotifRead'
+    });
+}
+
+function markManagerNotifRead(id, projectId, type) {
+    if (type === 'message') {
+        const tab = document.getElementById('messages-tab');
+        if (tab) {
+            tab.click();
+            setTimeout(() => { document.getElementById('inbox-tab')?.click(); }, 250);
+        }
+        return;
+    }
+    if (type === 'new_request') {
+        document.getElementById('requests-tab')?.click();
+        return;
+    }
+    if (projectId) {
+        document.getElementById('projects-tab')?.click();
+    }
 }

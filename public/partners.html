@@ -13,30 +13,6 @@
     <!-- AOS Animation Library -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <style>
-        .page-header {
-            padding: 120px 0 60px;
-            background-color: var(--bg-surface);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .navbar-custom {
-            background-color: rgba(5, 5, 5, 0.95);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1rem 0;
-            transition: all 0.3s ease;
-        }
-
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: var(--text-main) !important;
-            letter-spacing: 0.05em;
-        }
-
-        .navbar-brand span {
-            color: var(--text-muted);
-        }
-
         .partner-step {
             display: flex;
             align-items: flex-start;
@@ -83,26 +59,32 @@
 
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
-                    style="height: 40px; object-fit: contain;"></a>
-            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-                <i class="bi bi-list fs-2 text-white"></i>
-            </button>
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand me-0" href="/index.html">
+                <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;">
+            </a>
+
+            <div class="d-flex align-items-center gap-2 d-lg-none">
+                <a href="/login.html" class="btn btn-primary btn-sm fw-bold px-3">КАБИНЕТ</a>
+                <button class="navbar-toggler border-0 p-0" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav">
+                    <i class="bi bi-list fs-1 text-white"></i>
+                </button>
+            </div>
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center py-3 py-lg-0">
                     <li class="nav-item"><a class="nav-link" href="/index.html">Главная</a></li>
                     <li class="nav-item"><a class="nav-link" href="/services.html">Услуги</a></li>
                     <li class="nav-item"><a class="nav-link" href="/portfolio.html">Портфолио</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/partners.html">Партнерам</a></li>
                     <li class="nav-item"><a class="nav-link" href="/contact.html">Контакты</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-4">
-                    <div class="contact-info d-none d-xl-block">
+                <div class="d-none d-lg-flex align-items-center gap-4">
+                    <div class="contact-info">
                         <a href="tel:+79939074577" class="text-white text-decoration-none fw-bold">+7 993 907-45-77</a>
                     </div>
-                    <a href="/login.html" class="btn btn-primary fw-bold">КАБИНЕТ</a>
+                    <a href="/login.html" class="btn btn-primary fw-bold px-4">КАБИНЕТ</a>
                 </div>
             </div>
         </div>
@@ -110,22 +92,31 @@
 
     <!-- Заголовок страницы -->
     <section class="page-header border-0 position-relative"
-        style="background-image: linear-gradient(rgba(10, 10, 10, 0.8), rgba(10, 10, 10, 0.95)), url('https://images.unsplash.com/photo-1541888086026-6f8c2b73ee34?q=80&w=2000&auto=format&fit=crop'); background-size: cover; background-position: center; padding: 160px 0 100px;">
+        style="background-image: linear-gradient(rgba(10, 10, 10, 0.8), rgba(10, 10, 10, 0.95)), url('/img/partners_hero.png'); background-size: cover; background-position: center; padding: 160px 0 80px;">
         <div class="container position-relative z-1" data-aos="fade-up">
-            <div class="row align-items-center">
+            <div class="row align-items-center g-5">
                 <div class="col-lg-7">
-                    <span class="badge bg-primary text-black mb-3 fs-6 px-3 py-2 rounded-0">ПАРТНЕРСКАЯ ПРОГРАММА</span>
-                    <h1 class="display-3 fw-bold text-uppercase mb-4 text-white">СТАНЬТЕ ПАРТНЕРОМ <span
-                            class="text-primary">ЭНЕРГОАТЛАНТ</span></h1>
-                    <p class="lead text-muted mb-5 fs-4" style="max-width: 600px;">
-                        Привлекайте клиентов на проектирование и строительство электросетевых объектов. Получайте до
-                        <span class="text-white fw-bold">15% кэшбека</span> с каждого оплаченного этапа договора.
-                        Абсолютная прозрачность сделок.
+                    <span class="badge bg-primary text-black mb-3 fs-6 px-3 py-2 rounded-0 shadow">ПАРТНЕРСКАЯ
+                        ПРОГРАММА</span>
+                    <h1 class="display-4 fw-bold text-uppercase mb-3 text-white">СТАНЬТЕ ПАРТНЕРОМ <br><span
+                            class="text-primary text-glow">ЭНЕРГОАТЛАНТ</span></h1>
+                    <p class="lead text-muted mb-4 fs-5" style="max-width: 650px; line-height: 1.6;">
+                        Привлекайте клиентов на проектирование и строительство. Получайте до
+                        <span class="text-white fw-bold text-glow">15% кэшбека</span>. <br>
+                        Абсолютная прозрачность и личный кабинет для отслеживания.
                     </p>
-                    <div class="d-flex gap-3">
-                        <a href="/register.html" class="btn btn-primary btn-lg fw-bold px-4 py-3">СТАТЬ ПАРТНЕРОМ</a>
-                        <a href="#how-it-works" class="btn btn-outline-light btn-lg fw-bold px-4 py-3">КАК ЭТО
-                            РАБОТАЕТ?</a>
+                    <div class="d-flex flex-column flex-sm-row gap-3">
+                        <a href="/register.html" class="btn btn-primary btn-lg fw-bold px-5 shadow-lg">СТАТЬ
+                            ПАРТНЕРОМ</a>
+                        <a href="#how-it-works" class="btn btn-outline-light btn-lg fw-bold px-5">ПОДРОБНЕЕ</a>
+                    </div>
+                </div>
+                <div class="col-lg-5 d-none d-lg-block">
+                    <div class="hero-image-frame p-2 border border-secondary rounded shadow-lg overflow-hidden position-relative"
+                        style="background:rgba(255,152,0,0.05); transform: perspective(1000px) rotateY(-12deg) rotateX(2deg);">
+                        <div class="frame-glare"></div>
+                        <img src="/img/partners_hero.png" class="img-fluid rounded" alt="ЭнергоАтлант Партнеры"
+                            style="filter: contrast(1.1) brightness(1.1);">
                     </div>
                 </div>
             </div>
@@ -142,7 +133,7 @@
             </div>
 
             <div class="row g-4">
-                <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="200">
                     <div class="level-card">
                         <div class="text-muted text-uppercase fw-bold">Уровень "Старт"</div>
                         <div class="level-percent">7.5<span>%</span></div>
@@ -151,8 +142,9 @@
                         <small class="text-muted">от 1 клиента</small>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="level-card" style="border-color: var(--primary-color);">
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="500">
+                    <div class="level-card"
+                        style="border-color: var(--primary-color); transform: scale(1.05); box-shadow: 0 0 30px rgba(255,152,0,0.2);">
                         <div class="text-white text-uppercase fw-bold">Уровень "Профи"</div>
                         <div class="level-percent">10<span>%</span></div>
                         <p class="text-muted">Достигается после 3 успешно реализованных контрактов.</p>
@@ -160,7 +152,7 @@
                         <small class="text-muted">+0.5% за каждых следующих</small>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" data-aos="zoom-in" data-aos-delay="800">
                     <div class="level-card">
                         <div class="text-info text-uppercase fw-bold">Уровень "Элита"</div>
                         <div class="level-percent">15<span>%</span></div>

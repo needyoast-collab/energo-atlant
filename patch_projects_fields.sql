@@ -1,0 +1,12 @@
+ALTER TABLE projects ADD COLUMN work_type TEXT;
+ALTER TABLE projects ADD COLUMN length_m INTEGER;
+ALTER TABLE projects ADD COLUMN offer_sum REAL;
+ALTER TABLE projects ADD COLUMN lead_source TEXT;
+ALTER TABLE projects ADD COLUMN visit_date TEXT;
+ALTER TABLE projects ADD COLUMN offer_sent_date TEXT;
+ALTER TABLE projects ADD COLUMN offer_valid_until TEXT;
+ALTER TABLE projects ADD COLUMN contract_date TEXT;
+ALTER TABLE projects ADD COLUMN advance_sum REAL;
+ALTER TABLE projects ADD COLUMN advance_date TEXT;
+ALTER TABLE projects ADD COLUMN act_date TEXT;
+ALTER TABLE projects ADD COLUMN final_sum REAL;

@@ -44,20 +44,7 @@ async function checkAuth() {
     return data.user;
 }
 
-const requireAuth = (req, res, next) => {
-    if (!req.session.userId) {
-        // если это API — JSON
-        if (req.originalUrl.startsWith('/api')) {
-            return res.status(401).json({
-                success: false,
-                message: "Требуется авторизация"
-            });
-        }
-        // если страница — редирект
-        return res.redirect('/login.html');
-    }
-    next();
-};
+
 // =============================================================================
 // УВЕДОМЛЕНИЯ
 // =============================================================================
@@ -129,9 +116,25 @@ function formatDateShort(dateString) {
 }
 
 function getStatusBadge(status) {
+    const isCustomer = window.location.pathname.includes('customer');
     switch (status) {
+        // Проекты
+        case 'lead': return isCustomer ? '<span class="badge bg-primary text-uppercase">Заявка принята</span>' : '<span class="badge bg-primary text-uppercase">Новый лид</span>';
+        case 'qualification': return isCustomer ? '<span class="badge text-dark text-uppercase" style="background:#0dcaf0;">Уточняем детали</span>' : '<span class="badge text-dark text-uppercase" style="background:#0dcaf0;">Квалификация</span>';
+        case 'visit_scheduled': return isCustomer ? '<span class="badge bg-warning text-dark text-uppercase">Выезд на объект запланирован</span>' : '<span class="badge bg-warning text-dark text-uppercase">Выезд назначен</span>';
+        case 'offer_in_progress': return isCustomer ? '<span class="badge text-dark border text-uppercase" style="background:#e9ecef;">Готовим КП</span>' : '<span class="badge text-dark border text-uppercase" style="background:#e9ecef;">КП в работе</span>';
+        case 'offer_sent': return isCustomer ? '<span class="badge bg-info text-dark text-uppercase">КП направлено</span>' : '<span class="badge bg-info text-dark text-uppercase">КП отправлено</span>';
+        case 'negotiation': return isCustomer ? '<span class="badge bg-warning text-dark text-uppercase">Согласование условий</span>' : '<span class="badge bg-warning text-dark text-uppercase">Переговоры</span>';
+        case 'contract_signing': return isCustomer ? '<span class="badge bg-secondary text-uppercase">Договор на подписании</span>' : '<span class="badge bg-secondary text-uppercase">Договор на согласовании</span>';
+        case 'waiting_advance': return isCustomer ? '<span class="badge text-dark text-uppercase" style="background:#ffc107;">Ожидаем аванс</span>' : '<span class="badge text-dark text-uppercase" style="background:#ffc107;">Ожидание аванса</span>';
+        case 'in_progress': return isCustomer ? '<span class="badge bg-success text-uppercase">Работы выполняются</span>' : '<span class="badge bg-success text-uppercase">В работе</span>';
+        case 'closing_docs': return isCustomer ? '<span class="badge bg-secondary text-uppercase">Оформление документации</span>' : '<span class="badge bg-secondary text-uppercase">Закрытие документов</span>';
+        case 'won': return isCustomer ? '<span class="badge bg-success text-uppercase">Объект сдан</span>' : '<span class="badge bg-success text-uppercase">Закрыт — выигран</span>';
+        case 'lost': return isCustomer ? '<span class="badge border border-danger text-danger text-uppercase bg-transparent d-none">Отменён</span>' : '<span class="badge border border-danger text-danger text-uppercase bg-transparent">Закрыт — проигран</span>';
+        case 'postponed': return isCustomer ? '<span class="badge bg-dark text-uppercase">Рассмотрение приостановлено</span>' : '<span class="badge bg-dark text-uppercase">Отложен</span>';
+
+        // Обратная совместимость с запросами (requests) и материалами из других таблиц:
         case 'new': return '<span class="badge bg-primary">НОВЫЙ</span>';
-        case 'in_progress': return '<span class="badge bg-info text-dark">В РАБОТЕ</span>';
         case 'stages_pending': return '<span class="badge bg-warning text-dark">ОЖИДАНИЕ ЭТАПОВ</span>';
         case 'completed': return '<span class="badge bg-success">ЗАВЕРШЁН</span>';
         case 'cancelled': return '<span class="badge bg-danger">ОТМЕНЁН</span>';

@@ -104,26 +104,31 @@
 
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand me-0" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
                     style="height: 40px; object-fit: contain;"></a>
-            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-                <i class="bi bi-list fs-2 text-white"></i>
-            </button>
+
+            <div class="d-flex align-items-center gap-2 d-lg-none">
+                <a href="/login.html" class="btn btn-primary btn-sm fw-bold px-3">КАБИНЕТ</a>
+                <button class="navbar-toggler border-0 p-0" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav">
+                    <i class="bi bi-list fs-1 text-white"></i>
+                </button>
+            </div>
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center py-3 py-lg-0">
                     <li class="nav-item"><a class="nav-link" href="/index.html">Главная</a></li>
                     <li class="nav-item"><a class="nav-link" href="/services.html">Услуги</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/portfolio.html">Портфолио</a></li>
                     <li class="nav-item"><a class="nav-link" href="/partners.html">Партнерам</a></li>
                     <li class="nav-item"><a class="nav-link" href="/contact.html">Контакты</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-4">
-                    <div class="contact-info d-none d-xl-block">
+                <div class="d-none d-lg-flex align-items-center gap-4">
+                    <div class="contact-info">
                         <a href="tel:+79939074577" class="text-white text-decoration-none fw-bold">+7 993 907-45-77</a>
                     </div>
-                    <a href="/login.html" class="btn btn-primary fw-bold">КАБИНЕТ</a>
+                    <a href="/login.html" class="btn btn-primary fw-bold px-4">КАБИНЕТ</a>
                 </div>
             </div>
         </div>

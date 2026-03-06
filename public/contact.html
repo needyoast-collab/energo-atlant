@@ -19,24 +19,6 @@
             border-bottom: 1px solid var(--border-color);
         }
 
-        .navbar-custom {
-            background-color: rgba(5, 5, 5, 0.95);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1rem 0;
-            transition: all 0.3s ease;
-        }
-
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: var(--text-main) !important;
-            letter-spacing: 0.05em;
-        }
-
-        .navbar-brand span {
-            color: var(--text-muted);
-        }
-
         .contact-box {
             padding: 2rem;
             background-color: var(--bg-surface);
@@ -60,26 +42,31 @@
 
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand me-0" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
                     style="height: 40px; object-fit: contain;"></a>
-            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-                <i class="bi bi-list fs-2 text-white"></i>
-            </button>
+
+            <div class="d-flex align-items-center gap-2 d-lg-none">
+                <a href="/login.html" class="btn btn-primary btn-sm fw-bold px-3">КАБИНЕТ</a>
+                <button class="navbar-toggler border-0 p-0" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav">
+                    <i class="bi bi-list fs-1 text-white"></i>
+                </button>
+            </div>
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center py-3 py-lg-0">
                     <li class="nav-item"><a class="nav-link" href="/index.html">Главная</a></li>
                     <li class="nav-item"><a class="nav-link" href="/services.html">Услуги</a></li>
                     <li class="nav-item"><a class="nav-link" href="/portfolio.html">Портфолио</a></li>
                     <li class="nav-item"><a class="nav-link" href="/partners.html">Партнерам</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/contact.html">Контакты</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-4">
-                    <div class="contact-info d-none d-xl-block">
+                <div class="d-none d-lg-flex align-items-center gap-4">
+                    <div class="contact-info">
                         <a href="tel:+79939074577" class="text-white text-decoration-none fw-bold">+7 993 907-45-77</a>
                     </div>
-                    <a href="/login.html" class="btn btn-primary fw-bold">КАБИНЕТ</a>
+                    <a href="/login.html" class="btn btn-primary fw-bold px-4">КАБИНЕТ</a>
                 </div>
             </div>
         </div>
@@ -126,6 +113,27 @@
                                 <a href="mailto:info@energoatlant.ru"
                                     class="text-white text-decoration-none fs-5">info@energoatlant.ru</a>
                                 <p class="text-muted mt-2 mb-0 small">Для заказов и прессы</p>
+                            </div>
+                        </div>
+
+                        <!-- МИНИ-КАРТА -->
+                        <div class="col-12" data-aos="fade-right" data-aos-delay="300">
+                            <div class="contact-box p-0 overflow-hidden" style="height:200px; position:relative;">
+                                <iframe
+                                    src="https://yandex.ru/map-widget/v1/?ll=37.5449%2C55.7494&z=15&l=map&pt=37.5449,55.7494,pm2rdm"
+                                    width="100%" height="200"
+                                    style="border:0; filter: grayscale(0.5) brightness(0.6) contrast(1.1); display:block;"
+                                    allowfullscreen loading="lazy" title="Офис ЭнергоАтлант на карте">
+                                </iframe>
+                                <a href="https://yandex.ru/maps/?text=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C+%D0%9F%D1%80%D0%B5%D1%81%D0%BD%D0%B5%D0%BD%D1%81%D0%BA%D0%B0%D1%8F+%D0%BD%D0%B0%D0%B1%2C+12"
+                                    target="_blank" rel="noopener" style="position:absolute; bottom:10px; right:10px;
+                                          background:rgba(255,152,0,0.92); color:#000;
+                                          font-weight:700; font-size:0.75rem;
+                                          padding: 6px 12px; border-radius:4px;
+                                          text-decoration:none;
+                                          display:flex; align-items:center; gap:5px;">
+                                    <i class="bi bi-box-arrow-up-right"></i> Открыть в Картах
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -191,21 +199,7 @@
                 </div>
             </div>
 
-            <!-- Карта -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <div class="card border-0 rounded-0" style="height: 400px; overflow: hidden; background: #222;">
-                        <!-- Заглушка вместо настоящей карты -->
-                        <div class="w-100 h-100 d-flex justify-content-center align-items-center"
-                            style="background-color: var(--bg-surface); filter: grayscale(1);">
-                            <div class="text-center text-muted">
-                                <i class="bi bi-map display-1 mb-3"></i>
-                                <h3>КАРТА ПРОЕЗДА</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
         </div>
     </section>
 

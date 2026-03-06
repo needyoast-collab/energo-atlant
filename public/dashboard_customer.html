@@ -16,11 +16,11 @@
     <!-- NAVBAR с постоянными кнопками -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm"
         style="background-color: var(--bg-surface) !important; border-bottom: 1px solid var(--border-color);">
-        <div class="container-fluid">
+        <div class="container-fluid px-2 px-md-4">
             <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
                 <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;" class="me-2">
                 <span class="badge bg-warning text-dark ms-1 align-middle d-none d-sm-inline"
-                    style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">В ЛИЧНОМ КАБИНЕТЕ</span>
+                    style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">ЗАКАЗЧИК</span>
             </a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -28,32 +28,66 @@
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="d-flex gap-3 ms-lg-4 me-auto my-3 my-lg-0">
-                    <button class="btn btn-success btn-sm fw-bold px-3 py-2" data-bs-toggle="modal"
+                <div class="ms-auto d-flex flex-column flex-sm-row gap-2 gap-sm-3 me-lg-4 my-3 my-lg-0">
+                    <button class="btn btn-success btn-sm fw-bold px-3 py-2 w-100 w-sm-auto" data-bs-toggle="modal"
                         data-bs-target="#createRequestModal">
                         <i class="bi bi-plus-circle-fill me-1"></i> СОЗДАТЬ ЗАЯВКУ
                     </button>
-                    <button class="btn btn-outline-light btn-sm fw-bold px-3 py-2" data-bs-toggle="modal"
-                        data-bs-target="#joinProjectModal">
+                    <button class="btn btn-outline-light btn-sm fw-bold px-3 py-2 w-100 w-sm-auto"
+                        data-bs-toggle="modal" data-bs-target="#joinProjectModal">
                         <i class="bi bi-link-45deg me-1"></i> ПРИСОЕДИНИТЬСЯ
                     </button>
                 </div>
 
                 <ul class="navbar-nav align-items-center">
+                    <!-- УВЕДОМЛЕНИЯ -->
+                    <li class="nav-item dropdown me-lg-3 mb-2 mb-lg-0">
+                        <a class="nav-link text-white position-relative d-inline-block" href="#" id="notifDropdown"
+                            role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell-fill fs-5"></i>
+                            <span id="notifBadge"
+                                class="position-absolute translate-middle p-1 bg-warning border border-light rounded-circle d-none"
+                                style="top:30%; left:85%;"></span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" id="notifList"
+                            style="width:320px; max-width: 90vw; max-height:400px; overflow-y:auto; font-size:0.85rem; border-radius:8px;">
+                            <li><span class="dropdown-item text-muted text-center py-3">Загрузка...</span></li>
+                        </ul>
+                    </li>
+
                     <li class="nav-item me-lg-3 mb-2 mb-lg-0 text-white opacity-75 small">
                         <i class="bi bi-person-circle me-1"></i> <span id="userName">Загрузка...</span>
                     </li>
                     <li class="nav-item">
-                        <a href="/api/logout" class="btn btn-outline-danger btn-sm fw-bold">ВЫЙТИ</a>
+                        <a href="#"
+                            onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');"
+                            class="btn btn-outline-danger btn-sm fw-bold">ВЫЙТИ</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-4">
+    <div class="container-fluid px-2 px-md-4">
+        <!-- Persistent Notifications Area -->
+        <div id="persistentNotifications" class="mb-3 d-none">
+            <div class="card bg-dark border-warning overflow-hidden">
+                <div class="card-header bg-warning text-dark fw-bold py-1 px-3 d-flex justify-content-between align-items-center"
+                    style="font-size:0.75rem;">
+                    <span><i class="bi bi-bell-fill me-1"></i> НОВЫЕ УВЕДОМЛЕНИЯ</span>
+                    <button class="btn btn-link text-dark p-0 text-decoration-none fw-bold"
+                        onclick="markAllNotificationsRead()" style="font-size:0.7rem;">ПРОЧИТАТЬ ВСЕ</button>
+                </div>
+                <div class="card-body p-0">
+                    <div id="persistentNotifList" class="list-group list-group-flush"
+                        style="max-height: 150px; overflow-y: auto;">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+        <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active fw-bold" id="projects-tab" data-bs-toggle="tab"
                     data-bs-target="#projectsTab" type="button">
@@ -66,12 +100,30 @@
                     📬 Мои заявки
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="messages-tab" data-bs-toggle="tab" data-bs-target="#messagesTab"
+                    type="button">
+                    ✉️ Почта
+                </button>
+            </li>
         </ul>
 
-        <div class="tab-content p-4 rounded" id="myTabContent">
+        <div class="tab-content p-2 p-md-4 rounded" id="myTabContent">
 
             <!-- Проекты -->
             <div class="tab-pane fade show active" id="projectsTab" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" id="projectSearch"
+                                class="form-control bg-dark text-white border-secondary"
+                                placeholder="Поиск по названию или ID...">
+                        </div>
+                    </div>
+                </div>
                 <div id="projectsList" class="row g-3">
                     <div class="text-center py-5">
                         <div class="spinner-border text-primary" role="status"></div>
@@ -87,6 +139,55 @@
                         <div class="spinner-border text-primary" role="status"></div>
                         <p class="mt-2 text-muted">Загружаем заявки...</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Почта -->
+            <div class="tab-pane fade" id="messagesTab" role="tabpanel">
+                <div class="bg-dark rounded p-4" style="border: 1px solid var(--border-color);">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom"
+                        style="border-color: var(--border-color) !important;">
+                        <h5 class="mb-0 text-white fw-bold"><i class="bi bi-envelope me-2"></i>ОФИЦИАЛЬНАЯ ПЕРЕПИСКА
+                        </h5>
+                        <button class="btn btn-primary btn-sm fw-bold" onclick="showComposeModal()">
+                            <i class="bi bi-pencil-square me-1"></i> НАПИСАТЬ
+                        </button>
+                    </div>
+
+                    <ul class="nav nav-pills mb-3" id="mailTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold px-3 py-1 me-2" id="inbox-tab" data-bs-toggle="pill"
+                                data-bs-target="#inboxPane" type="button"
+                                style="border-radius:20px; font-size: 0.85rem;">
+                                ВХОДЯЩИЕ
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold px-3 py-1" id="sent-tab" data-bs-toggle="pill"
+                                data-bs-target="#sentPane" type="button"
+                                style="border-radius:20px; font-size: 0.85rem;">
+                                ИСХОДЯЩИЕ
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="mailTabsContent">
+                        <div class="tab-pane fade show active" id="inboxPane" role="tabpanel">
+                            <div id="inboxList" class="d-flex flex-column gap-2">
+                                <div class="text-center py-5 px-3">
+                                    <div class="spinner-border text-primary shadow-sm" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="sentPane" role="tabpanel">
+                            <div id="sentList" class="d-flex flex-column gap-2">
+                                <div class="text-center py-5 px-3">
+                                    <div class="spinner-border text-primary shadow-sm" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -205,20 +306,96 @@
         </div>
     </div>
 
+    <!-- Написать письмо -->
+    <div class="modal fade" id="composeMessageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white border-bottom border-secondary">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Написать сообщение</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="composeMessageForm">
+                    <div class="modal-body bg-dark text-white">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small">Получатель (Менеджер Проекта)</label>
+                            <select class="form-select bg-dark text-white border-secondary" id="composeReceiver"
+                                required>
+                                <option value="">Выберите проект/менеджера...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small">Тема</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                                id="composeSubject" placeholder="Например: Уточнение по акту" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small">Сообщение</label>
+                            <textarea class="form-control bg-dark text-white border-secondary" id="composeBody" rows="5"
+                                placeholder="Текст вашего сообщения..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small"><i class="bi bi-paperclip"></i> Вложения
+                                (Опционально)</label>
+                            <input type="file" class="form-control bg-dark text-white border-secondary"
+                                id="composeAttachments" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx">
+                            <small class="text-muted">До 5 файлов</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-dark border-top border-secondary">
+                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary fw-bold" id="sendMsgBtn">
+                            Отправить <i class="bi bi-send ms-1"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Детали письма -->
+    <div class="modal fade" id="messageDetailModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-bold" id="msgDetailSubject">Тема сообщения</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="msgDetailBody">
+                    <div class="d-flex justify-content-between mb-3 border-bottom border-secondary pb-2">
+                        <div>
+                            <small class="text-muted d-block">От: <span class="text-white"
+                                    id="msgDetailSender"></span></small>
+                            <small class="text-muted d-block mt-1">Кому: <span class="text-white"
+                                    id="msgDetailReceiver"></span></small>
+                        </div>
+                        <small class="text-muted" id="msgDetailDate"></small>
+                    </div>
+                    <div id="msgDetailText" style="white-space: pre-wrap; font-size: 0.95rem;"></div>
+                    <div id="msgDetailAttachments" class="mt-4 pt-3 border-top border-secondary d-none">
+                        <small class="text-muted fw-bold d-block mb-2"><i class="bi bi-paperclip"></i> ВЛОЖЕНИЯ</small>
+                        <div id="msgDetailAttachmentsList" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-primary fw-bold" id="msgReplyBtn" onclick="composeReply()"><i
+                            class="bi bi-reply-fill"></i> Ответить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/api.js?v=2"></script>
-    <script src="/js/customer.js?v=2"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/shared.js"></script>
+    <script src="/js/customer.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const res = await fetch('/api/user/me');
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('userName').innerText = data.user.full_name || data.user.login;
-                    window.currentUserPhone = data.user.phone || '';
-                }
-            } catch (e) { console.error(e); }
+            // api.js уже подгружает данные в userName, нам нужно только сохранить телефон для форм
+            checkAuth().then(user => {
+                if (user) window.currentUserPhone = user.phone || '';
+            });
         });
     </script>
     <div id="docsModal" class="custom-modal">

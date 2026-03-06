@@ -146,6 +146,69 @@
             font-weight: 400;
         }
 
+        /* Mobile specific landing fixes */
+        @media (max-width: 1199px) {
+            .hero-title {
+                font-size: 2.8rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 1.6rem !important;
+                /* Smaller, and forced */
+                margin-top: 1rem;
+                margin-bottom: 1rem;
+                word-wrap: break-word;
+                width: 100%;
+                display: block;
+            }
+
+            .hero-subtitle {
+                font-size: 0.85rem;
+                margin-bottom: 2rem;
+                max-width: 100%;
+            }
+
+            .navbar-brand img {
+                height: 25px !important;
+                max-width: 160px;
+                object-fit: contain;
+            }
+
+            .hero-section {
+                padding-top: 60px;
+                min-height: calc(100vh - 60px);
+                height: auto;
+            }
+
+            .flex-column.flex-sm-row {
+                gap: 10px !important;
+            }
+        }
+
+        /* Prevent ALL horizontal scroll */
+        * {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            overflow-x: hidden !important;
+            width: 100% !important;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        .container {
+            max-width: 100% !important;
+            overflow: hidden;
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+
         .service-card {
             height: 100%;
             padding: 2.5rem 2rem;
@@ -165,21 +228,11 @@
             letter-spacing: 0.05em;
         }
 
-        /* Стилизация скроллбара */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-dark);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
+        @media (max-width: 991px) {
+            .navbar-custom .btn-primary {
+                width: 100%;
+                margin-top: 10px;
+            }
         }
     </style>
 </head>
@@ -192,26 +245,32 @@
 
     <!-- Навигация -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="/index.html"><img src="/img/logo.png" alt="ЭнергоАтлант"
-                    style="height: 40px; object-fit: contain;"></a>
-            <button class="navbar-toggler border-0 rounded-0" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-                <i class="bi bi-list fs-2 text-white"></i>
-            </button>
+        <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand me-0" href="/index.html">
+                <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;">
+            </a>
+
+            <div class="d-flex align-items-center gap-2 d-lg-none">
+                <a href="/login.html" class="btn btn-primary btn-sm fw-bold px-3">КАБИНЕТ</a>
+                <button class="navbar-toggler border-0 p-0" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav">
+                    <i class="bi bi-list fs-1 text-white"></i>
+                </button>
+            </div>
+
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center py-3 py-lg-0">
                     <li class="nav-item"><a class="nav-link active" href="/index.html">Главная</a></li>
                     <li class="nav-item"><a class="nav-link" href="/services.html">Услуги</a></li>
                     <li class="nav-item"><a class="nav-link" href="/portfolio.html">Портфолио</a></li>
                     <li class="nav-item"><a class="nav-link" href="/partners.html">Партнерам</a></li>
                     <li class="nav-item"><a class="nav-link" href="/contact.html">Контакты</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-4">
-                    <div class="contact-info d-none d-xl-block">
+                <div class="d-none d-lg-flex align-items-center gap-4">
+                    <div class="contact-info">
                         <a href="tel:+79939074577" class="text-white text-decoration-none">+7 993 907-45-77</a>
                     </div>
-                    <a href="/login.html" class="btn btn-primary fw-bold">КАБИНЕТ</a>
+                    <a href="/login.html" class="btn btn-primary fw-bold px-4">КАБИНЕТ</a>
                 </div>
             </div>
         </div>
@@ -306,12 +365,15 @@
         </div>
     </section>
 
+
+
     <!-- КАК МЫ РАБОТАЕМ -->
     <section class="py-5 bg-dark hero-dots">
         <div class="container py-5">
-            <h2 class="mb-5 text-center fw-bold text-uppercase" data-aos="fade-up">КАК МЫ РАБОТАЕМ</h2>
+            <h2 class="mb-5 text-center fw-bold text-uppercase" data-aos="fade-up" data-aos-duration="900">КАК МЫ
+                РАБОТАЕМ</h2>
             <div class="row g-4 text-center">
-                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="100">
+                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="150" data-aos-duration="1200">
                     <div class="workflow-step">
                         <div class="step-number mx-auto">1</div>
                         <h5 class="text-uppercase mb-3">Заявка и ТЗ</h5>
@@ -319,7 +381,7 @@
                             консультацию.</p>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="200">
+                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="350" data-aos-duration="1200">
                     <div class="workflow-step">
                         <div class="step-number mx-auto">2</div>
                         <h5 class="text-uppercase mb-3">Проектирование</h5>
@@ -327,7 +389,7 @@
                             инстанциях.</p>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="300">
+                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="550" data-aos-duration="1200">
                     <div class="workflow-step">
                         <div class="step-number mx-auto">3</div>
                         <h5 class="text-uppercase mb-3">Монтаж и ПНР</h5>
@@ -335,7 +397,7 @@
                             пусконаладка.</p>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="400">
+                <div class="col-lg-3 col-md-6" data-aos="zoom-in" data-aos-delay="750" data-aos-duration="1200">
                     <div class="workflow-step">
                         <div class="step-number mx-auto">4</div>
                         <h5 class="text-uppercase mb-3">Сдача объекта</h5>
@@ -492,6 +554,8 @@
         </div>
     </section>
 
+
+
     <!-- Footer -->
     <footer class="bg-dark py-4 border-top" style="border-color: rgba(255,255,255,0.05) !important;">
         <div class="container text-center text-md-start" data-aos="fade-in">
@@ -530,12 +594,10 @@
         // Эффект шапки при скролле
         window.addEventListener('scroll', function () {
             const navbar = document.querySelector('.navbar-custom');
-            if (window.scrollY > 50) {
-                navbar.style.backgroundColor = 'rgba(5,5,5,0.95)';
-                navbar.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+            if (window.scrollY > 30) {
+                navbar.classList.add('nav-scrolled');
             } else {
-                navbar.style.backgroundColor = 'transparent';
-                navbar.style.borderBottom = '1px solid transparent';
+                navbar.classList.remove('nav-scrolled');
             }
         });
     </script>

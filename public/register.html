@@ -122,13 +122,17 @@
             }
 
             // Собираем данные
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref') || null;
+
             const formData = {
                 login: document.getElementById('login').value.trim(),
                 password: document.getElementById('password').value,
                 email: document.getElementById('email').value.trim(),
                 phone: document.getElementById('phone').value.trim(),
                 fullName: document.getElementById('fullName').value.trim(),
-                organization: document.getElementById('organization').value.trim()
+                organization: document.getElementById('organization').value.trim(),
+                refCode: refCode
             };
 
             // Блокируем кнопку

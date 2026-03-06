@@ -124,7 +124,7 @@
         <nav>
             <a href="#" class="active"><i class="fas fa-tools"></i> Управление</a>
             <a href="cabinet.html"><i class="fas fa-chart-pie"></i> Мой Кабинет</a>
-            <a href="/api/logout" style="color: #f85149; margin-top: 50px;"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+            <a href="#" onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');" style="color: #f85149; margin-top: 50px;"><i class="fas fa-sign-out-alt"></i> Выйти</a>
         </nav>
     </aside>
 

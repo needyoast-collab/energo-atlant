@@ -1,4 +1,4 @@
-// Вспомогательные функции
+const { dbGet, dbRun } = require('../config/database');
 
 // Генерация уникального кода проекта
 const generateProjectCode = () => {
@@ -47,6 +47,32 @@ const sanitizeUser = (user) => {
     return sanitized;
 };
 
+// Автоматическое создание уведомления
+async function sendNotification(projectId, type, message) {
+    try {
+        const proj = await dbGet(`SELECT customer_id FROM projects WHERE id = ?`, [projectId]);
+        if (proj && proj.customer_id) {
+            await dbRun(
+                `INSERT INTO notifications (user_id, project_id, type, message) VALUES (?, ?, ?, ?)`,
+                [proj.customer_id, projectId, type, message]
+            );
+        }
+    } catch (err) {
+        console.error('Ошибка записи уведомления:', err);
+    }
+}
+
+async function sendDirectNotification(userId, projectId, type, message) {
+    try {
+        await dbRun(
+            `INSERT INTO notifications (user_id, project_id, type, message) VALUES (?, ?, ?, ?)`,
+            [userId, projectId, type, message]
+        );
+    } catch (err) {
+        console.error('Ошибка записи прямого уведомления:', err);
+    }
+}
+
 module.exports = {
     generateProjectCode,
     addHours,
@@ -54,5 +80,7 @@ module.exports = {
     isDeadlinePassed,
     isValidEmail,
     isValidPhone,
-    sanitizeUser
+    sanitizeUser,
+    sendNotification,
+    sendDirectNotification
 };

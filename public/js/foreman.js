@@ -60,36 +60,36 @@ function renderProjects(projects) {
 
         html += `
             <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color);">
-                    <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                <div class="prj-card">
+                    <div class="prj-card-header">
                          <div class="d-flex flex-column">
-                            <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${project.title}">${project.title}</h5>
+                            <h5 class="prj-card-title mb-1" onclick="openProjectModal(${project.id})" title="${project.title}">${project.title}</h5>
                             <small class="text-muted"><i class="bi bi-hash"></i> ${project.id}</small>
                          </div>
                          ${getStatusBadge(project.status)}
                     </div>
-                    <div class="card-body">
+                    <div class="prj-card-body">
                         <div class="mb-3 d-flex flex-wrap gap-2">
-                             <span class="badge border border-info text-info bg-transparent"><i class="bi bi-person"></i> МЕНЕДЖЕР: ${project.manager_name || '-'}</span>
-                             <span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-truck"></i> СНАБЖЕНЕЦ: ${project.supplier_name || 'НЕ НАЗНАЧЕН'}</span>
+                             <span class="badge border border-info text-info bg-transparent"><i class="bi bi-person me-1"></i>МЕНЕДЖЕР: ${project.manager_name || '-'}</span>
+                             <span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-truck me-1"></i>СНАБЖЕНЕЦ: ${project.supplier_name || 'НЕ НАЗНАЧЕН'}</span>
                         </div>
-                        <div class="mb-3">
-                            <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
-                            <span class="text-white">${project.address || '<span class="text-muted">-</span>'}</span>
+                        <div class="prj-card-meta mb-3">
+                            <div><i class="bi bi-geo-alt"></i>${project.address || '-'}</div>
                         </div>
                         
                         ${project.status === 'stages_pending' ? `
-                            <div class="alert ${isExpired ? 'alert-danger bg-danger bg-opacity-10 border-danger' : 'alert-warning bg-warning bg-opacity-10 border-warning'} py-2 mb-0 border small">
+                            <div class="alert ${isExpired ? 'alert-danger bg-danger bg-opacity-10' : 'alert-warning bg-warning bg-opacity-10'} py-2 mb-0 border small">
                                 <i class="bi bi-clock-history"></i> ${isExpired
                     ? 'ДЕДЛАЙН ИСТЁК! Создание этапов недоступно'
                     : `Осталось ${hoursLeft} ч. для создания этапов`}
                             </div>` : ''}
                     </div>
-                    <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                    <div class="prj-card-body pt-0">
                         <button class="btn btn-warning w-100 py-2 fw-bold" onclick="openProjectModal(${project.id})">
                              <i class="bi bi-folder2-open"></i> ОТКРЫТЬ ОБЪЕКТ
                         </button>
                     </div>
+                    <div class="prj-card-footer-line"></div>
                 </div>
             </div>`;
     });
@@ -121,8 +121,7 @@ async function openProjectModal(projectId) {
 }
 
 function renderModalContent(project, stages, documents) {
-    const deadline = new Date(project.stages_deadline);
-    const canCreateStages = deadline > new Date() && project.status === 'stages_pending';
+    const canCreateStages = project.status !== 'completed' && project.status !== 'cancelled';
 
     let html = `
         <div class="row mb-3">
@@ -181,10 +180,65 @@ function renderModalContent(project, stages, documents) {
 function renderStage(stage) {
     const done = stage.is_completed === 1;
 
-    let html = `
+    const materialsHtml = (stage.materials && stage.materials.length > 0) ? `
+        <h6 class="mt-2">Материалы этапа:</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Материал</th>
+                        <th>Ед.</th>
+                        <th>План</th>
+                        <th>Остаток на складе</th>
+                        <th>Списать сейчас</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${stage.materials.map(mat => {
+        const received = parseFloat(mat.quantity_received || 0);
+        const used = parseFloat(mat.quantity_used || 0);
+        const stock = Math.max(0, received - used);
+        const stockColor = stock > 0 ? 'text-success fw-bold' : (received > 0 ? 'text-danger fw-bold' : 'text-muted');
+        const stockText = received === 0 ? 'Не получено' : (stock > 0 ? `${stock} ${mat.unit || ''}` : 'Списано всё');
+        return `
+                            <tr>
+                                <td>${mat.material_name}</td>
+                                <td>${mat.unit || '-'}</td>
+                                <td>${mat.quantity_planned}</td>
+                                <td class="${stockColor}">${stockText}</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm"
+                                        id="used_${mat.id}"
+                                        value="0" min="0" max="${stock}" step="0.1" placeholder="0"
+                                        ${stock <= 0 ? 'disabled title="Нет остатка на складе"' : ''}
+                                        style="width:90px;">
+                                    <small class="text-muted d-block" style="font-size:0.7rem">Итого списано: ${used} ${mat.unit || ''}</small>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary"
+                                        onclick="updateMaterial(${mat.id}, ${stock})"
+                                        ${stock <= 0 ? 'disabled' : ''}>
+                                        Списать
+                                    </button>
+                                </td>
+                            </tr>`;
+    }).join('')}
+                </tbody>
+            </table>
+        </div>` : '<p class="text-muted small mb-0">Материалы не добавлены</p>';
+
+    const photosHtml = (stage.photos && stage.photos.length > 0) ? `
+        <div class="photo-grid mt-3">
+            ${stage.photos.map(ph => `
+                <a href="/${ph.file_path}" target="_blank">
+                    <img src="/${ph.file_path}" class="img-thumbnail" style="height:80px;object-fit:cover;">
+                </a>`).join('')}
+        </div>` : '';
+
+    return `
         <div class="card mb-3 ${done ? 'border-success' : ''}">
-            <div class="card-header d-flex justify-content-between align-items-center
-                        ${done ? 'bg-success text-white' : 'bg-light'}">
+            <div class="card-header d-flex justify-content-between align-items-center ${done ? 'bg-success text-white' : 'bg-light'}">
                 <h6 class="mb-0">
                     ${done ? '✅' : '🔨'} Этап ${stage.stage_number}: ${stage.name}
                 </h6>
@@ -202,67 +256,10 @@ function renderStage(stage) {
             </div>
             <div class="card-body">
                 ${stage.description ? `<p class="text-muted small">${stage.description}</p>` : ''}
-
-                ${stage.materials && stage.materials.length > 0 ? `
-                    <h6 class="mt-2">Материалы этапа:</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Материал</th>
-                                    <th>Ед.</th>
-                                    <th>План</th>
-                                    <th>На складе</th>
-                                    <th>Расход</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${stage.materials.map(mat => {
-                const received = parseFloat(mat.quantity_received || 0);
-                const used = parseFloat(mat.quantity_used || 0);
-                return `
-                                        <tr>
-                                            <td>${mat.material_name}</td>
-                                            <td>${mat.unit || '-'}</td>
-                                            <td>${mat.quantity_planned}</td>
-                                            <td class="${received > 0 ? 'text-success fw-bold' : 'text-muted'}">
-                                                ${received > 0 ? received : 'Не получено'}
-                                            </td>
-                                            <td>
-                                                <input type="number" class="form-control form-control-sm"
-                                                    id="used_${mat.id}"
-                                                    value="${used}"
-                                                    min="0" max="${received}"
-                                                    step="0.1"
-                                                    ${received === 0 ? 'disabled title="Сначала получите материал на склад"' : ''}
-                                                    style="width:90px;">
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary"
-                                                    onclick="updateMaterial(${mat.id})"
-                                                    ${received === 0 ? 'disabled' : ''}>
-                                                    Сохранить
-                                                </button>
-                                            </td>
-                                        </tr>`;
-            }).join('')}
-                            </tbody>
-                        </table>
-                    </div>` : '<p class="text-muted small mb-0">Материалы не добавлены</p>'}
-
-                ${stage.photos && stage.photos.length > 0 ? `
-                    <div class="photo-grid mt-3">
-                        ${stage.photos.map(ph => `
-                            <a href="/${ph.file_path}" target="_blank">
-                                <img src="/${ph.file_path}" class="img-thumbnail"
-                                     style="height:80px;object-fit:cover;">
-                            </a>`).join('')}
-                    </div>` : ''}
+                ${materialsHtml}
+                ${photosHtml}
             </div>
         </div>`;
-
-    return html;
 }
 
 // =============================================================================
@@ -303,6 +300,44 @@ async function loadAllMaterials() {
     let html = '';
 
     for (const [projectTitle, group] of Object.entries(grouped)) {
+        const rowsHtml = group.items.map(mat => {
+            const received = parseFloat(mat.quantity_received || 0);
+            const used = parseFloat(mat.quantity_used || 0);
+            const stock = Math.max(0, received - used);
+            const stockColor = stock > 0 ? 'text-success fw-bold' : (received > 0 ? 'text-danger fw-bold' : 'text-muted');
+            const stockText = received === 0 ? 'Ожидается' : (stock > 0 ? `${stock} ${mat.unit || ''}` : 'Списано всё');
+            const statusBadge = received === 0
+                ? '<span class="badge bg-secondary">Ожидается</span>'
+                : stock <= 0
+                    ? '<span class="badge bg-danger">Списано</span>'
+                    : '<span class="badge bg-success">Есть на складе</span>';
+
+            return `
+                <tr>
+                    <td><strong>${mat.material_name}</strong></td>
+                    <td><small class="text-muted">${mat.stage_name}</small></td>
+                    <td>${mat.unit || '-'}</td>
+                    <td>${mat.quantity_planned}</td>
+                    <td class="${stockColor}">${stockText}</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm"
+                            id="mat_used_${mat.id}"
+                            value="0" min="0" max="${stock}" step="0.1" placeholder="0"
+                            ${stock <= 0 ? 'disabled title="Нет остатка на складе"' : ''}
+                            style="width:90px;">
+                        <small class="text-muted d-block" style="font-size:0.7rem">Израсходовано: ${used} ${mat.unit || ''}</small>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary"
+                            onclick="updateMaterialFromTab(${mat.id}, ${stock})"
+                            ${stock <= 0 ? 'disabled' : ''}>
+                            💾
+                        </button>
+                    </td>
+                </tr>`;
+        }).join('');
+
         html += `
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-dark text-white fw-bold">
@@ -317,53 +352,13 @@ async function loadAllMaterials() {
                                     <th>Этап</th>
                                     <th>Ед.</th>
                                     <th>План</th>
-                                    <th>На складе</th>
-                                    <th>Расход</th>
+                                    <th>Остаток на складе</th>
+                                    <th>Списать сейчас</th>
                                     <th>Статус</th>
                                     <th></th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${group.items.map(mat => {
-            const received = parseFloat(mat.quantity_received || 0);
-            const used = parseFloat(mat.quantity_used || 0);
-            const deficit = parseFloat(mat.quantity_planned) - received;
-
-            return `
-                                        <tr>
-                                            <td><strong>${mat.material_name}</strong></td>
-                                            <td><small class="text-muted">${mat.stage_name}</small></td>
-                                            <td>${mat.unit || '-'}</td>
-                                            <td>${mat.quantity_planned}</td>
-                                            <td class="${received > 0 ? 'text-success fw-bold' : 'text-danger'}">
-                                                ${received > 0 ? received : '—'}
-                                            </td>
-                                            <td>
-                                                <input type="number" class="form-control form-control-sm"
-                                                    id="mat_used_${mat.id}"
-                                                    value="${used}"
-                                                    min="0" max="${received}"
-                                                    step="0.1"
-                                                    ${received === 0 ? 'disabled title="Материал ещё не получен на склад"' : ''}
-                                                    style="width:90px;">
-                                            </td>
-                                            <td>
-                                                ${received === 0
-                    ? '<span class="badge bg-secondary">Ожидается</span>'
-                    : used >= received
-                        ? '<span class="badge bg-danger">Всё списано</span>'
-                        : '<span class="badge bg-success">На складе</span>'}
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-primary"
-                                                    onclick="updateMaterialFromTab(${mat.id})"
-                                                    ${received === 0 ? 'disabled' : ''}>
-                                                    💾
-                                                </button>
-                                            </td>
-                                        </tr>`;
-        }).join('')}
-                            </tbody>
+                            <tbody>${rowsHtml}</tbody>
                         </table>
                     </div>
                 </div>
@@ -374,25 +369,31 @@ async function loadAllMaterials() {
 }
 
 // Сохранение расхода из вкладки Материалы
-async function updateMaterialFromTab(materialId) {
+async function updateMaterialFromTab(materialId, maxStock) {
     const input = document.getElementById(`mat_used_${materialId}`);
-    const quantityUsed = parseFloat(input.value) || 0;
-    const maxAllowed = parseFloat(input.max);
+    const quantityToWrite = parseFloat(input.value) || 0;
 
-    if (quantityUsed > maxAllowed) {
-        showError(`Нельзя списать больше ${maxAllowed} (получено на склад)`);
-        input.value = maxAllowed;
+    if (quantityToWrite <= 0) {
+        showError('Введите количество для списания');
         return;
     }
 
-    const result = await apiRequest(`/api/foreman/materials/${materialId}/usage`, 'PUT', { quantityUsed });
+    if (quantityToWrite > maxStock) {
+        showError(`Нельзя списать ${quantityToWrite} — на складе только ${maxStock}`);
+        input.value = maxStock;
+        return;
+    }
+
+    const result = await apiRequest(`/api/foreman/materials/${materialId}/usage`, 'PUT', { quantityUsed: quantityToWrite });
 
     if (result.success) {
         showSuccess('Расход сохранён');
+        await loadAllMaterials();
     } else {
         showError(result.message || 'Ошибка сохранения');
     }
 }
+
 
 // =============================================================================
 // СОЗДАНИЕ ЭТАПА
@@ -529,21 +530,27 @@ function addMaterialRow() {
 // ОБНОВЛЕНИЕ МАТЕРИАЛОВ (из окна этапа)
 // =============================================================================
 
-async function updateMaterial(materialId) {
+async function updateMaterial(materialId, maxStock) {
     const input = document.getElementById(`used_${materialId}`);
-    const quantityUsed = parseFloat(input.value) || 0;
-    const maxAllowed = parseFloat(input.max);
+    const quantityToWrite = parseFloat(input.value) || 0;
 
-    if (quantityUsed > maxAllowed) {
-        showError(`Нельзя списать больше ${maxAllowed} — столько получено на склад`);
-        input.value = maxAllowed;
+    if (quantityToWrite <= 0) {
+        showError('Введите количество для списания');
         return;
     }
 
-    const result = await apiRequest(`/api/foreman/materials/${materialId}/usage`, 'PUT', { quantityUsed });
+    if (quantityToWrite > maxStock) {
+        showError(`Нельзя списать ${quantityToWrite} — на складе только ${maxStock}`);
+        input.value = maxStock;
+        return;
+    }
+
+    const result = await apiRequest(`/api/foreman/materials/${materialId}/usage`, 'PUT', { quantityUsed: quantityToWrite });
 
     if (result.success) {
-        showSuccess('Расход обновлён');
+        showSuccess(result.message || 'Расход сохранён');
+        // Перезагружаем данные проекта
+        if (currentProject) await openProjectModal(currentProject.id);
     } else {
         showError(result.message || 'Ошибка обновления');
     }

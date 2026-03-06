@@ -5,31 +5,101 @@
 let allUsers = [];
 let currentProjects = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadStats();
+document.addEventListener('DOMContentLoaded', async () => {
+    // Инициализация данных
+    await loadStats();
+    await loadStaff(); // Подгружаем персонал для создания проектов
 
-    // Загружаем пользователей при переключении на вкладку
-    const usersTab = document.getElementById('users-tab');
-    if (usersTab) {
-        usersTab.addEventListener('click', loadUsers);
-        // Если вкладка активна по умолчанию
-        if (usersTab.classList.contains('active')) {
-            loadUsers();
+    // Начальная загрузка активной вкладки
+    loadActiveTab();
+
+    // Навигация через Sidebar (связка с Tabs)
+    const sidebarLinks = document.querySelectorAll('.list-group-item-action');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (href && href.startsWith('#')) {
+                e.preventDefault();
+                const targetId = href.substring(1);
+                const tabEl = document.querySelector(`button[data-bs-target="#${targetId}"]`);
+                if (tabEl) {
+                    bootstrap.Tab.getOrCreateInstance(tabEl).show();
+                    // Обновляем активный класс в сайдбаре
+                    sidebarLinks.forEach(l => {
+                        l.classList.remove('active', 'bg-primary', 'text-black');
+                        l.style.backgroundColor = 'transparent';
+                        l.style.color = 'white';
+                    });
+                    link.classList.add('active', 'bg-primary', 'text-black');
+                    link.style.backgroundColor = 'var(--primary-color)';
+                    link.style.color = '#000';
+                }
+            }
+        });
+    });
+
+    // Обработка переключения табов кнопками
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', (e) => {
+            const targetId = e.target.getAttribute('data-bs-target').substring(1);
+            updateActivityFromTab(targetId);
+        });
+    });
+
+    // Форма создания проекта
+    const createForm = document.getElementById('createProjectForm');
+    if (createForm) createForm.addEventListener('submit', handleCreateProject);
+});
+
+function loadActiveTab() {
+    const activeTab = document.querySelector('.nav-link.active');
+    if (activeTab) {
+        const targetId = activeTab.getAttribute('data-bs-target').substring(1);
+        updateActivityFromTab(targetId);
+    }
+}
+
+function updateActivityFromTab(targetId) {
+    if (targetId === 'projects') loadProjects();
+    if (targetId === 'requests') loadRequests();
+    if (targetId === 'users') loadUsers();
+
+    // Синхронизируем sidebar
+    const sidebarLinks = document.querySelectorAll('.list-group-item-action');
+    sidebarLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href.substring(1) === targetId) {
+            link.classList.add('active', 'bg-primary', 'text-black');
+            link.style.backgroundColor = 'var(--primary-color)';
+            link.style.color = '#000';
+        } else {
+            link.classList.remove('active', 'bg-primary', 'text-black');
+            link.style.backgroundColor = 'transparent';
+            link.style.color = 'white';
+        }
+    });
+}
+
+/** Персонал для селектов проекта */
+async function loadStaff() {
+    const data = await apiRequest('/api/manager/staff');
+    if (data.success) {
+        const selects = {
+            'foremanId': 'foreman',
+            'supplierId': 'supplier',
+            'ptoId': 'pto'
+        };
+        for (const [id, role] of Object.entries(selects)) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerHTML = '<option value="">Не назначен</option>';
+                data.staff.filter(s => s.role === role).forEach(s => {
+                    el.innerHTML += `<option value="${s.id}">${s.full_name}</option>`;
+                });
+            }
         }
     }
-
-    const projectsTab = document.getElementById('projects-tab');
-    if (projectsTab) {
-        projectsTab.addEventListener('click', loadProjects);
-        if (projectsTab.classList.contains('active')) loadProjects();
-    }
-
-    const requestsTab = document.getElementById('requests-tab');
-    if (requestsTab) {
-        requestsTab.addEventListener('click', loadRequests);
-        if (requestsTab.classList.contains('active')) loadRequests();
-    }
-});
+}
 
 // =============================================================================
 // СТАТИСТИКА И ПРОЕКТЫ
@@ -68,93 +138,133 @@ async function loadProjects() {
     const data = await apiRequest('/api/manager/projects');
     if (data.success) {
         currentProjects = data.projects;
-        const active = data.projects.filter(p => !['completed', 'cancelled'].includes(p.status));
-        const completed = data.projects.filter(p => ['completed', 'cancelled'].includes(p.status));
+        const active = data.projects.filter(p => !['won', 'lost', 'postponed'].includes(p.status));
+        const completedCount = data.projects.length - active.length;
 
         if (active.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-5">
-                    <p class="text-muted">Нет активных проектов</p>
-                    ${completed.length > 0 ? `<p class="small text-muted">Завершённых: ${completed.length}.</p>` : ''}
+                <div class="text-center py-5 bg-dark border border-secondary rounded-3">
+                    <i class="bi bi-folder-x display-1 opacity-25 mb-3"></i>
+                    <p class="text-muted fs-5">Активных проектов пока нет</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProjectModal">СОЗДАТЬ ПЕРВЫЙ</button>
                 </div>`;
             return;
         }
 
         let html = '<div class="row g-4">';
         active.forEach(p => {
-            // Определяем имя заказчика для красивого вывода
             const clientDisplay = p.customer_name
-                ? `<span class="badge bg-info text-dark border"><i class="bi bi-person-circle"></i> ${p.customer_name}</span>`
-                : (p.client_name ? `<span class="badge bg-secondary border"><i class="bi bi-person"></i> ${p.client_name}</span>` : '<span class="text-muted small">Заказчик не назначен</span>');
+                ? `<span class="badge border border-info text-info bg-transparent"><i class="bi bi-person-circle me-1"></i>${p.customer_name}</span>`
+                : (p.client_name ? `<span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-person me-1"></i>${p.client_name}</span>` : '<span class="text-muted small">Заказчик не назначен</span>');
 
             const foremanDisplay = p.foreman_name
-                ? `<span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools"></i> ${p.foreman_name}</span>`
-                : `<span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-exclamation-triangle"></i> Прораб не назначен</span>`;
+                ? `<span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools me-1"></i>${p.foreman_name}</span>`
+                : `<span class="badge border border-danger text-danger bg-transparent"><i class="bi bi-exclamation-triangle me-1"></i>БЕЗ ПРОРАБА</span>`;
 
             html += `
-                <div class="col-12 col-md-6 col-xl-4">
-                    <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color);">
-                        <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                <div class="col-12 col-md-6 col-xl-4" data-aos="zoom-in">
+                    <div class="prj-card">
+                        <div class="prj-card-header">
                              <div class="d-flex flex-column">
-                                <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${p.title}">${p.title}</h5>
+                                <h5 class="prj-card-title mb-1" onclick="editProject(${p.id})" title="${p.title}">${p.title}</h5>
                                 <small class="text-muted"><i class="bi bi-hash"></i> ${p.id}</small>
                              </div>
                              ${getStatusBadge(p.status)}
                         </div>
-                        <div class="card-body">
+                        <div class="prj-card-body">
                             <div class="mb-3 d-flex flex-wrap gap-2">
                                  ${clientDisplay}
                                  ${foremanDisplay}
                             </div>
-                            <div class="mb-3">
-                                <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
-                                <span class="text-white">${p.address || '<span class="text-muted">-</span>'}</span>
+                            <div class="prj-card-meta mb-3">
+                                <div><i class="bi bi-geo-alt"></i>${p.address || '-'}</div>
                             </div>
                             <div class="mb-2">
-                                 <p class="mb-1 text-muted small"><i class="bi bi-key"></i> Код доступа</p>
-                                 <code class="user-select-all px-2 py-1 rounded" style="background-color: var(--bg-elevated); color: var(--primary-color); border: 1px solid var(--border-color);">${p.access_code}</code>
+                                 <p class="mb-1 text-muted small"><i class="bi bi-key"></i> Код доступа (прораб/заказчик):</p>
+                                 <code class="user-select-all px-2 py-1 rounded d-block text-center" style="background-color: var(--bg-elevated); color: var(--primary-color); border: 1px solid var(--border-color); font-size: 1.1rem; border-style: dashed;">${p.access_code}</code>
                             </div>
                         </div>
-                        <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                        <div class="prj-card-body pt-0 mt-auto">
                             <div class="d-flex justify-content-between gap-2">
-                                <button class="btn btn-sm btn-outline-warning flex-grow-1" onclick="editProject(${p.id})">
-                                    <i class="bi bi-pencil-square"></i> ИЗМЕНИТЬ
-                                </button>
-                                <button class="btn btn-sm btn-outline-info" onclick="showProjectDocs(${p.id})">
-                                    <i class="bi bi-folder2-open"></i> DOCS
-                                </button>
-                                <button class="btn btn-sm btn-ai-glow" onclick="showAIModal(${p.id})">
-                                    <i class="bi bi-stars"></i> ✨ ИИ
-                                </button>
+                                <div class="prj-card-btn" onclick="editProject(${p.id})">
+                                    <i class="bi bi-pencil-square"></i>
+                                    <span class="prj-card-btn-label">ПРАВИТЬ</span>
+                                </div>
+                                <div class="prj-card-btn" onclick="showProjectDocs(${p.id})">
+                                    <i class="bi bi-folder2-open"></i>
+                                    <span class="prj-card-btn-label">DOCS</span>
+                                </div>
+                                <div class="prj-card-btn" onclick="showAIModal(${p.id})">
+                                    <i class="bi bi-stars"></i>
+                                    <span class="prj-card-btn-label">ИИ</span>
+                                </div>
                             </div>
                         </div>
+                        <div class="prj-card-footer-line"></div>
                     </div>
                 </div>`;
         });
         html += '</div>';
 
-        if (completed.length > 0) {
-            html += `
-                <div class="p-3 mt-4 text-muted small border-top border-secondary text-center">
-                    Завершённых проектов: ${completed.length} (доступны в общем списке API)
-                </div>`;
+        if (completedCount > 0) {
+            html += `<div class="text-center mt-4 text-muted small">Архивных проектов: ${completedCount}</div>`;
         }
-
         container.innerHTML = html;
     } else {
-        container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки проектов</div>';
+        container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки: ' + (data.message || 'нет связи') + '</div>';
     }
 }
 
-function getStatusBadge(status) {
-    switch (status) {
-        case 'new': return '<span class="badge bg-primary">Новый</span>';
-        case 'in_progress': return '<span class="badge bg-info">В работе</span>';
-        case 'stages_pending': return '<span class="badge bg-warning text-dark">Ожидание этапов</span>';
-        case 'completed': return '<span class="badge bg-success">Завершён</span>';
-        case 'cancelled': return '<span class="badge bg-danger">Отменён</span>';
-        default: return '<span class="badge bg-secondary">Неизвестно</span>';
+/** Редактирование проекта (Админская версия) */
+async function editProject(id) {
+    const p = currentProjects.find(item => item.id === id);
+    if (!p) return;
+
+    // В админке можем просто вызвать алерт или открыть ту же модалку, что и менеджер 
+    // но сейчас реализуем базовый вызов через shared
+    if (window.sharedEditProject) {
+        window.sharedEditProject(p, loadProjects);
+    } else {
+        alert('Редактирование для админа будет доступно в следующем обновлении UI. Пока используйте кабинет менеджера.');
     }
+}
+
+/** Создание проекта */
+async function handleCreateProject(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const ogText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'СВЯЗЬ С СЕРВЕРОМ...';
+
+    const formData = new FormData(e.target);
+    const res = await apiRequest('/api/manager/projects', 'POST', formData, true);
+
+    if (res.success) {
+        showSuccess('Объект успешно создан!');
+        const modalEl = document.getElementById('createProjectModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        e.target.reset();
+        loadProjects();
+        loadStats();
+    } else {
+        showError(res.message);
+    }
+    btn.disabled = false;
+    btn.innerHTML = ogText;
+}
+
+function getStatusBadge(status) {
+    const configs = {
+        'new': { label: 'Новый', bg: 'primary' },
+        'in_progress': { label: 'В работе', bg: 'success' },
+        'stages_pending': { label: 'Ожидание этапов', bg: 'warning text-dark' },
+        'completed': { label: 'Завершён', bg: 'info' },
+        'cancelled': { label: 'Отменён', bg: 'danger' }
+    };
+    const c = configs[status] || { label: status, bg: 'secondary' };
+    return `<span class="badge bg-${c.bg}">${c.label}</span>`;
 }
 
 function showLoading(containerId) {
@@ -167,21 +277,57 @@ function showLoading(containerId) {
         </div>`;
 }
 
-// Загрузка заявок в админке
+/** Загрузка заявок в админке */
 async function loadRequests() {
     const container = document.getElementById('requestsList');
     showLoading('requestsList');
     const data = await apiRequest('/api/manager/requests');
     if (data.success) {
-        let html = `<div class="table-responsive"><table class="table table-hover">
-             <thead class="table-light"><tr><th>ID</th><th>Заголовок</th><th>Клиент</th></tr></thead><tbody>`;
+        if (data.requests.length === 0) {
+            container.innerHTML = '<div class="text-center p-5 text-secondary">Новых заявок пока нет</div>';
+            return;
+        }
+
+        let html = `
+            <div class="table-responsive border border-secondary rounded overflow-hidden">
+                <table class="table table-dark table-hover mb-0">
+                    <thead class="table-dark" style="border-bottom: 2px solid var(--primary-color)">
+                        <tr>
+                            <th>ДАТА</th>
+                            <th>КЛИЕНТ</th>
+                            <th>ОРГАНИЗАЦИЯ</th>
+                            <th>ОПИСАНИЕ</th>
+                            <th>СТАТУС</th>
+                            <th>ДЕЙСТВИЕ</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
         data.requests.forEach(r => {
-            html += `<tr><td>${r.id}</td><td>${r.title}</td><td>${r.customer_name}</td></tr>`;
+            html += `
+                <tr class="align-middle">
+                    <td><small class="text-muted">${formatDateShort(r.created_at)}</small></td>
+                    <td class="fw-bold">${r.customer_name || r.id}</td>
+                    <td>${r.organization || '-'}</td>
+                    <td><div class="text-truncate" style="max-width:300px;">${r.description || '-'}</div></td>
+                    <td><span class="badge bg-warning text-dark">${r.status || 'pending'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="reviewAdminRequest(${r.id})">ОТКРЫТЬ</button>
+                    </td>
+                </tr>`;
         });
         html += `</tbody></table></div>`;
         container.innerHTML = html;
     } else {
-        container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки заявок</div>';
+        container.innerHTML = '<div class="alert alert-danger">Ошибка: ' + data.message + '</div>';
+    }
+}
+
+async function reviewAdminRequest(id) {
+    // В админке можно использовать универсальную логику ревью
+    if (typeof reviewRequest === 'function') {
+        reviewRequest(id);
+    } else {
+        alert('Перейдите в раздел менеджера для полной обработки заявки, или ожидайте обновления.');
     }
 }
 

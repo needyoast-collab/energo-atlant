@@ -43,32 +43,32 @@ async function loadProjects() {
     data.projects.forEach(p => {
         html += `
             <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 bg-transparent border-secondary shadow-hover" style="border: 1px solid var(--border-color); cursor:pointer;" onclick="openProject(${p.id})">
-                    <div class="card-header border-bottom border-secondary bg-transparent d-flex justify-content-between align-items-start pt-3 pb-2">
+                <div class="prj-card" onclick="openProject(${p.id})">
+                    <div class="prj-card-header">
                          <div class="d-flex flex-column">
-                            <h5 class="fw-bold mb-1 text-white text-truncate" style="max-width: 250px;" title="${p.title}">${p.title}</h5>
+                            <h5 class="prj-card-title mb-1" title="${p.title}">${p.title}</h5>
                             <small class="text-muted"><i class="bi bi-hash"></i> ${p.id}</small>
                          </div>
                          ${getStatusBadge(p.status)}
                     </div>
-                    <div class="card-body">
+                    <div class="prj-card-body">
                         <div class="mb-3 d-flex flex-wrap gap-2">
-                             <span class="badge border border-info text-info bg-transparent"><i class="bi bi-person"></i> МЕНЕДЖЕР: ${p.manager_name || '-'}</span>
-                             <span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools"></i> ПРОРАБ: ${p.foreman_name || 'НЕ НАЗНАЧЕН'}</span>
+                             <span class="badge border border-info text-info bg-transparent"><i class="bi bi-person me-1"></i>МЕНЕДЖЕР: ${p.manager_name || '-'}</span>
+                             <span class="badge border border-warning text-warning bg-transparent"><i class="bi bi-tools me-1"></i>ПРОРАБ: ${p.foreman_name || 'НЕ НАЗНАЧЕН'}</span>
                         </div>
-                        <div class="mb-3">
-                            <p class="mb-1 text-muted small"><i class="bi bi-geo-alt"></i> Адрес</p>
-                            <span class="text-white">${p.address || '<span class="text-muted">-</span>'}</span>
+                        <div class="prj-card-meta mb-3">
+                            <div><i class="bi bi-geo-alt"></i>${p.address || '-'}</div>
                         </div>
                         <div class="text-muted small">
-                            <i class="bi bi-calendar3"></i> Создан: ${formatDateShort(p.created_at)}
+                            <i class="bi bi-calendar3 me-1"></i>Создан: ${formatDateShort(p.created_at)}
                         </div>
                     </div>
-                    <div class="card-footer bg-transparent border-top border-secondary pt-3 pb-3">
+                    <div class="prj-card-body pt-0">
                         <button class="btn btn-primary w-100 py-2 fw-bold" onclick="event.stopPropagation(); openProject(${p.id})">
                              <i class="bi bi-folder2-open"></i> ОТКРЫТЬ ПРОЕКТ
                         </button>
                     </div>
+                    <div class="prj-card-footer-line"></div>
                 </div>
             </div>`;
     });
