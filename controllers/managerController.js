@@ -101,9 +101,11 @@ exports.createProject = async (req, res) => {
 
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
+                // Исправление кодировки кириллицы в имени файла
+                const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
                 await dbRun(
                     "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by) VALUES (?, 'initial', ?, ?, ?)",
-                    [projectId, file.originalname, file.path, req.session.userId]
+                    [projectId, fileName, file.path, req.session.userId]
                 );
             }
         }
@@ -350,9 +352,10 @@ exports.completeProject = async (req, res) => {
 
         const projectId = req.params.id;
 
+        const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
         await dbRun(
             "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, 'act', ?, ?, ?, ?)",
-            [projectId, req.file.originalname, req.file.path, req.session.userId, `Акт выполненных работ (Подписан по СМС: ${smsCode})`]
+            [projectId, fileName, req.file.path, req.session.userId, `Акт выполненных работ (Подписан по СМС: ${smsCode})`]
         );
 
         let query = "UPDATE projects SET status = 'won' WHERE id = ?";
@@ -387,13 +390,15 @@ exports.uploadProjectDocument = async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: "Файл не выбран" });
 
+        // Исправление кодировки кириллицы
+        const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
         await dbRun(
             "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?, ?)",
-            [req.params.id, req.body.docType || 'other', req.file.originalname, req.file.path, req.session.userId, req.body.description || '']
+            [req.params.id, req.body.docType || 'other', fileName, req.file.path, req.session.userId, req.body.description || '']
         );
 
-        // Уведомляем участников проекта (нужно прокинуть sendNotification или вызывать его по-другому, если он в helpers)
-        sendNotification(req.params.id, 'document', `Загружен новый документ: ${req.file.originalname}`);
+        // Уведомляем участников проекта
+        sendNotification(req.params.id, 'document', `Загружен новый документ: ${fileName}`);
 
         res.json({ success: true, message: "Документ загружен" });
     } catch (error) {

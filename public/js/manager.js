@@ -1108,3 +1108,104 @@ function markManagerNotifRead(id, projectId, type) {
         document.getElementById('projects-tab')?.click();
     }
 }
+
+function showManagerComposeModal() {
+    const select = document.getElementById('composeReceiver');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Выберите заказчика...</option>';
+
+    if (currentProjects && currentProjects.length > 0) {
+        const clients = new Map();
+        currentProjects.forEach(p => {
+            if (p.customer_id) {
+                if (!clients.has(p.customer_id)) {
+                    clients.set(p.customer_id, { name: p.customer_name || p.client_name, projects: [] });
+                }
+                clients.get(p.customer_id).projects.push({ id: p.id, title: p.title });
+            }
+        });
+
+        if (clients.size > 0) {
+            clients.forEach((data, customerId) => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `Заказчик: ${data.name || 'Аноним'}`;
+                data.projects.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify({ receiver_id: customerId, project_id: p.id });
+                    opt.textContent = `Проект: ${p.title}`;
+                    optgroup.appendChild(opt);
+                });
+                select.appendChild(optgroup);
+            });
+            select.disabled = false;
+        } else {
+            select.innerHTML = '<option value="">У ваших проектов нет привязанных заказчиков</option>';
+            select.disabled = true;
+        }
+    } else {
+        select.innerHTML = '<option value="">Сначала создайте или примите проект</option>';
+        select.disabled = true;
+    }
+
+    document.getElementById('composeSubject').value = '';
+    document.getElementById('composeBody').value = '';
+    const modal = new bootstrap.Modal(document.getElementById('composeMessageModal'));
+    modal.show();
+}
+
+async function sendManagerMessage(e) {
+    e.preventDefault();
+    const btn = document.getElementById('sendMsgBtn');
+    if (btn) btn.disabled = true;
+
+    const recvVal = document.getElementById('composeReceiver').value;
+    if (!recvVal) {
+        showError('Выберите получателя');
+        if (btn) btn.disabled = false;
+        return;
+    }
+
+    const { receiver_id, project_id } = JSON.parse(recvVal);
+    const subject = document.getElementById('composeSubject').value;
+    const body = document.getElementById('composeBody').value;
+    const fileInput = document.getElementById('composeAttachments');
+    const files = fileInput ? fileInput.files : [];
+
+    const formData = new FormData();
+    formData.append('receiver_id', receiver_id);
+    if (project_id) formData.append('project_id', project_id);
+    formData.append('subject', subject);
+    formData.append('body', body);
+
+    for (let i = 0; i < files.length; i++) {
+        formData.append('attachments', files[i]);
+    }
+
+    try {
+        const response = await fetch('/api/messages', {
+            method: 'POST',
+            body: formData
+        });
+        const res = await response.json();
+
+        if (res.success) {
+            showSuccess('Письмо отправлено');
+            const modalEl = document.getElementById('composeMessageModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // Если мы во вкладке почты, обновляем список отправленных
+            if (document.getElementById('sent-tab')) {
+                document.getElementById('sent-tab').click();
+                await loadManagerSent();
+            }
+        } else {
+            showError(res.message);
+        }
+    } catch (err) {
+        console.error('Ошибка отправки:', err);
+        showError('Ошибка отправки сообщения');
+    }
+    if (btn) btn.disabled = false;
+}

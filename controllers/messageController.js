@@ -45,7 +45,7 @@ exports.sendMessage = async (req, res) => {
         let attachmentsString = null;
         if (req.files && req.files.length > 0) {
             const filesData = req.files.map(f => ({
-                originalName: f.originalname,
+                originalName: Buffer.from(f.originalname, 'latin1').toString('utf8'),
                 filename: f.filename,
                 size: f.size
             }));

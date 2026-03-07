@@ -12,7 +12,8 @@
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm"
+        style="background-color: var(--bg-surface) !important; border-bottom: 1px solid var(--border-color);">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
                 <img src="/img/logo.png" alt="ЭнергоАтлант" style="height: 40px; object-fit: contain;" class="me-2">
@@ -20,36 +21,40 @@
                     style="font-size: 0.75rem; letter-spacing: 1px; padding: 0.4em 0.6em;">МЕНЕДЖЕР</span>
             </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <!-- УВЕДОМЛЕНИЯ МЕНЕДЖЕРА ПЕРЕНЕСЕНЫ ВЛЕВО -->
+            <div class="dropdown ms-2 ms-lg-3 order-lg-1">
+                <a class="nav-link text-white position-relative" href="#" id="mgrNotifDropdown" role="button"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-bell-fill fs-5"></i>
+                    <span id="mgrNotifBadge"
+                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
+                        style="font-size: 0.6rem; padding: 0.25em 0.5em;">
+                        0
+                    </span>
+                </a>
+                <ul class="dropdown-menu shadow-lg py-0 overflow-hidden" id="mgrNotifList"
+                    style="width: 320px; border: 1px solid var(--primary-color);">
+                    <li class="p-3 text-center text-muted small">Загрузка уведомлений...</li>
+                </ul>
+            </div>
+
+            <button class="navbar-toggler border-0 p-0 ms-auto" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="collapse navbar-collapse order-lg-2" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    <!-- УВЕДОМЛЕНИЯ МЕНЕДЖЕРА -->
-                    <li class="nav-item dropdown me-3">
-                        <a class="nav-link text-white position-relative d-inline-block" href="#" id="mgrNotifDropdown"
-                            role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-bell-fill fs-5"></i>
-                            <span id="mgrNotifBadge"
-                                class="position-absolute translate-middle p-1 bg-danger border border-dark rounded-circle d-none"
-                                style="top:30%; left:85%; width:10px; height:10px;"></span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" id="mgrNotifList"
-                            style="width:340px; max-height:420px; overflow-y:auto; font-size:0.85rem; border-radius:8px; background:#1a1f2e; border:1px solid #2d3748;">
-                            <li><span class="dropdown-item text-muted text-center py-3">Загрузка...</span></li>
-                        </ul>
-                    </li>
                     <li class="nav-item me-3">
-                        <span class="text-white">
-                            <i class="bi bi-person-circle"></i> <span id="userName">Загрузка...</span>
+                        <span class="text-white small">
+                            <i class="bi bi-person-circle"></i> <span id="userName">...</span>
                         </span>
                     </li>
                     <li class="nav-item">
                         <a href="#"
                             onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');"
                             class="btn btn-outline-danger btn-sm fw-bold">
-                            <i class="bi bi-box-arrow-right"></i> Выйти
+                            ВЫЙТИ
                         </a>
                     </li>
                 </ul>
@@ -68,8 +73,8 @@
                         onclick="markAllNotificationsRead()" style="font-size:0.75rem;">ПРОЧИТАТЬ ВСЕ</button>
                 </div>
                 <div class="card-body p-0">
-                    <div id="persistentNotifList" class="list-group list-group-flush"
-                        style="max-height: 200px; overflow-y: auto;">
+                    <div id="persistentNotifList" class="notif-scroll-container list-group list-group-flush"
+                        style="max-height: 350px !important;">
                         <!-- JS populated -->
                     </div>
                 </div>

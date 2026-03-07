@@ -506,16 +506,93 @@ h6 {
     background-color: var(--bg-elevated) !important;
 }
 
-.table-hover>tbody>tr:hover>* {
-    background-color: rgba(255, 152, 0, 0.05) !important;
-    color: var(--text-main) !important;
+/* =============================================================================
+   УВЕДОМЛЕНИЯ И ПРОКРУТКА
+   ============================================================================= */
+
+/* Контейнер уведомлений с ограничением высоты (5 элементов) */
+.notif-scroll-container {
+    max-height: 350px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(255, 255, 255, 0.05);
 }
 
-.table-responsive {
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
+.notif-scroll-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.notif-scroll-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.notif-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+}
+
+.notification-item {
+    transition: background 0.2s;
+}
+
+.notification-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.notification-item.unread {
+    background: rgba(255, 152, 0, 0.05);
+}
+
+.unread-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px var(--primary-color);
+}
+
+.notif-message {
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text-main);
+}
+
+.notification-item.unread .notif-message {
+    font-weight: 600;
+}
+
+/* Обрезка текста до 2 строк */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
     overflow: hidden;
-    background-color: var(--bg-surface);
+    text-overflow: ellipsis;
+}
+
+/* Дополнительные стили для навбара (уведомления вне коллапса) */
+.navbar-tools-fixed {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* УВЕДОМЛЕНИЯ: Фикс перекрытия поисковой строкой и другими элементами */
+.navbar {
+    z-index: 1050 !important;
+}
+
+.dropdown-menu#notifList,
+.dropdown-menu#mgrNotifList,
+.notif-scroll-container {
+    z-index: 2000 !important;
+}
+
+#navbarNav {
+    width: 100%;
 }
 
 /* Модальные окна */

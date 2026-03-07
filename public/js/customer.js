@@ -72,6 +72,7 @@ async function loadProjects() {
 
     if (data.success) {
         allProjects = data.projects || [];
+        window.customerProjects = allProjects; // Добавлено для корректной работы выбора получателя в сообщениях
         renderProjects(allProjects);
     } else {
         container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки проектов</div>';

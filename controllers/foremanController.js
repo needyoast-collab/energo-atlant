@@ -277,9 +277,10 @@ exports.uploadStagePhotos = async (req, res) => {
 
         // Сохранение фото
         for (const file of req.files) {
+            const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
             await dbRun(
                 "INSERT INTO project_stage_photos (stage_id, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?)",
-                [stageId, file.originalname, file.path, req.session.userId, req.body.description || null]
+                [stageId, fileName, file.path, req.session.userId, req.body.description || null]
             );
         }
 

@@ -114,9 +114,10 @@ exports.uploadExecutiveDocuments = async (req, res) => {
 
         // Сохранение документов
         for (const file of req.files) {
+            const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
             await dbRun(
                 "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, 'executive', ?, ?, ?, ?)",
-                [req.params.id, file.originalname, file.path, req.session.userId, req.body.description || null]
+                [req.params.id, fileName, file.path, req.session.userId, req.body.description || null]
             );
         }
 

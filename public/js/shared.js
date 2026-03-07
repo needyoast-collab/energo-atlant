@@ -71,28 +71,32 @@ async function sharedLoadNotifications(config) {
         return;
     }
 
-    list.innerHTML = data.notifications.map(n => {
+    const notifHtml = data.notifications.map(n => {
         const ic = iconMap[n.type] || { icon: 'bi-bell', color: '#6c757d' };
         const isUnread = !n.is_read;
         const clickHandler = `sharedMarkNotificationRead(${n.id}, ${n.project_id || 'null'}, '${n.type}', '${config.onMarkRead || ''}')`;
 
         return `
-            <li style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <a class="dropdown-item text-wrap py-2 ${isUnread ? 'bg-light-subtle fw-bold' : 'text-muted'}" 
-                   href="#" onclick="${clickHandler}; return false;" 
-                   style="transition: 0.2s; ${isUnread ? 'background: rgba(255,255,255,0.05);' : ''}">
+            <li class="notification-item ${isUnread ? 'unread' : ''}" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <a class="dropdown-item text-wrap py-2" 
+                   href="#" onclick="${clickHandler}; return false;">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <div class="d-flex align-items-center">
                             <i class="bi ${ic.icon} me-2" style="color:${ic.color}"></i>
-                            <small class="text-secondary" style="font-size:0.75rem;">${new Date(n.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
+                            <small class="text-secondary" style="font-size:0.7rem;">${new Date(n.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
                         </div>
-                        ${isUnread ? '<span style="width:8px;height:8px;background:#f59e0b;border-radius:50%;display:inline-block;"></span>' : ''}
+                        ${isUnread ? '<span class="unread-dot"></span>' : ''}
                     </div>
-                    <div class="small text-truncate" style="color: ${isUnread ? 'var(--bs-emphasis-color)' : 'inherit'}; line-height: 1.3;">${n.message}</div>
+                    <div class="notif-message text-truncate-2">${n.message}</div>
                 </a>
             </li>
         `;
     }).join('');
+
+    list.innerHTML = notifHtml;
+
+    // Обеспечиваем прокрутку после 5 элементов
+    list.classList.add('notif-scroll-container');
 }
 
 async function markAllNotificationsRead() {
