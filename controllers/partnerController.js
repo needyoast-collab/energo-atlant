@@ -1,13 +1,19 @@
 const { dbGet, dbRun, dbAll } = require('../config/database');
+const { z } = require('zod');
+
+const payoutRequestSchema = z.object({
+    amount: z.coerce.number().positive("Сумма должна быть положительной"),
+    payment_details: z.string().min(5, "Укажите корректные реквизиты").max(500)
+});
 
 // === СТАТИСТИКА ПАРТНЁРА ===
-exports.getStats = async (req, res) => {
+exports.getStats = async (req, res, next) => {
     try {
         const partnerId = req.session.userId;
 
         // Получаем info партнёра с ref_code
         const partner = await dbGet(
-            'SELECT id, full_name, organization, ref_code, partner_level, created_at FROM users WHERE id = ?',
+            'SELECT id, full_name, organization, ref_code, created_at FROM users WHERE id = ?',
             [partnerId]
         );
 
@@ -66,23 +72,20 @@ exports.getStats = async (req, res) => {
             payouts
         });
     } catch (error) {
-        console.error('partnerController.getStats error:', error);
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };
 
 // === ЗАПРОС НА ВЫПЛАТУ ===
-exports.requestPayout = async (req, res) => {
+exports.requestPayout = async (req, res, next) => {
     try {
         const partnerId = req.session.userId;
-        const { amount, payment_details } = req.body;
+        const parseResult = payoutRequestSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+        }
 
-        if (!amount || amount <= 0) {
-            return res.status(400).json({ success: false, message: 'Укажите корректную сумму' });
-        }
-        if (!payment_details) {
-            return res.status(400).json({ success: false, message: 'Укажите реквизиты для выплаты' });
-        }
+        const { amount, payment_details } = parseResult.data;
 
         // Проверяем доступный баланс
         const finance = await dbGet(
@@ -102,8 +105,7 @@ exports.requestPayout = async (req, res) => {
 
         res.json({ success: true, message: 'Запрос на выплату отправлен. Обработка 1-3 рабочих дня.' });
     } catch (error) {
-        console.error('partnerController.requestPayout error:', error);
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };
 
@@ -115,6 +117,7 @@ exports.registerReferral = async (partnerId, newUserId) => {
             [partnerId, newUserId]
         );
     } catch (e) {
+        // Здесь не используем next(error), так как это внутренняя функция
         console.error('registerReferral error:', e);
     }
 };

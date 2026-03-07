@@ -1,66 +1,85 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
 const { sendNotification, sendDirectNotification } = require('../utils/helpers');
+const { z } = require('zod');
+
+// Схемы валидации
+const accessCodeSchema = z.object({
+    accessCode: z.string().min(1, "Введите код доступа")
+});
+
+const createStageSchema = z.object({
+    projectId: z.number().int(),
+    stageName: z.string().min(2, "Название этапа слишком короткое").max(100),
+    description: z.string().optional(),
+    materials: z.array(z.object({
+        name: z.string(),
+        unit: z.string().optional(),
+        quantity: z.number().positive()
+    })).optional()
+});
+
+const updateMaterialSchema = z.object({
+    quantityUsed: z.number().positive("Количество должно быть положительным")
+});
+
+const materialRequestSchema = z.object({
+    projectId: z.number().int(),
+    materialName: z.string().min(1),
+    unit: z.string().optional(),
+    quantity: z.number().positive(),
+    reason: z.string().optional()
+});
+
+const reviewRequestSchema = z.object({
+    status: z.enum(['approved', 'rejected']),
+    notes: z.string().optional()
+});
+
+const idParamSchema = z.object({
+    id: z.string().regex(/^\d+$/).transform(Number)
+});
 
 // Присоединение к проекту по коду
-exports.joinProject = async (req, res) => {
+exports.joinProject = async (req, res, next) => {
     try {
-        const { accessCode } = req.body;
-
-        if (!accessCode) {
-            return res.status(400).json({
-                success: false,
-                message: "Введите код проекта"
-            });
-        }
+        const { accessCode } = accessCodeSchema.parse(req.body);
 
         const project = await dbGet(
-            "SELECT * FROM projects WHERE access_code = ?",
+            "SELECT id, title, address, foreman_id FROM projects WHERE access_code = ?",
             [accessCode]
         );
 
         if (!project) {
-            return res.json({
-                success: false,
-                message: "Проект с таким кодом не найден"
-            });
+            return res.status(404).json({ success: false, message: "Проект с таким кодом не найден" });
         }
 
-        // Проверка, не истек ли срок создания этапов
         if (project.foreman_id && project.foreman_id !== req.session.userId) {
-            return res.json({
-                success: false,
-                message: "К этому проекту уже привязан другой прораб"
-            });
+            return res.status(403).json({ success: false, message: "К этому проекту уже привязан другой прораб" });
         }
 
-        // Привязка прораба
         await dbRun(
             "UPDATE projects SET foreman_id = ? WHERE id = ?",
             [req.session.userId, project.id]
         );
 
-        console.log(`✅ Прораб ${req.session.userName} присоединился к проекту ${project.title}`);
+        console.log(`✅ Прораб ID ${req.session.userId} присоединился к проекту ${project.id}`);
 
         res.json({
             success: true,
-            project: {
-                id: project.id,
-                title: project.title,
-                address: project.address
-            }
+            project: { id: project.id, title: project.title, address: project.address }
         });
 
     } catch (error) {
-        console.error('Ошибка присоединения к проекту:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
 // Получение проектов прораба
-exports.getProjects = async (req, res) => {
+exports.getProjects = async (req, res, next) => {
     try {
+        const userId = req.session.userId;
         const projects = await dbAll(
-            `SELECT p.*, 
+            `SELECT p.id, p.title, p.address, p.status, p.created_at,
                     um.full_name as manager_name,
                     us.full_name as supplier_name
              FROM projects p
@@ -68,91 +87,77 @@ exports.getProjects = async (req, res) => {
              LEFT JOIN users us ON p.supplier_id = us.id
              WHERE p.foreman_id = ?
              ORDER BY p.created_at DESC`,
-            [req.session.userId]
+            [userId]
         );
 
         res.json({ success: true, projects });
     } catch (error) {
-        console.error('Ошибка получения проектов:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
 // Получение деталей проекта с этапами
-exports.getProjectDetails = async (req, res) => {
+exports.getProjectDetails = async (req, res, next) => {
     try {
+        const { id } = idParamSchema.parse(req.params);
+        const userId = req.session.userId;
+
         const project = await dbGet(
             `SELECT p.*, um.full_name as manager_name
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              WHERE p.id = ? AND p.foreman_id = ?`,
-            [req.params.id, req.session.userId]
+            [id, userId]
         );
 
         if (!project) {
-            return res.status(404).json({
-                success: false,
-                message: "Проект не найден"
-            });
+            return res.status(404).json({ success: false, message: "Проект не найден или доступ запрещен" });
         }
 
-        // Получение этапов
         const stages = await dbAll(
             "SELECT * FROM project_stages WHERE project_id = ? ORDER BY stage_number",
-            [req.params.id]
+            [id]
         );
 
-        // Получение материалов для каждого этапа
         for (const stage of stages) {
             stage.materials = await dbAll(
                 "SELECT * FROM project_materials WHERE stage_id = ?",
                 [stage.id]
             );
-
             stage.photos = await dbAll(
-                "SELECT * FROM project_stage_photos WHERE stage_id = ?",
+                "SELECT id, file_name, file_path, uploaded_at FROM project_stage_photos WHERE stage_id = ?",
                 [stage.id]
             );
         }
 
-        // Получение документов
         const documents = await dbAll(
-            "SELECT * FROM project_documents WHERE project_id = ?",
-            [req.params.id]
+            "SELECT id, file_name, file_path, document_type, uploaded_at FROM project_documents WHERE project_id = ?",
+            [id]
         );
 
-        res.json({
-            success: true,
-            project,
-            stages,
-            documents
-        });
+        res.json({ success: true, project, stages, documents });
 
     } catch (error) {
-        console.error('Ошибка получения деталей проекта:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
 // Создание этапа работ
-exports.createStage = async (req, res) => {
+exports.createStage = async (req, res, next) => {
     try {
-        const { projectId, stageName, description, materials } = req.body;
+        const validated = createStageSchema.parse(req.body);
+        const { projectId, stageName, description, materials } = validated;
+        const userId = req.session.userId;
 
-        // Проверка принадлежности проекта
         const project = await dbGet(
-            "SELECT * FROM projects WHERE id = ? AND foreman_id = ?",
-            [projectId, req.session.userId]
+            "SELECT id FROM projects WHERE id = ? AND foreman_id = ?",
+            [projectId, userId]
         );
 
         if (!project) {
-            return res.status(403).json({
-                success: false,
-                message: "Доступ запрещен"
-            });
+            return res.status(403).json({ success: false, message: "Доступ запрещен" });
         }
 
-        // Получение номера этапа
         const lastStage = await dbGet(
             "SELECT MAX(stage_number) as max_num FROM project_stages WHERE project_id = ?",
             [projectId]
@@ -160,290 +165,228 @@ exports.createStage = async (req, res) => {
 
         const stageNumber = (lastStage?.max_num || 0) + 1;
 
-        // Создание этапа
         const result = await dbRun(
             "INSERT INTO project_stages (project_id, stage_number, name, description, created_by) VALUES (?, ?, ?, ?, ?)",
-            [projectId, stageNumber, stageName, description, req.session.userId]
+            [projectId, stageNumber, stageName, description, userId]
         );
 
         const stageId = result.id;
 
-        // Добавление материалов
-        if (materials && Array.isArray(materials)) {
-            for (const material of materials) {
+        if (materials && materials.length > 0) {
+            for (const mat of materials) {
                 await dbRun(
                     "INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned) VALUES (?, ?, ?, ?)",
-                    [stageId, material.name, material.unit, material.quantity]
+                    [stageId, mat.name, mat.unit, mat.quantity]
                 );
             }
         }
 
-        console.log(`✅ Этап создан: ${stageName} (проект ${projectId})`);
-
-        res.json({
-            success: true,
-            stageId,
-            message: "Этап создан"
-        });
+        res.json({ success: true, stageId, message: "Этап успешно создан" });
 
     } catch (error) {
-        console.error('Ошибка создания этапа:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
 // Обновление использованных материалов
-exports.updateMaterialUsage = async (req, res) => {
+exports.updateMaterialUsage = async (req, res, next) => {
     try {
-        const { quantityUsed } = req.body;
+        const { id: materialId } = idParamSchema.parse(req.params);
+        const { quantityUsed } = updateMaterialSchema.parse(req.body);
+        const userId = req.session.userId;
 
-        // Получаем материал и проверяем принадлежность проекту прораба
         const material = await dbGet(
-            `SELECT pm.*, p.foreman_id
+            `SELECT pm.*, p.foreman_id, p.id as project_id
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
              JOIN projects p ON ps.project_id = p.id
              WHERE pm.id = ?`,
-            [req.params.id]
+            [materialId]
         );
 
-        if (!material) {
-            return res.status(404).json({ success: false, message: 'Материал не найден' });
+        if (!material || material.foreman_id !== userId) {
+            return res.status(403).json({ success: false, message: "Доступ запрещен" });
         }
 
-        if (material.foreman_id !== req.session.userId) {
-            return res.status(403).json({ success: false, message: 'Нет доступа' });
-        }
-
-        const maxAllowed = parseFloat(material.quantity_received || 0);
-        const alreadyUsed = parseFloat(material.quantity_used || 0);
-        const requested = parseFloat(quantityUsed);
-
-        if (requested <= 0) {
-            return res.json({ success: false, message: 'Введите количество больше 0' });
-        }
-
-        const remainingStock = maxAllowed - alreadyUsed;
-
-        if (requested > remainingStock) {
-            return res.json({
-                success: false,
-                message: `Нельзя списать ${requested} — на складе только ${remainingStock.toFixed(2)}`
-            });
-        }
-
-        if (requested < 0) {
-            return res.json({ success: false, message: 'Расход не может быть отрицательным' });
+        const stock = (material.quantity_received || 0) - (material.quantity_used || 0);
+        if (quantityUsed > stock) {
+            return res.status(400).json({ success: false, message: `На складе только ${stock}` });
         }
 
         await dbRun(
-            'UPDATE project_materials SET quantity_used = quantity_used + ? WHERE id = ?',
-            [requested, req.params.id]
+            "UPDATE project_materials SET quantity_used = quantity_used + ? WHERE id = ?",
+            [quantityUsed, materialId]
         );
 
-        res.json({ success: true, message: `Списано ${requested} единиц. Остаток на складе: ${(remainingStock - requested).toFixed(2)}` });
+        res.json({ success: true, message: "Расход материалов обновлен" });
+
     } catch (error) {
-        console.error('Ошибка обновления расхода:', error);
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };
 
 // Загрузка фото к этапу
-exports.uploadStagePhotos = async (req, res) => {
+exports.uploadStagePhotos = async (req, res, next) => {
     try {
-        const stageId = req.params.id;
+        const { id: stageId } = idParamSchema.parse(req.params);
+        const userId = req.session.userId;
 
         if (!req.files || req.files.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Файлы не загружены"
-            });
+            return res.status(400).json({ success: false, message: "Файлы не выбраны" });
         }
 
-        // Проверка доступа к этапу
         const stage = await dbGet(
-            `SELECT ps.* FROM project_stages ps
+            `SELECT ps.id, p.id as project_id FROM project_stages ps
              JOIN projects p ON ps.project_id = p.id
              WHERE ps.id = ? AND p.foreman_id = ?`,
-            [stageId, req.session.userId]
+            [stageId, userId]
         );
 
         if (!stage) {
-            return res.status(403).json({
-                success: false,
-                message: "Доступ запрещен"
-            });
+            return res.status(403).json({ success: false, message: "Доступ запрещен" });
         }
 
-        // Сохранение фото
         for (const file of req.files) {
             const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
             await dbRun(
                 "INSERT INTO project_stage_photos (stage_id, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?)",
-                [stageId, fileName, file.path, req.session.userId, req.body.description || null]
+                [stageId, fileName, file.path, userId, req.body.description || null]
             );
         }
 
-        sendNotification(stage.project_id, 'photo', `Прораб загрузил фото (${req.files.length} шт.) к этапу`);
-
-        res.json({
-            success: true,
-            message: "Фото загружены",
-            count: req.files.length
-        });
+        sendNotification(stage.project_id, 'photo', `Прораб загрузил фото (${req.files.length} шт.)`);
+        res.json({ success: true, message: "Фотографии загружены" });
 
     } catch (error) {
-        console.error('Ошибка загрузки фото:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
 // Отметка этапа как выполненного
-exports.completeStage = async (req, res) => {
+exports.completeStage = async (req, res, next) => {
     try {
-        // Проверка доступа
+        const { id: stageId } = idParamSchema.parse(req.params);
+        const userId = req.session.userId;
+
         const stage = await dbGet(
-            `SELECT ps.* FROM project_stages ps
+            `SELECT ps.*, p.title as project_title, p.manager_id FROM project_stages ps
              JOIN projects p ON ps.project_id = p.id
              WHERE ps.id = ? AND p.foreman_id = ?`,
-            [req.params.id, req.session.userId]
+            [stageId, userId]
         );
 
         if (!stage) {
-            return res.status(403).json({
-                success: false,
-                message: "Доступ запрещен"
-            });
+            return res.status(403).json({ success: false, message: "Доступ запрещен" });
         }
 
         await dbRun(
             "UPDATE project_stages SET is_completed = 1, completed_at = datetime('now') WHERE id = ?",
-            [req.params.id]
+            [stageId]
         );
 
-        // Уведомить заказчика
-        sendNotification(stage.project_id, 'stage_complete', `Этап "${stage.name || 'Без названия'}" завершён`);
-        // Уведомить менеджера проекта
-        try {
-            const project = await dbGet('SELECT manager_id, title FROM projects WHERE id = ?', [stage.project_id]);
-            if (project && project.manager_id) {
-                await sendDirectNotification(
-                    project.manager_id,
-                    stage.project_id,
-                    'stage_complete',
-                    `Прораб завершил этап "${stage.name || 'Без названия'}" по проекту "${project.title}"`
-                );
-            }
-        } catch (e) { console.error('Ошибка уведомления менеджера об этапе:', e); }
+        sendNotification(stage.project_id, 'stage_complete', `Этап "${stage.name}" завершен`);
+        if (stage.manager_id) {
+            await sendDirectNotification(stage.manager_id, stage.project_id, 'stage_complete', `Завершен этап "${stage.name}" по проекту ${stage.project_title}`);
+        }
 
-        res.json({ success: true, message: "Этап отмечен как выполненный" });
+        res.json({ success: true, message: "Этап завершен" });
 
     } catch (error) {
-        console.error('Ошибка завершения этапа:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
 // Прораб видит материалы ожидающие согласования от снабженца
-exports.getMaterialRequests = async (req, res) => {
+exports.getMaterialRequests = async (req, res, next) => {
     try {
+        const userId = req.session.userId;
         const requests = await dbAll(
-            `SELECT mr.*,
-                    p.title as project_title,
-                    us.full_name as supplier_name
+            `SELECT mr.*, p.title as project_title, us.full_name as supplier_name
              FROM material_requests mr
              JOIN projects p ON mr.project_id = p.id
              LEFT JOIN users us ON mr.supplier_id = us.id
              WHERE mr.foreman_id = ?
              ORDER BY mr.created_at DESC`,
-            [req.session.userId]
+            [userId]
         );
         res.json({ success: true, requests });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };
 
 // Прораб согласует или отклоняет предложение снабженца
-exports.reviewMaterialRequest = async (req, res) => {
+exports.reviewMaterialRequest = async (req, res, next) => {
     try {
-        const { status, notes } = req.body;
-
-        if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({ success: false, message: 'Недопустимый статус' });
-        }
+        const { id: requestId } = idParamSchema.parse(req.params);
+        const { status, notes } = reviewRequestSchema.parse(req.body);
+        const userId = req.session.userId;
 
         const request = await dbGet(
-            'SELECT * FROM material_requests WHERE id = ? AND foreman_id = ?',
-            [req.params.id, req.session.userId]
+            "SELECT id FROM material_requests WHERE id = ? AND foreman_id = ?",
+            [requestId, userId]
         );
 
         if (!request) {
-            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+            return res.status(403).json({ success: false, message: "Доступ запрещен" });
         }
 
         await dbRun(
-            `UPDATE material_requests SET status = ?, notes = ?, reviewed_at = datetime('now')
-             WHERE id = ?`,
-            [status, notes || null, req.params.id]
+            "UPDATE material_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?",
+            [status, notes || null, requestId]
         );
 
-        res.json({ success: true, message: status === 'approved' ? 'Материал согласован' : 'Материал отклонён' });
+        res.json({ success: true, message: `Заявка ${status === 'approved' ? 'согласована' : 'отклонена'}` });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };
 
-// Прораб создаёт заявку на дополнительный материал (когда запасы закончились)
-exports.createMaterialRequest = async (req, res) => {
+// Прораб создаёт заявку на дополнительный материал
+exports.createMaterialRequest = async (req, res, next) => {
     try {
-        const { projectId, materialName, unit, quantity, reason } = req.body;
-
-        if (!projectId || !materialName || !quantity) {
-            return res.status(400).json({ success: false, message: 'Заполните обязательные поля' });
-        }
+        const validated = materialRequestSchema.parse(req.body);
+        const { projectId, materialName, unit, quantity, reason } = validated;
+        const userId = req.session.userId;
 
         const project = await dbGet(
-            'SELECT * FROM projects WHERE id = ? AND foreman_id = ?',
-            [projectId, req.session.userId]
+            "SELECT id, supplier_id FROM projects WHERE id = ? AND foreman_id = ?",
+            [projectId, userId]
         );
 
         if (!project) {
-            return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+            return res.status(403).json({ success: false, message: "Доступ запрещен" });
         }
 
-        const result = await dbRun(
-            `INSERT INTO material_requests 
-             (project_id, foreman_id, supplier_id, material_name, quantity, unit, reason, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-            [projectId, req.session.userId, project.supplier_id,
-                materialName, quantity, unit, reason || 'Запрос от прораба']
+        await dbRun(
+            `INSERT INTO material_requests (project_id, foreman_id, supplier_id, material_name, quantity, unit, reason)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [projectId, userId, project.supplier_id, materialName, quantity, unit, reason || 'Запрос от прораба']
         );
 
-        res.json({ success: true, id: result.id, message: 'Заявка отправлена снабженцу' });
+        res.json({ success: true, message: "Заявка отправлена снабженцу" });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };
 
-exports.getMaterials = async (req, res) => {
+exports.getMaterials = async (req, res, next) => {
     try {
+        const userId = req.session.userId;
         const materials = await dbAll(
-            `SELECT pm.*, 
-                    ps.name as stage_name,
-                    ps.project_id,
-                    p.title as project_title
+            `SELECT pm.*, ps.name as stage_name, p.title as project_title
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
              JOIN projects p ON ps.project_id = p.id
              WHERE p.foreman_id = ?
              ORDER BY p.id, ps.stage_number, pm.id`,
-            [req.session.userId]
+            [userId]
         );
 
         res.json({ success: true, materials });
     } catch (error) {
-        console.error('Ошибка получения материалов:', error);
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };

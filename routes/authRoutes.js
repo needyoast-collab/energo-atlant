@@ -7,15 +7,19 @@ const { requireAuth } = require('../middleware/auth');
 // Rate limiting для защиты от брутфорса
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 минут
-    max: 10, // Строгий лимит на 10 попыток
-    skipSuccessfulRequests: true, // НЕ считать успешные попытки
-    message: { success: false, message: "Слишком много попыток входа. Попробуйте позже." }
+    max: 5, // Строгий лимит: 5 попыток
+    skipSuccessfulRequests: true, // Считаем только ошибки (брутфорс)
+    standardHeaders: true, // Возвращать RateLimit заголовки
+    legacyHeaders: false,
+    message: { success: false, message: "🚨 Слишком много неудачных попыток входа. Пожалуйста, подождите 15 минут." }
 });
 
 const registerLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 час
-    max: 5, // Не более 5 регистраций в час с одного IP
-    message: { success: false, message: "Превышен лимит регистраций. Попробуйте позже." }
+    max: 3, // Максимум 3 регистрации в час с одного IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: "⚠️ Превышен лимит регистраций с вашего IP. Пожалуйста, попробуйте позднее." }
 });
 
 router.post('/login', loginLimiter, authController.login);

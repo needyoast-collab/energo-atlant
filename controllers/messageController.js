@@ -1,7 +1,15 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
 const { sendDirectNotification } = require('../utils/helpers');
+const { z } = require('zod');
 
-exports.getInbox = async (req, res) => {
+const sendMessageSchema = z.object({
+    receiver_id: z.coerce.number().positive("Укажите получателя"),
+    project_id: z.coerce.number().positive().optional().nullable(),
+    subject: z.string().max(200).optional().or(z.literal('')),
+    body: z.string().min(1, "Введите текст сообщения").max(2000)
+});
+
+exports.getInbox = async (req, res, next) => {
     try {
         const messages = await dbAll(
             `SELECT m.*, u.full_name as sender_name, p.title as project_title
@@ -13,13 +21,12 @@ exports.getInbox = async (req, res) => {
             [req.session.userId]
         );
         res.json({ success: true, messages });
-    } catch (e) {
-        console.error('Ошибка входящих:', e);
-        res.status(500).json({ success: false, message: e.message });
+    } catch (error) {
+        next(error);
     }
 };
 
-exports.getSent = async (req, res) => {
+exports.getSent = async (req, res, next) => {
     try {
         const messages = await dbAll(
             `SELECT m.*, u.full_name as receiver_name, p.title as project_title
@@ -31,17 +38,20 @@ exports.getSent = async (req, res) => {
             [req.session.userId]
         );
         res.json({ success: true, messages });
-    } catch (e) {
-        console.error('Ошибка исходящих:', e);
-        res.status(500).json({ success: false, message: e.message });
+    } catch (error) {
+        next(error);
     }
 };
 
-exports.sendMessage = async (req, res) => {
-    const { receiver_id, project_id, subject, body } = req.body;
-    if (!receiver_id || !body) return res.status(400).json({ success: false, message: 'Обязательные поля не заполнены' });
-
+exports.sendMessage = async (req, res, next) => {
     try {
+        const parseResult = sendMessageSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+        }
+
+        const { receiver_id, project_id, subject, body } = parseResult.data;
+
         let attachmentsString = null;
         if (req.files && req.files.length > 0) {
             const filesData = req.files.map(f => ({
@@ -54,7 +64,7 @@ exports.sendMessage = async (req, res) => {
 
         await dbRun(
             `INSERT INTO messages (sender_id, receiver_id, project_id, subject, body, attachments) VALUES (?, ?, ?, ?, ?, ?)`,
-            [req.session.userId, receiver_id, project_id, subject, body, attachmentsString]
+            [req.session.userId, receiver_id, project_id || null, subject || null, body, attachmentsString]
         );
 
         // Прямое уведомление получателю
@@ -63,22 +73,21 @@ exports.sendMessage = async (req, res) => {
             receiver_id,
             project_id || null,
             'message',
-            `У вас новое непрочитанное входящее сообщение от ${sender ? sender.full_name : 'пользователя'}`
+            `У вас новое сообщение от ${sender ? sender.full_name : 'пользователя'}`
         );
 
         res.json({ success: true });
-    } catch (e) {
-        console.error('Ошибка отправки сообщения:', e);
-        res.status(500).json({ success: false, message: e.message });
+    } catch (error) {
+        next(error);
     }
 };
 
-exports.markAsRead = async (req, res) => {
+exports.markAsRead = async (req, res, next) => {
     try {
-        await dbRun(`UPDATE messages SET is_read = 1 WHERE id = ? AND receiver_id = ?`, [req.params.id, req.session.userId]);
+        const messageId = z.coerce.number().parse(req.params.id);
+        await dbRun(`UPDATE messages SET is_read = 1 WHERE id = ? AND receiver_id = ?`, [messageId, req.session.userId]);
         res.json({ success: true });
-    } catch (e) {
-        console.error('Ошибка прочтения:', e);
-        res.status(500).json({ success: false, message: e.message });
+    } catch (error) {
+        next(error);
     }
 };

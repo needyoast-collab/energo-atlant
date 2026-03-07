@@ -4,11 +4,6 @@ const path = require('path');
 const pdfParse = require('pdf-parse');
 const { OpenAI } = require('openai');
 const { format } = require('date-fns');
-
-// Функция-помощник для генерации кода (скопирована из helpers.js или будет импортирована)
-// Так как мы не знаем где она сейчас, мы импортируем из helpers, если она там есть, 
-// но давайте проверим utils/helpers.js на наличие нужных функций.
-// Для простоты импортируем из helpers:
 const { generateProjectCode, formatDateForDB, addHours, sendNotification, sendDirectNotification } = require('../utils/helpers');
 
 // Настройка ИИ (openai)
@@ -21,34 +16,57 @@ const openai = new OpenAI({
     }
 });
 
-exports.getStaff = async (req, res) => {
+const { z } = require('zod');
+
+// Схемы валидации Zod
+const projectSchema = z.object({
+    title: z.string().min(3, "Название слишком короткое").max(200),
+    address: z.string().min(5, "Адрес слишком короткий").max(300),
+    description: z.string().max(1000).optional().or(z.literal('')),
+    clientName: z.string().max(100).optional().or(z.literal('')),
+    clientOrganization: z.string().max(100).optional().or(z.literal('')),
+    foremanId: z.number().int().positive().optional().nullable(),
+    supplierId: z.number().int().positive().optional().nullable(),
+    ptoId: z.number().int().positive().optional().nullable(),
+    customerId: z.number().int().positive().optional().nullable(),
+    requestId: z.number().int().positive().optional().nullable(),
+    work_type: z.string().min(2, "Укажите тип работ").max(200),
+    length_m: z.coerce.number().min(0, "Протяженность не может быть отрицательной"),
+    lead_source: z.string().max(100).optional().nullable(),
+    offer_sum: z.coerce.number().optional().nullable(),
+    visit_date: z.string().datetime().optional().nullable().or(z.literal('')),
+    offer_sent_date: z.string().date().optional().nullable().or(z.literal('')),
+    offer_valid_until: z.string().date().optional().nullable().or(z.literal('')),
+    contract_date: z.string().date().optional().nullable().or(z.literal('')),
+    advance_sum: z.coerce.number().optional().nullable(),
+    advance_date: z.string().date().optional().nullable().or(z.literal('')),
+    act_date: z.string().date().optional().nullable().or(z.literal('')),
+    final_sum: z.coerce.number().optional().nullable(),
+    status: z.string().optional().default('lead')
+});
+
+exports.getStaff = async (req, res, next) => {
     try {
         const staff = await dbAll(
             "SELECT id, full_name, role FROM users WHERE role IN ('foreman', 'supplier', 'pto') AND is_active = 1"
         );
         res.json({ success: true, staff });
     } catch (error) {
-        console.error('Ошибка получения персонала:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.createProject = async (req, res) => {
+exports.createProject = async (req, res, next) => {
     try {
-        const {
-            title, address, description, clientName, clientOrganization,
-            foremanId, supplierId, ptoId, customerId, requestId,
-            work_type, length_m, lead_source, offer_sum, visit_date,
-            offer_sent_date, offer_valid_until, contract_date,
-            advance_sum, advance_date, act_date, final_sum
-        } = req.body;
-
-        if (!title || !address || !work_type || !length_m) {
-            return res.status(400).json({ success: false, message: "Заполните все обязательные поля (Название, Адрес, Тип работ, Протяженность)" });
+        const parseResult = projectSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
         }
 
+        const data = parseResult.data;
         let accessCode;
         let codeExists = true;
+
         while (codeExists) {
             accessCode = generateProjectCode();
             const existing = await dbGet("SELECT id FROM projects WHERE access_code = ?", [accessCode]);
@@ -64,23 +82,24 @@ exports.createProject = async (req, res) => {
                 work_type, length_m, lead_source, offer_sum, visit_date, offer_sent_date, 
                 offer_valid_until, contract_date, advance_sum, advance_date, act_date, final_sum
              )
-             VALUES (?, ?, ?, ?, ?, ?, 'lead', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                title, address, description, clientName, clientOrganization, accessCode,
-                stagesDeadline, req.session.userId, foremanId || null, supplierId || null,
-                ptoId || null, customerId || null,
-                work_type, length_m || 0, lead_source || null,
-                offer_sum ? parseFloat(offer_sum) : null, visit_date || null, offer_sent_date || null,
-                offer_valid_until || null, contract_date || null, advance_sum ? parseFloat(advance_sum) : null,
-                advance_date || null, act_date || null, final_sum ? parseFloat(final_sum) : null
+                data.title, data.address, data.description || null, data.clientName || null,
+                data.clientOrganization || null, accessCode, data.status || 'lead',
+                stagesDeadline, req.session.userId, data.foremanId || null,
+                data.supplierId || null, data.ptoId || null, data.customerId || null,
+                data.work_type, data.length_m || 0, data.lead_source || null,
+                data.offer_sum || null, data.visit_date || null, data.offer_sent_date || null,
+                data.offer_valid_until || null, data.contract_date || null,
+                data.advance_sum || null, data.advance_date || null, data.act_date || null,
+                data.final_sum || null
             ]
         );
 
         const projectId = result.id;
 
-        if (requestId) {
-            // Переносим документы из заявки в проект
-            const request = await dbGet("SELECT documents, customer_id FROM project_requests WHERE id = ?", [requestId]);
+        if (data.requestId) {
+            const request = await dbGet("SELECT documents, customer_id FROM project_requests WHERE id = ?", [data.requestId]);
             if (request && request.documents) {
                 const paths = request.documents.split(',');
                 for (const p of paths) {
@@ -95,13 +114,12 @@ exports.createProject = async (req, res) => {
 
             await dbRun(
                 "UPDATE project_requests SET status = 'accepted', notes = 'Проект создан', reviewed_at = datetime('now'), project_id = ? WHERE id = ?",
-                [projectId, requestId]
+                [projectId, data.requestId]
             );
         }
 
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
-                // Исправление кодировки кириллицы в имени файла
                 const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
                 await dbRun(
                     "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by) VALUES (?, 'initial', ?, ?, ?)",
@@ -111,22 +129,32 @@ exports.createProject = async (req, res) => {
         }
 
         res.json({ success: true, projectId, accessCode, message: "Проект успешно создан" });
-
     } catch (error) {
-        console.error('Ошибка создания проекта:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.aiAnalyze = async (req, res) => {
+exports.aiAnalyze = async (req, res, next) => {
     try {
         let filePath, originalName, mimeType;
 
         if (req.body.documentId) {
-            const doc = await dbGet("SELECT file_path, file_name FROM project_documents WHERE id = ?", [req.body.documentId]);
+            const documentId = z.coerce.number().parse(req.body.documentId);
+            const doc = await dbGet(`
+                SELECT pd.file_path, pd.file_name, p.manager_id 
+                FROM project_documents pd
+                JOIN projects p ON pd.project_id = p.id
+                WHERE pd.id = ?
+            `, [documentId]);
+
             if (!doc) return res.status(404).json({ success: false, message: "Документ не найден" });
 
-            filePath = path.join(__dirname, '..', doc.file_path);
+            // Проверка прав (IDOR)
+            if (req.session.userRole !== 'admin' && doc.manager_id !== req.session.userId) {
+                return res.status(403).json({ success: false, message: "Нет доступа к этому документу" });
+            }
+
+            filePath = path.join(process.cwd(), doc.file_path);
             originalName = doc.file_name;
             mimeType = originalName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg';
         } else if (req.file) {
@@ -145,51 +173,21 @@ exports.aiAnalyze = async (req, res) => {
         }
 
         const prompt = `Ты - опытный инженер-сметчик и снабженец строительной компании. 
-Твоя задача: изучить предоставленный файл (это может быть проектная документация, чертёж спецификации, смета или список).
-Извлеки из него все строительно-монтажные работы (этапы работ) и все требуемые материалы.
-Обязательно игнорируй любые цены и стоимости, нас интересуют только физические объёмы для закупки и проведения работ.
-
-Верни ТОЛЬКО валидный JSON-объект, содержащий два массива ("works" и "materials"). Без лишнего текста, без markdown блоков! 
-Пример формата:
-{
-  "works": [
-    { "name": "Установка опор", "unit": "шт", "quantity": 10 }
-  ],
-  "materials": [
-    { "name": "Опора железобетонная", "unit": "шт", "quantity": 10.5 }
-  ]
-}`;
+Извлеки строительно-монтажные работы и материалы из документа (без цен). 
+Верни ТОЛЬКО валидный JSON-объект: { "works": [...], "materials": [...] }`;
 
         let apiMessages = [];
-
         if (isPdf) {
             const pdfData = await pdfParse(fs.readFileSync(filePath));
             const pdfText = pdfData.text.replace(/\s+/g, ' ').trim();
-
             if (!pdfText || pdfText.length < 10) {
                 return res.status(400).json({ success: false, message: "Не удалось извлечь текст из PDF." });
             }
-
-            apiMessages = [
-                {
-                    role: "user",
-                    content: prompt + "\n\nВот текст документа для анализа:\n" + pdfText.substring(0, 15000)
-                }
-            ];
+            apiMessages = [{ role: "user", content: prompt + "\n\nТекст:\n" + pdfText.substring(0, 15000) }];
         } else {
             const fileData = fs.readFileSync(filePath);
-            const base64Data = Buffer.from(fileData).toString("base64");
-            const dataUrl = `data:${mimeType};base64,${base64Data}`;
-
-            apiMessages = [
-                {
-                    role: "user",
-                    content: [
-                        { type: "text", text: prompt },
-                        { type: "image_url", image_url: { url: dataUrl } }
-                    ]
-                }
-            ];
+            const dataUrl = `data:${mimeType};base64,${fileData.toString("base64")}`;
+            apiMessages = [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: dataUrl } }] }];
         }
 
         const response = await openai.chat.completions.create({
@@ -198,280 +196,233 @@ exports.aiAnalyze = async (req, res) => {
         });
 
         let jsonText = response.choices[0].message.content.trim();
+        jsonText = jsonText.replace(/^\`\`\`json/i, '').replace(/\`\`\`$/i, '').trim();
 
-        if (jsonText.startsWith('\`\`\`json')) jsonText = jsonText.replace(/^\`\`\`json/, '');
-        if (jsonText.startsWith('\`\`\`')) jsonText = jsonText.replace(/^\`\`\`/, '');
-        if (jsonText.endsWith('\`\`\`')) jsonText = jsonText.replace(/\`\`\`$/, '');
-        jsonText = jsonText.trim();
-
-        let aiData;
-        try {
-            aiData = JSON.parse(jsonText);
-        } catch (parseError) {
-            return res.status(500).json({ success: false, message: "ИИ вернул ответ в неверном формате." });
-        }
-
+        const aiData = JSON.parse(jsonText);
         res.json({ success: true, data: aiData });
     } catch (error) {
-        console.error('Ошибка ИИ API:', error);
-        res.status(500).json({ success: false, message: "Сбой на стороне нейросети (API)." });
+        next(error);
     }
 };
 
-exports.applyAiEstimate = async (req, res) => {
+exports.applyAiEstimate = async (req, res, next) => {
     try {
+        const projectId = z.coerce.number().parse(req.params.id);
         const { works, materials } = req.body;
-        const projectId = req.params.id;
+
+        // Проверка прав (IDOR)
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+            [projectId, req.session.userId, req.session.userRole]);
+        if (!project) return res.status(403).json({ success: false, message: "Нет доступа к проекту" });
 
         const stageRes = await dbRun(
             "INSERT INTO project_stages (project_id, stage_number, name, description, created_by) VALUES (?, ?, ?, ?, ?)",
-            [projectId, 1, "Основные работы (по смете ИИ)", "Сгенерировано нейросетью из загруженной документации", req.session.userId]
+            [projectId, 1, "Основные работы (по смете ИИ)", "Сгенерировано нейросетью", req.session.userId]
         );
         const stageId = stageRes.id;
 
-        if (materials && materials.length > 0) {
+        if (Array.isArray(materials)) {
             for (const mat of materials) {
-                await dbRun(
-                    "INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned) VALUES (?, ?, ?, ?)",
-                    [stageId, mat.name, mat.unit, mat.quantity]
-                );
+                if (mat.name) {
+                    await dbRun(
+                        "INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned) VALUES (?, ?, ?, ?)",
+                        [stageId, mat.name, mat.unit || 'шт', mat.quantity || 0]
+                    );
+                }
             }
         }
 
         res.json({ success: true, message: "Смета прикреплена к проекту" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.getProjects = async (req, res) => {
+exports.getProjects = async (req, res, next) => {
     try {
-        let query = `SELECT p.*, 
-                    uf.full_name as foreman_name,
-                    us.full_name as supplier_name,
-                    up.full_name as pto_name,
-                    uc.full_name as customer_name
-             FROM projects p
-             LEFT JOIN users uf ON p.foreman_id = uf.id
-             LEFT JOIN users us ON p.supplier_id = us.id
-             LEFT JOIN users up ON p.pto_id = up.id
-             LEFT JOIN users uc ON p.customer_id = uc.id`;
+        let query = `SELECT p.*, uf.full_name as foreman_name, us.full_name as supplier_name,
+                            up.full_name as pto_name, uc.full_name as customer_name
+                     FROM projects p
+                     LEFT JOIN users uf ON p.foreman_id = uf.id
+                     LEFT JOIN users us ON p.supplier_id = us.id
+                     LEFT JOIN users up ON p.pto_id = up.id
+                     LEFT JOIN users uc ON p.customer_id = uc.id`;
+        const params = [];
 
-        let params = [];
-
-        // Если не админ - фильтруем по менеджеру
         if (req.session.userRole !== 'admin') {
             query += " WHERE p.manager_id = ?";
             params.push(req.session.userId);
         }
 
         query += " ORDER BY p.created_at DESC";
-
         const projects = await dbAll(query, params);
         res.json({ success: true, projects });
     } catch (error) {
-        console.error('getProjects error:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.updateProject = async (req, res) => {
+exports.updateProject = async (req, res, next) => {
     try {
-        const {
-            title, address, description, clientName, clientOrganization,
-            foremanId, supplierId, ptoId, status,
-            work_type, length_m, lead_source, offer_sum, visit_date,
-            offer_sent_date, offer_valid_until, contract_date,
-            advance_sum, advance_date, act_date, final_sum
-        } = req.body;
-
-        // Получаем старый статус и customer_id перед обновлением для уведомлений
-        const oldProject = await dbGet("SELECT status, customer_id, title FROM projects WHERE id = ?", [req.params.id]);
-
-        let query = `UPDATE projects SET title = ?, address = ?, description = ?, client_name = ?, 
-                     client_organization = ?, foreman_id = ?, supplier_id = ?, pto_id = ?, status = ?,
-                     work_type = ?, length_m = ?, lead_source = ?, offer_sum = ?, visit_date = ?, 
-                     offer_sent_date = ?, offer_valid_until = ?, contract_date = ?, advance_sum = ?, 
-                     advance_date = ?, act_date = ?, final_sum = ?
-                     WHERE id = ?`;
-        let params = [
-            title, address, description, clientName, clientOrganization, foremanId, supplierId, ptoId, status,
-            work_type, length_m, lead_source, offer_sum, visit_date, offer_sent_date, offer_valid_until,
-            contract_date, advance_sum, advance_date, act_date, final_sum, req.params.id
-        ];
-
-        if (req.session.userRole !== 'admin') {
-            query += " AND manager_id = ?";
-            params.push(req.session.userId);
+        const projectId = z.coerce.number().parse(req.params.id);
+        const parseResult = projectSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
         }
 
-        const runResult = await dbRun(query, params);
+        const data = parseResult.data;
+        const oldProject = await dbGet("SELECT status, customer_id, title, manager_id FROM projects WHERE id = ?", [projectId]);
 
-        // Если обновилось хотя бы 1 поле и статус изменился + есть привязанный заказчик
-        if (runResult.changes > 0 && oldProject && oldProject.status !== status && oldProject.customer_id) {
-            const customerStatusLabels = {
-                'lead': 'Заявка принята',
-                'qualification': 'Уточняем детали объекта',
-                'visit_scheduled': 'Выезд на объект запланирован',
-                'offer_in_progress': 'Готовим коммерческое предложение',
-                'offer_sent': 'Коммерческое предложение направлено',
-                'negotiation': 'Согласование условий',
-                'contract_signing': 'Договор на подписании',
-                'waiting_advance': 'Ожидаем аванс для старта работ',
-                'in_progress': 'Работы выполняются',
-                'closing_docs': 'Оформление документации',
-                'won': 'Объект сдан',
-                'lost': 'Отменён',
-                'postponed': 'Рассмотрение приостановлено'
-            };
+        if (!oldProject) return res.status(404).json({ success: false, message: "Проект не найден" });
 
-            const newLabel = customerStatusLabels[status] || status;
+        // IDOR check
+        if (req.session.userRole !== 'admin' && oldProject.manager_id !== req.session.userId) {
+            return res.status(403).json({ success: false, message: "Нет прав на редактирование этого проекта" });
+        }
+
+        await dbRun(
+            `UPDATE projects SET 
+                title = ?, address = ?, description = ?, client_name = ?, client_organization = ?, 
+                foreman_id = ?, supplier_id = ?, pto_id = ?, status = ?, work_type = ?, 
+                length_m = ?, lead_source = ?, offer_sum = ?, visit_date = ?, offer_sent_date = ?, 
+                offer_valid_until = ?, contract_date = ?, advance_sum = ?, advance_date = ?, 
+                act_date = ?, final_sum = ?
+            WHERE id = ?`,
+            [
+                data.title, data.address, data.description || null, data.clientName || null, data.clientOrganization || null,
+                data.foremanId || null, data.supplierId || null, data.ptoId || null, data.status, data.work_type,
+                data.length_m, data.lead_source || null, data.offer_sum || null, data.visit_date || null,
+                data.offer_sent_date || null, data.offer_valid_until || null, data.contract_date || null,
+                data.advance_sum || null, data.advance_date || null, data.act_date || null, data.final_sum || null,
+                projectId
+            ]
+        );
+
+        if (oldProject.status !== data.status && oldProject.customer_id) {
+            const labels = { 'lead': 'Заявка принята', 'in_progress': 'Работы выполняются', 'won': 'Объект сдан' };
+            const label = labels[data.status] || data.status;
             await dbRun(
                 `INSERT INTO notifications (user_id, project_id, type, message) VALUES (?, ?, 'status_change', ?)`,
-                [oldProject.customer_id, req.params.id, `Статус объекта «${oldProject.title}» изменён: ${newLabel}`]
+                [oldProject.customer_id, projectId, `Статус объекта «${oldProject.title}» изменён: ${label}`]
             );
         }
 
         res.json({ success: true, message: "Проект обновлен" });
     } catch (error) {
-        console.error('updateProject error:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.completeProject = async (req, res) => {
+exports.completeProject = async (req, res, next) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: "Необходимо загрузить скан-копию Акта выполненных работ" });
-        }
+        const projectId = z.coerce.number().parse(req.params.id);
+        if (!req.file) return res.status(400).json({ success: false, message: "Загрузите Акт" });
 
-        const smsCode = req.body.smsCode;
-        if (!smsCode || smsCode.length < 4) {
-            return res.status(400).json({ success: false, message: "Необходим корректный СМС-код от заказчика" });
-        }
-
-        const projectId = req.params.id;
-
+        const smsCode = z.string().min(4).parse(req.body.smsCode);
         const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+
+        // Check ownership
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+            [projectId, req.session.userId, req.session.userRole]);
+        if (!project) return res.status(403).json({ success: false, message: "Нет доступа" });
+
         await dbRun(
             "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, 'act', ?, ?, ?, ?)",
-            [projectId, fileName, req.file.path, req.session.userId, `Акт выполненных работ (Подписан по СМС: ${smsCode})`]
+            [projectId, fileName, req.file.path, req.session.userId, `Подписан по СМС: ${smsCode}`]
         );
 
-        let query = "UPDATE projects SET status = 'won' WHERE id = ?";
-        let params = [projectId];
-
-        if (req.session.userRole !== 'admin') {
-            query += " AND manager_id = ?";
-            params.push(req.session.userId);
-        }
-
-        await dbRun(query, params);
-
-        res.json({ success: true, message: "Проект успешно завершен, Акт подписан по СМС и загружен" });
+        await dbRun("UPDATE projects SET status = 'won' WHERE id = ?", [projectId]);
+        res.json({ success: true, message: "Проект успешно завершен" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.getProjectDocuments = async (req, res) => {
+exports.getProjectDocuments = async (req, res, next) => {
     try {
-        const documents = await dbAll(
-            "SELECT * FROM project_documents WHERE project_id = ? ORDER BY uploaded_at DESC",
-            [req.params.id]
-        );
+        const projectId = z.coerce.number().parse(req.params.id);
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+            [projectId, req.session.userId, req.session.userRole]);
+        if (!project) return res.status(403).json({ success: false, message: "Нет доступа" });
+
+        const documents = await dbAll("SELECT * FROM project_documents WHERE project_id = ? ORDER BY uploaded_at DESC", [projectId]);
         res.json({ success: true, documents });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.uploadProjectDocument = async (req, res) => {
+exports.uploadProjectDocument = async (req, res, next) => {
     try {
+        const projectId = z.coerce.number().parse(req.params.id);
         if (!req.file) return res.status(400).json({ success: false, message: "Файл не выбран" });
 
-        // Исправление кодировки кириллицы
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+            [projectId, req.session.userId, req.session.userRole]);
+        if (!project) return res.status(403).json({ success: false, message: "Нет доступа" });
+
         const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
         await dbRun(
             "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?, ?)",
-            [req.params.id, req.body.docType || 'other', fileName, req.file.path, req.session.userId, req.body.description || '']
+            [projectId, req.body.docType || 'other', fileName, req.file.path, req.session.userId, req.body.description || '']
         );
 
-        // Уведомляем участников проекта
-        sendNotification(req.params.id, 'document', `Загружен новый документ: ${fileName}`);
-
+        sendNotification(projectId, 'document', `Загружен новый документ: ${fileName}`);
         res.json({ success: true, message: "Документ загружен" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.getRequests = async (req, res) => {
+exports.getRequests = async (req, res, next) => {
     try {
-        const requests = await dbAll(
-            `SELECT pr.id, pr.title, pr.description, pr.documents, pr.contact_info, pr.status, pr.created_at, 
-                    u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
-             FROM project_requests pr
-             JOIN users u ON pr.customer_id = u.id
-             WHERE pr.status = 'pending'
-             
-             UNION ALL
-             
-             SELECT id, organization as title, description, documents, NULL as contact_info, status, created_at,
-                    full_name as customer_name, email, phone, 'public' as request_type
-             FROM public_requests
-             WHERE status = 'pending'
-             
-             ORDER BY created_at DESC`
-        );
+        const requests = await dbAll(`
+            SELECT pr.id, pr.title, pr.description, pr.documents, pr.contact_info, pr.status, pr.created_at, 
+                   u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
+            FROM project_requests pr JOIN users u ON pr.customer_id = u.id WHERE pr.status = 'pending'
+            UNION ALL
+            SELECT id, organization as title, description, documents, NULL as contact_info, status, created_at,
+                   full_name as customer_name, email, phone, 'public' as request_type
+            FROM public_requests WHERE status = 'pending'
+            ORDER BY created_at DESC
+        `);
         res.json({ success: true, requests });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.getRequestArchive = async (req, res) => {
+exports.getRequestArchive = async (req, res, next) => {
     try {
-        const requests = await dbAll(
-            `SELECT pr.id, pr.title, pr.description, pr.status, pr.created_at, pr.reviewed_at, pr.notes,
-                    u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
-             FROM project_requests pr
-             JOIN users u ON pr.customer_id = u.id
-             WHERE pr.status IN ('accepted', 'rejected', 'reviewed')
-             
-             UNION ALL
-             
-             SELECT id, organization as title, description, status, created_at, reviewed_at, notes,
-                    full_name as customer_name, email, phone, 'public' as request_type
-             FROM public_requests
-             WHERE status IN ('accepted', 'rejected', 'reviewed')
-             
-             ORDER BY reviewed_at DESC`
-        );
+        const requests = await dbAll(`
+            SELECT pr.id, pr.title, pr.description, pr.status, pr.created_at, pr.reviewed_at, pr.notes,
+                   u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
+            FROM project_requests pr JOIN users u ON pr.customer_id = u.id 
+            WHERE pr.status IN ('accepted', 'rejected', 'reviewed')
+            UNION ALL
+            SELECT id, organization as title, description, status, created_at, reviewed_at, notes,
+                   full_name as customer_name, email, phone, 'public' as request_type
+            FROM public_requests WHERE status IN ('accepted', 'rejected', 'reviewed')
+            ORDER BY reviewed_at DESC
+        `);
         res.json({ success: true, requests });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Ошибка сервера' });
+        next(error);
     }
 };
 
-exports.reviewRequest = async (req, res) => {
+exports.reviewRequest = async (req, res, next) => {
     try {
+        const requestId = z.coerce.number().parse(req.params.id);
         const { status, notes, requestType } = req.body;
 
         if (requestType === 'public') {
-            await dbRun(
-                "UPDATE public_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?",
-                [status, notes, req.params.id]
-            );
+            await dbRun("UPDATE public_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes, requestId]);
         } else {
-            await dbRun(
-                "UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?",
-                [status, notes, req.session.userId, req.params.id]
-            );
+            await dbRun("UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes, req.session.userId, requestId]);
         }
-
         res.json({ success: true, message: "Заявка обработана" });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };

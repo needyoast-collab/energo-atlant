@@ -1,5 +1,7 @@
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 // Создаем папку uploads если её нет
 const uploadDir = process.env.UPLOAD_PATH || './uploads';
@@ -13,9 +15,9 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const utf8Name = Buffer.from(file.originalname, 'latin1').toString('utf8');
-        const safeOriginalName = utf8Name.replace(/[^a-zA-Z0-9а-яА-Я._-]/g, '_');
-        const safeName = `${Date.now()}-${safeOriginalName}`;
+        // Защита от Path Traversal: используем UUID вместо оригинального имени
+        const ext = path.extname(file.originalname).toLowerCase();
+        const safeName = `${uuidv4()}${ext}`;
         cb(null, safeName);
     }
 });
@@ -23,28 +25,26 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage,
     limits: {
-        fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760,
-        files: 20 // Максимум 20 файлов
+        fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10485760, // 10MB по умолчанию
+        files: 20
     },
     fileFilter: (req, file, cb) => {
-        console.log(`📎 Загружается файл: ${file.originalname}`);
-        // Разрешенные MIME-типы для загрузки
+        // Белый список MIME-типов
         const allowedMimeTypes = [
-            'application/pdf',
-            'image/jpeg', 'image/png', 'image/webp',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
-            'text/plain',
-            'text/csv'
+            'application/pdf', // PDF
+            'application/msword', // DOC
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+            'application/vnd.ms-excel', // XLS
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
+            'image/jpeg', // JPG/JPEG
+            'image/png'   // PNG
         ];
 
         if (allowedMimeTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            console.error(`❌ Заблокирована загрузка файла недопустимого типа: ${file.originalname} (${file.mimetype})`);
-            cb(new Error(`Недопустимый формат файла. Загрузка ${file.mimetype} запрещена.`), false);
+            console.warn(`🛑 Попытка загрузки небезопасного типа файла: ${file.mimetype}`);
+            cb(new Error('Недопустимый формат файла. Разрешены только PDF, Word, Excel и изображения (JPG, PNG).'), false);
         }
     }
 });

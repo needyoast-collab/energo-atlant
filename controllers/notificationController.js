@@ -1,6 +1,7 @@
 const { dbRun, dbAll } = require('../config/database');
+const { z } = require('zod');
 
-exports.getNotifications = async (req, res) => {
+exports.getNotifications = async (req, res, next) => {
     try {
         const notifications = await dbAll(
             `SELECT * FROM notifications 
@@ -11,37 +12,34 @@ exports.getNotifications = async (req, res) => {
         );
         res.json({ success: true, notifications });
     } catch (error) {
-        console.error('Ошибка получения уведомлений:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.markAsRead = async (req, res) => {
+exports.markAsRead = async (req, res, next) => {
     try {
+        const notificationId = z.coerce.number().parse(req.params.id);
         await dbRun(
             `UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?`,
-            [req.params.id, req.session.userId]
+            [notificationId, req.session.userId]
         );
         res.json({ success: true });
     } catch (error) {
-        console.error('Ошибка отметки уведомления:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.markProjectNotificationsAsRead = async (req, res) => {
+exports.markProjectNotificationsAsRead = async (req, res, next) => {
     try {
-        const { type } = req.body;
-        if (!type || (type !== 'photo' && type !== 'document')) {
-            return res.status(400).json({ success: false, message: "Неверный тип уведомления" });
-        }
+        const projectId = z.coerce.number().parse(req.params.id);
+        const { type } = z.object({ type: z.enum(['photo', 'document', 'status_change', 'message']) }).parse(req.body);
+
         await dbRun(
             `UPDATE notifications SET is_read = 1 WHERE project_id = ? AND user_id = ? AND type = ?`,
-            [req.params.id, req.session.userId, type]
+            [projectId, req.session.userId, type]
         );
         res.json({ success: true });
     } catch (error) {
-        console.error('Ошибка очистки уведомлений проекта:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };

@@ -12,19 +12,27 @@ const adminCreateUserSchema = z.object({
     organization: z.string().max(100).optional().or(z.literal(''))
 });
 
-exports.getUsers = async (req, res) => {
+const adminUpdateUserSchema = z.object({
+    full_name: z.string().min(2, "ФИО слишком короткое").max(100),
+    role: z.enum(['admin', 'manager', 'foreman', 'supplier', 'pto', 'customer', 'partner']),
+    is_active: z.number().int().min(0).max(1).optional(),
+    is_verified: z.number().int().min(0).max(1).optional(),
+    email: z.string().email("Неверный формат email").optional().or(z.literal('')),
+    phone: z.string().optional().or(z.literal(''))
+});
+
+exports.getUsers = async (req, res, next) => {
     try {
         const users = await dbAll(
             "SELECT id, login, email, phone, role, full_name, organization, is_active, is_verified, created_at FROM users ORDER BY id DESC"
         );
         res.json({ success: true, users });
     } catch (error) {
-        console.error('Ошибка получения списка пользователей:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.createUser = async (req, res) => {
+exports.createUser = async (req, res, next) => {
     try {
         const parseResult = adminCreateUserSchema.safeParse(req.body);
         if (!parseResult.success) {
@@ -48,39 +56,38 @@ exports.createUser = async (req, res) => {
 
         res.json({ success: true, message: "Пользователь успешно создан" });
     } catch (error) {
-        console.error('Ошибка создания пользователя:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.updateUser = async (req, res) => {
+exports.updateUser = async (req, res, next) => {
     try {
         const userId = req.params.id;
-        const { full_name, role, is_active, email } = req.body;
+        const parseResult = adminUpdateUserSchema.safeParse(req.body);
 
-        if (!full_name || !role) {
-            return res.status(400).json({ success: false, message: "Заполните обязательные поля ФИО и Роль" });
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
         }
 
-        // Обновляем данные (включая is_verified и email, если передали)
+        const { full_name, role, is_active, is_verified, email, phone } = parseResult.data;
+
         await dbRun(
-            "UPDATE users SET full_name = ?, role = ?, is_active = ?, is_verified = COALESCE(?, is_verified), email = ? WHERE id = ?",
-            [full_name, role, is_active !== undefined ? is_active : 1, req.body.is_verified, email || null, userId]
+            "UPDATE users SET full_name = ?, role = ?, is_active = ?, is_verified = ?, email = ?, phone = ? WHERE id = ?",
+            [full_name, role, is_active ?? 1, is_verified ?? 1, email || null, phone || null, userId]
         );
 
         res.json({ success: true, message: "Данные пользователя обновлены" });
     } catch (error) {
-        console.error('Ошибка обновления пользователя:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };
 
-exports.verifyUser = async (req, res) => {
+exports.verifyUser = async (req, res, next) => {
     try {
-        await dbRun("UPDATE users SET is_verified = 1 WHERE id = ?", [req.params.id]);
+        const userId = z.string().or(z.number()).parse(req.params.id);
+        await dbRun("UPDATE users SET is_verified = 1 WHERE id = ?", [userId]);
         res.json({ success: true, message: "Пользователь успешно верифицирован" });
     } catch (error) {
-        console.error('Ошибка верификации пользователя:', error);
-        res.status(500).json({ success: false, message: "Ошибка сервера" });
+        next(error);
     }
 };

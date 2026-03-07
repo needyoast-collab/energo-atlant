@@ -210,6 +210,22 @@ function sharedRenderMessages(messages, container, type, clickHandlerName) {
     }).join('');
 }
 
+/**
+ * Вспомогательная функция для получения защищенного URL файла
+ */
+function sharedGetFileUrl(path) {
+    if (!path) return '#';
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
+
+    // Если путь не содержит uploads/, но это файл из папки загрузок
+    let fullPath = path;
+    if (!path.startsWith('uploads/')) {
+        fullPath = 'uploads/' + path;
+    }
+
+    return `/api/documents/serve?path=${encodeURIComponent(fullPath)}`;
+}
+
 async function sharedViewMessage(id, type, cardElement) {
     const subject = cardElement.querySelector('.msg-subject').textContent;
     const partner = cardElement.querySelector('.msg-partner').textContent;
@@ -242,8 +258,9 @@ async function sharedViewMessage(id, type, cardElement) {
                 attachmentsList.innerHTML = files.map(f => {
                     const isImg = f.originalName.match(/\.(jpg|jpeg|png)$/i);
                     const icon = isImg ? 'bi-image text-success' : 'bi-file-earmark-text text-primary';
+                    const secureUrl = sharedGetFileUrl(f.filename);
                     return `
-                        <a href="/uploads/${f.filename}" target="_blank" class="msg-attachment-link d-flex align-items-center mb-2 me-2" style="max-width:220px">
+                        <a href="${secureUrl}" target="_blank" class="msg-attachment-link d-flex align-items-center mb-2 me-2" style="max-width:220px">
                             <i class="bi ${icon} me-2 fs-5"></i>
                             <div class="text-truncate text-start">
                                 <span class="d-block text-truncate" style="font-size:0.8rem; font-weight:600">${f.originalName}</span>
@@ -381,18 +398,21 @@ async function sharedLoadProjectDocsArray(projectId) {
         'initial': 'РД (стар.)', 'executive': 'ИД'
     };
 
-    container.innerHTML = data.documents.map(d => `
-        <div class="list-group-item bg-dark border-secondary d-flex justify-content-between align-items-center">
-            <div>
-                <span class="badge bg-secondary me-2">${typeNames[d.type] || d.type}</span>
-                <a href="/uploads/${d.filename}" target="_blank" class="text-info text-decoration-none">${d.original_name}</a>
-                <div class="small text-muted">${new Date(d.created_at).toLocaleString()}</div>
+    container.innerHTML = data.documents.map(d => {
+        const secureUrl = sharedGetFileUrl(d.file_path || d.filename);
+        return `
+            <div class="list-group-item bg-dark border-secondary d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-secondary me-2">${typeNames[d.document_type] || d.document_type}</span>
+                    <a href="${secureUrl}" target="_blank" class="text-info text-decoration-none">${d.file_name}</a>
+                    <div class="small text-muted">${new Date(d.uploaded_at).toLocaleString()}</div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="sharedDeleteProjectDoc(${projectId}, ${d.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
             </div>
-            <button class="btn btn-sm btn-outline-danger" onclick="sharedDeleteProjectDoc(${projectId}, ${d.id})">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 async function sharedDeleteProjectDoc(projectId, docId) {
