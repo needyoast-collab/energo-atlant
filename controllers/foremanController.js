@@ -1,4 +1,5 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
+const { uploadToSupabase } = require('../utils/supabaseStorage');
 const { sendNotification, sendDirectNotification } = require('../utils/helpers');
 const { z } = require('zod');
 
@@ -45,7 +46,7 @@ exports.joinProject = async (req, res, next) => {
         const { accessCode } = accessCodeSchema.parse(req.body);
 
         const project = await dbGet(
-            "SELECT id, title, address, foreman_id FROM projects WHERE access_code = ?",
+            "SELECT id, title, address, foreman_id FROM projects WHERE access_code = ? AND is_deleted = 0",
             [accessCode]
         );
 
@@ -85,7 +86,7 @@ exports.getProjects = async (req, res, next) => {
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              LEFT JOIN users us ON p.supplier_id = us.id
-             WHERE p.foreman_id = ?
+             WHERE p.foreman_id = ? AND p.is_deleted = 0
              ORDER BY p.created_at DESC`,
             [userId]
         );
@@ -106,7 +107,7 @@ exports.getProjectDetails = async (req, res, next) => {
             `SELECT p.*, um.full_name as manager_name
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
-             WHERE p.id = ? AND p.foreman_id = ?`,
+             WHERE p.id = ? AND p.foreman_id = ? AND p.is_deleted = 0`,
             [id, userId]
         );
 
@@ -115,13 +116,13 @@ exports.getProjectDetails = async (req, res, next) => {
         }
 
         const stages = await dbAll(
-            "SELECT * FROM project_stages WHERE project_id = ? ORDER BY stage_number",
+            "SELECT * FROM project_stages WHERE project_id = ? AND is_deleted = 0 ORDER BY stage_number",
             [id]
         );
 
         for (const stage of stages) {
             stage.materials = await dbAll(
-                "SELECT * FROM project_materials WHERE stage_id = ?",
+                "SELECT * FROM project_materials WHERE stage_id = ? AND is_deleted = 0",
                 [stage.id]
             );
             stage.photos = await dbAll(
@@ -150,7 +151,7 @@ exports.createStage = async (req, res, next) => {
         const userId = req.session.userId;
 
         const project = await dbGet(
-            "SELECT id FROM projects WHERE id = ? AND foreman_id = ?",
+            "SELECT id FROM projects WHERE id = ? AND foreman_id = ? AND is_deleted = 0",
             [projectId, userId]
         );
 
@@ -159,7 +160,7 @@ exports.createStage = async (req, res, next) => {
         }
 
         const lastStage = await dbGet(
-            "SELECT MAX(stage_number) as max_num FROM project_stages WHERE project_id = ?",
+            "SELECT MAX(stage_number) as max_num FROM project_stages WHERE project_id = ? AND is_deleted = 0",
             [projectId]
         );
 
@@ -200,7 +201,7 @@ exports.updateMaterialUsage = async (req, res, next) => {
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
              JOIN projects p ON ps.project_id = p.id
-             WHERE pm.id = ?`,
+             WHERE pm.id = ? AND pm.is_deleted = 0 AND ps.is_deleted = 0 AND p.is_deleted = 0`,
             [materialId]
         );
 
@@ -238,7 +239,7 @@ exports.uploadStagePhotos = async (req, res, next) => {
         const stage = await dbGet(
             `SELECT ps.id, p.id as project_id FROM project_stages ps
              JOIN projects p ON ps.project_id = p.id
-             WHERE ps.id = ? AND p.foreman_id = ?`,
+             WHERE ps.id = ? AND p.foreman_id = ? AND ps.is_deleted = 0 AND p.is_deleted = 0`,
             [stageId, userId]
         );
 
@@ -248,9 +249,10 @@ exports.uploadStagePhotos = async (req, res, next) => {
 
         for (const file of req.files) {
             const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            const cloudPath = await uploadToSupabase(file, 'projects/photos');
             await dbRun(
                 "INSERT INTO project_stage_photos (stage_id, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?)",
-                [stageId, fileName, file.path, userId, req.body.description || null]
+                [stageId, fileName, cloudPath, userId, req.body.description || null]
             );
         }
 
@@ -271,7 +273,7 @@ exports.completeStage = async (req, res, next) => {
         const stage = await dbGet(
             `SELECT ps.*, p.title as project_title, p.manager_id FROM project_stages ps
              JOIN projects p ON ps.project_id = p.id
-             WHERE ps.id = ? AND p.foreman_id = ?`,
+             WHERE ps.id = ? AND p.foreman_id = ? AND ps.is_deleted = 0 AND p.is_deleted = 0`,
             [stageId, userId]
         );
 
@@ -305,7 +307,7 @@ exports.getMaterialRequests = async (req, res, next) => {
              FROM material_requests mr
              JOIN projects p ON mr.project_id = p.id
              LEFT JOIN users us ON mr.supplier_id = us.id
-             WHERE mr.foreman_id = ?
+             WHERE mr.foreman_id = ? AND mr.is_deleted = 0
              ORDER BY mr.created_at DESC`,
             [userId]
         );
@@ -323,7 +325,7 @@ exports.reviewMaterialRequest = async (req, res, next) => {
         const userId = req.session.userId;
 
         const request = await dbGet(
-            "SELECT id FROM material_requests WHERE id = ? AND foreman_id = ?",
+            "SELECT id FROM material_requests WHERE id = ? AND foreman_id = ? AND is_deleted = 0",
             [requestId, userId]
         );
 
@@ -351,7 +353,7 @@ exports.createMaterialRequest = async (req, res, next) => {
         const userId = req.session.userId;
 
         const project = await dbGet(
-            "SELECT id, supplier_id FROM projects WHERE id = ? AND foreman_id = ?",
+            "SELECT id, supplier_id FROM projects WHERE id = ? AND foreman_id = ? AND is_deleted = 0",
             [projectId, userId]
         );
 
@@ -380,7 +382,7 @@ exports.getMaterials = async (req, res, next) => {
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
              JOIN projects p ON ps.project_id = p.id
-             WHERE p.foreman_id = ?
+             WHERE p.foreman_id = ? AND pm.is_deleted = 0 AND ps.is_deleted = 0 AND p.is_deleted = 0
              ORDER BY p.id, ps.stage_number, pm.id`,
             [userId]
         );

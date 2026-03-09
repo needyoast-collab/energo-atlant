@@ -16,5 +16,8 @@ router.get('/users', adminController.getUsers);
 router.post('/users', adminController.createUser);
 router.put('/users/:id', adminController.updateUser);
 router.post('/users/:id/verify', adminController.verifyUser);
+router.delete('/users/:id', adminController.deleteUser);
+router.get('/users/deleted', adminController.getDeletedUsers);
+router.post('/users/:id/restore', adminController.restoreUser);
 
 module.exports = router;

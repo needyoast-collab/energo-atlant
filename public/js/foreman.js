@@ -166,7 +166,7 @@ function renderModalContent(project, stages, documents) {
         html += '<h5 class="border-bottom pb-2 mt-4">📄 Документы</h5><div class="list-group">';
         documents.forEach(doc => {
             html += `
-                <a href="/${doc.file_path}" target="_blank" class="list-group-item list-group-item-action">
+                <a href="${sharedGetFileUrl(doc.file_path)}" target="_blank" class="list-group-item list-group-item-action">
                     <i class="bi bi-paperclip"></i> ${doc.file_name}
                     <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
                 </a>`;
@@ -231,8 +231,8 @@ function renderStage(stage) {
     const photosHtml = (stage.photos && stage.photos.length > 0) ? `
         <div class="photo-grid mt-3">
             ${stage.photos.map(ph => `
-                <a href="/${ph.file_path}" target="_blank">
-                    <img src="/${ph.file_path}" class="img-thumbnail" style="height:80px;object-fit:cover;">
+                <a href="${sharedGetFileUrl(ph.file_path)}" target="_blank">
+                    <img src="${sharedGetFileUrl(ph.file_path)}" class="img-thumbnail" style="height:80px;object-fit:cover;">
                 </a>`).join('')}
         </div>` : '';
 

@@ -167,6 +167,7 @@ function renderProjects(projects) {
 
     html += '</div>';
     container.innerHTML = html;
+    if (typeof AOS !== 'undefined') setTimeout(() => AOS.refresh(), 50);
 }
 
 // Просмотр документов (категоризированный)
@@ -221,7 +222,7 @@ async function viewDocuments(projectId, title) {
                 <div class="doc-category">
                     <div class="category-title"><i class="fas ${cat.icon}"></i> ${cat.name}</div>
                     ${cat.items.map(d => `
-                        <a href="/${d.file_path}" target="_blank" class="doc-item">
+                        <a href="${sharedGetFileUrl(d.file_path)}" target="_blank" class="doc-item">
                             <div class="doc-info">
                                 <i class="fas fa-file-pdf doc-icon"></i>
                                 <span>${d.file_name}</span>
@@ -326,9 +327,9 @@ async function viewProject(projectId) {
                         ${stage.photos && stage.photos.length > 0
                     ? `<div class="d-flex flex-wrap gap-2">
                                 ${stage.photos.map(ph => `
-                                    <a href="/${ph.file_path}" target="_blank" class="text-decoration-none">
+                                    <a href="${sharedGetFileUrl(ph.file_path)}" target="_blank" class="text-decoration-none">
                                         <div style="width: 120px; height: 120px; border-radius: 8px; overflow: hidden; border: 2px solid var(--border-color);">
-                                            <img src="/${ph.file_path}" style="width:100%; height:100%; object-fit:cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Фото">
+                                            <img src="${sharedGetFileUrl(ph.file_path)}" style="width:100%; height:100%; object-fit:cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" alt="Фото">
                                         </div>
                                     </a>`).join('')}
                                </div>`
@@ -418,7 +419,7 @@ async function viewProject(projectId) {
                 <div class="list-group">`;
         documents.forEach(doc => {
             html += `
-                <a href="/${doc.file_path}" target="_blank" class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-1 rounded d-flex justify-content-between align-items-center">
+                <a href="${sharedGetFileUrl(doc.file_path)}" target="_blank" class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-1 rounded d-flex justify-content-between align-items-center">
                     <div>
                         <i class="bi bi-file-earmark-text text-primary fs-5 me-2"></i>
                         <span class="fw-bold" style="font-size: 0.95rem;">${doc.file_name}</span>
@@ -564,7 +565,7 @@ async function submitRequest(e) {
         await loadRequests();
         document.getElementById('requests-tab').click();
     } else {
-        showError(data.message || 'Ошибка отправки заявки');
+        showError(data.message || 'Ошибка отправки заявки', data.errors);
     }
 
     btn.disabled = false;

@@ -3,24 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-// Создаем папку uploads если её нет
-const uploadDir = process.env.UPLOAD_PATH || './uploads';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-    console.log('📁 Создана папка uploads');
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        // Защита от Path Traversal: используем UUID вместо оригинального имени
-        const ext = path.extname(file.originalname).toLowerCase();
-        const safeName = `${uuidv4()}${ext}`;
-        cb(null, safeName);
-    }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage,

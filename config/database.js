@@ -1,102 +1,106 @@
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
+require('dotenv').config();
 
-// === НАСТРОЙКА БАЗЫ ДАННЫХ ===
-const db = new sqlite3.Database(process.env.DB_PATH || './energo.db', (err) => {
-    if (err) {
-        console.error('❌ Ошибка подключения к БД:', err.message);
-        process.exit(1);
-    }
-    console.log('💾 База данных подключена');
-
-    // Авто-патч БД - добавление таблицы уведомлений
-    db.run(`CREATE TABLE IF NOT EXISTS notifications (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        project_id INTEGER,
-        type TEXT NOT NULL,
-        message TEXT NOT NULL,
-        is_read INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-    )`);
-
-    // Авто-патч БД - добавление таблицы сообщений
-    db.run(`CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender_id INTEGER NOT NULL,
-        receiver_id INTEGER NOT NULL,
-        project_id INTEGER,
-        subject TEXT,
-        body TEXT NOT NULL,
-        attachments TEXT,
-        is_read INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY(receiver_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE SET NULL
-    )`);
-
-    // Авто-патч: партнёрские таблицы
-    db.run(`CREATE TABLE IF NOT EXISTS referral_clients (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        partner_id INTEGER NOT NULL,
-        referred_user_id INTEGER NOT NULL,
-        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'active', 'paid')),
-        commission_amount REAL DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(partner_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY(referred_user_id) REFERENCES users(id) ON DELETE CASCADE,
-        UNIQUE(partner_id, referred_user_id)
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS partner_payouts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        partner_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        payment_details TEXT,
-        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'processing', 'paid', 'rejected')),
-        admin_note TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        processed_at DATETIME,
-        FOREIGN KEY(partner_id) REFERENCES users(id) ON DELETE CASCADE
-    )`);
-
-    // Авто-патч: добавить колонки ref_code и partner_level в users если нет
-    db.run(`ALTER TABLE users ADD COLUMN ref_code TEXT`, () => { });
-    db.run(`ALTER TABLE users ADD COLUMN partner_level TEXT DEFAULT 'start'`, () => { });
+// === НАСТРОЙКА POSTGRESQL ===
+const pool = new Pool({
+    host: process.env.PGHOST,
+    user: process.env.PGUSER,
+    database: process.env.PGDATABASE,
+    password: process.env.PGPASSWORD,
+    port: process.env.PGPORT,
 });
 
-// Промисификация запросов к БД
-const dbGet = (sql, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
+pool.on('error', (err) => {
+    console.error('❌ Ошибка пула PostgreSQL:', err);
+});
+
+console.log('� PostgreSQL: Пул соединений инициализирован');
+
+/**
+ * Вспомогательная функция для конвертации SQL-диалекта
+ * Переводит SQLite-стиль (?) в PostgreSQL ($1, $2)
+ */
+const convertQuery = (sql) => {
+    if (!sql) return sql;
+    let pgSql = sql;
+
+    // 1. Конвертация заполнителей ? -> $1, $2...
+    let count = 1;
+    pgSql = pgSql.replace(/\?/g, () => `$${count++}`);
+
+    // 2. Хак для дат: SQLite datetime('now') -> PG CURRENT_TIMESTAMP
+    pgSql = pgSql.replace(/datetime\(['"]now['"]\)/gi, 'CURRENT_TIMESTAMP');
+    pgSql = pgSql.replace(/datetime\(['"]now['"],\s?['"]localtime['"]\)/gi, 'CURRENT_TIMESTAMP');
+
+    // 3. Хак для автоинкремента: в PG нужно RETURNING id, чтобы получить ID вставленной записи
+    if (pgSql.trim().toUpperCase().startsWith('INSERT') && !pgSql.toUpperCase().includes('RETURNING')) {
+        // Добавляем RETURNING id если это вставка и его нет
+        pgSql = pgSql.trim();
+        if (pgSql.endsWith(';')) pgSql = pgSql.slice(0, -1);
+        pgSql += ' RETURNING id';
+    }
+
+    return pgSql;
 };
 
-const dbAll = (sql, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
+// --- Промисификация запросов для совместимости с существующим кодом ---
+
+const dbGet = async (sql, params = []) => {
+    try {
+        const pgSql = convertQuery(sql);
+        const result = await pool.query(pgSql, params);
+        return result.rows[0];
+    } catch (error) {
+        console.error('SQL Error (dbGet):', sql, params, error.message);
+        throw error;
+    }
 };
 
-const dbRun = (sql, params = []) => {
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function (err) {
-            if (err) reject(err);
-            else resolve({ id: this.lastID, changes: this.changes });
-        });
-    });
+const dbAll = async (sql, params = []) => {
+    try {
+        const pgSql = convertQuery(sql);
+        const result = await pool.query(pgSql, params);
+        return result.rows;
+    } catch (error) {
+        console.error('SQL Error (dbAll):', sql, params, error.message);
+        throw error;
+    }
+};
+
+const dbRun = async (sql, params = []) => {
+    try {
+        const pgSql = convertQuery(sql);
+        const result = await pool.query(pgSql, params);
+
+        // Для совместимости с SQLite: возвращаем { id: lastID, changes: changesCount }
+        // В PG для INSERT RETURNING id, значение будет в result.rows[0].id
+        return {
+            id: (result.rows && result.rows.length > 0) ? result.rows[0].id : null,
+            changes: result.rowCount
+        };
+    } catch (error) {
+        // Специальная обработка BEGIN TRANSACTION для PG
+        if (sql.toUpperCase().includes('BEGIN TRANSACTION')) {
+            await pool.query('BEGIN');
+            return { success: true };
+        }
+        if (sql.toUpperCase().includes('COMMIT')) {
+            await pool.query('COMMIT');
+            return { success: true };
+        }
+        if (sql.toUpperCase().includes('ROLLBACK')) {
+            await pool.query('ROLLBACK');
+            return { success: true };
+        }
+
+        console.error('SQL Error (dbRun):', sql, params, error.message);
+        throw error;
+    }
 };
 
 module.exports = {
-    db,
+    pool,
+    db: pool, // Для совместимости, если где-то используется напрямую
     dbGet,
     dbAll,
     dbRun

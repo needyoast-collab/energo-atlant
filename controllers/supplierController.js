@@ -18,11 +18,11 @@ exports.joinProject = async (req, res, next) => {
     try {
         const parseResult = joinProjectSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
         }
 
         const { accessCode } = parseResult.data;
-        const project = await dbGet("SELECT * FROM projects WHERE access_code = ?", [accessCode]);
+        const project = await dbGet("SELECT * FROM projects WHERE access_code = ? AND is_deleted = 0", [accessCode]);
         if (!project) return res.status(404).json({ success: false, message: "Проект не найден" });
 
         if (project.supplier_id && project.supplier_id !== req.session.userId) {
@@ -43,7 +43,7 @@ exports.getProjects = async (req, res, next) => {
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              LEFT JOIN users uf ON p.foreman_id = uf.id
-             WHERE p.supplier_id = ?
+             WHERE p.supplier_id = ? AND p.is_deleted = 0
              ORDER BY p.created_at DESC`,
             [req.session.userId]
         );
@@ -56,7 +56,7 @@ exports.getProjects = async (req, res, next) => {
 exports.getProjectMaterials = async (req, res, next) => {
     try {
         const projectId = z.coerce.number().parse(req.params.id);
-        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND supplier_id = ?", [projectId, req.session.userId]);
+        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND supplier_id = ? AND is_deleted = 0", [projectId, req.session.userId]);
 
         if (!project) return res.status(403).json({ success: false, message: "Доступ запрещен" });
 
@@ -64,7 +64,7 @@ exports.getProjectMaterials = async (req, res, next) => {
             `SELECT pm.*, ps.name as stage_name, ps.stage_number
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
-             WHERE ps.project_id = ?
+             WHERE ps.project_id = ? AND ps.is_deleted = 0 AND pm.is_deleted = 0
              ORDER BY ps.stage_number, pm.id`,
             [projectId]
         );
@@ -78,7 +78,7 @@ exports.getProjectMaterials = async (req, res, next) => {
 exports.exportProjectMaterials = async (req, res, next) => {
     try {
         const projectId = z.coerce.number().parse(req.params.id);
-        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND supplier_id = ?", [projectId, req.session.userId]);
+        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND supplier_id = ? AND is_deleted = 0", [projectId, req.session.userId]);
 
         if (!project) return res.status(403).json({ success: false, message: "Доступ запрещен" });
 
@@ -88,7 +88,7 @@ exports.exportProjectMaterials = async (req, res, next) => {
                     pm.quantity_used, pm.quantity_received, pm.is_received
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
-             WHERE ps.project_id = ?
+             WHERE ps.project_id = ? AND ps.is_deleted = 0 AND pm.is_deleted = 0
              ORDER BY ps.stage_number, pm.id`,
             [projectId]
         );
@@ -115,18 +115,18 @@ exports.getProjectDetails = async (req, res, next) => {
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              LEFT JOIN users uf ON p.foreman_id = uf.id
-             WHERE p.id = ? AND p.supplier_id = ?`,
+             WHERE p.id = ? AND p.supplier_id = ? AND p.is_deleted = 0`,
             [projectId, req.session.userId]
         );
 
         if (!project) return res.status(403).json({ success: false, message: 'Доступ запрещён' });
 
-        const stages = await dbAll('SELECT * FROM project_stages WHERE project_id = ? ORDER BY stage_number', [projectId]);
+        const stages = await dbAll('SELECT * FROM project_stages WHERE project_id = ? AND is_deleted = 0 ORDER BY stage_number', [projectId]);
         const materials = await dbAll(
             `SELECT pm.*, ps.name as stage_name, ps.stage_number
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
-             WHERE ps.project_id = ?
+             WHERE ps.project_id = ? AND ps.is_deleted = 0 AND pm.is_deleted = 0
              ORDER BY ps.stage_number, pm.id`,
             [projectId]
         );
@@ -141,7 +141,7 @@ exports.proposeMaterial = async (req, res, next) => {
     try {
         const parseResult = proposeMaterialSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
         }
 
         const { stageId, materialName, unit, quantity, notes } = parseResult.data;
@@ -150,7 +150,7 @@ exports.proposeMaterial = async (req, res, next) => {
             `SELECT ps.*, p.supplier_id, p.foreman_id, p.id as project_id
              FROM project_stages ps
              JOIN projects p ON ps.project_id = p.id
-             WHERE ps.id = ? AND p.supplier_id = ?`,
+             WHERE ps.id = ? AND p.supplier_id = ? AND ps.is_deleted = 0 AND p.is_deleted = 0`,
             [stageId, req.session.userId]
         );
 
@@ -176,7 +176,7 @@ exports.getMaterialRequests = async (req, res, next) => {
              FROM material_requests mr
              JOIN projects p ON mr.project_id = p.id
              LEFT JOIN users uf ON mr.foreman_id = uf.id
-             WHERE mr.supplier_id = ? OR p.supplier_id = ?
+             WHERE (mr.supplier_id = ? OR p.supplier_id = ?) AND mr.is_deleted = 0 AND p.is_deleted = 0
              ORDER BY mr.created_at DESC`,
             [req.session.userId, req.session.userId]
         );
@@ -186,16 +186,26 @@ exports.getMaterialRequests = async (req, res, next) => {
     }
 };
 
+const updateMaterialStatusSchema = z.object({
+    status: z.enum(['ordered', 'delivered', 'rejected']),
+    notes: z.string().max(500).optional().or(z.literal(''))
+});
+
 exports.updateMaterialRequestStatus = async (req, res, next) => {
     try {
         const requestId = z.coerce.number().parse(req.params.id);
-        const { status, notes } = req.body;
+        const parseResult = updateMaterialStatusSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
+        }
+
+        const { status, notes } = parseResult.data;
 
         const request = await dbGet(
             `SELECT mr.*, p.supplier_id 
              FROM material_requests mr
              JOIN projects p ON mr.project_id = p.id
-             WHERE mr.id = ?`,
+             WHERE mr.id = ? AND mr.is_deleted = 0 AND p.is_deleted = 0`,
             [requestId]
         );
 
@@ -204,9 +214,9 @@ exports.updateMaterialRequestStatus = async (req, res, next) => {
         }
 
         if (status === 'delivered') {
-            const stage = await dbGet('SELECT id FROM project_stages WHERE project_id = ? ORDER BY stage_number LIMIT 1', [request.project_id]);
+            const stage = await dbGet('SELECT id FROM project_stages WHERE project_id = ? AND is_deleted = 0 ORDER BY stage_number LIMIT 1', [request.project_id]);
             if (stage) {
-                const exists = await dbGet('SELECT id FROM project_materials WHERE stage_id = ? AND material_name = ?', [stage.id, request.material_name]);
+                const exists = await dbGet('SELECT id FROM project_materials WHERE stage_id = ? AND material_name = ? AND is_deleted = 0', [stage.id, request.material_name]);
                 if (exists) {
                     await dbRun(
                         `UPDATE project_materials SET quantity_received = quantity_received + ?, is_received = 1, received_at = datetime('now') WHERE id = ?`,
@@ -239,7 +249,7 @@ exports.confirmMaterialDelivery = async (req, res, next) => {
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
              JOIN projects p ON ps.project_id = p.id
-             WHERE pm.id = ?`,
+             WHERE pm.id = ? AND pm.is_deleted = 0 AND ps.is_deleted = 0 AND p.is_deleted = 0`,
             [materialId]
         );
 

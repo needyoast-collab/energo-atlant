@@ -13,7 +13,7 @@ exports.createPublicRequest = async (req, res, next) => {
     try {
         const parseResult = publicRequestSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
         }
 
         const { fullName, phone, email, organization, description } = parseResult.data;

@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadStats();
     await loadStaff(); // Подгружаем персонал для создания проектов
 
+    // Инициализация анимаций
+    if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true });
+
     // Начальная загрузка активной вкладки
     loadActiveTab();
 
@@ -63,6 +66,10 @@ function updateActivityFromTab(targetId) {
     if (targetId === 'projects') loadProjects();
     if (targetId === 'requests') loadRequests();
     if (targetId === 'users') loadUsers();
+    if (targetId === 'trash') {
+        loadDeletedProjects();
+        loadDeletedUsers();
+    }
 
     // Синхронизируем sidebar
     const sidebarLinks = document.querySelectorAll('.list-group-item-action');
@@ -112,18 +119,18 @@ async function loadStats() {
             apiRequest('/api/manager/requests')
         ]);
 
-        if (projectsRes.success) {
+        if (projectsRes.success && projectsRes.projects) {
             document.getElementById('totalProjects').textContent = projectsRes.projects.length;
             const active = projectsRes.projects.filter(p => p.status === 'in_progress').length;
             document.getElementById('activeProjects').textContent = active;
         }
 
-        if (requestsRes.success) {
+        if (requestsRes.success && requestsRes.requests) {
             const pending = requestsRes.requests.filter(r => r.status === 'pending').length;
             document.getElementById('pendingRequests').textContent = pending;
         }
         const usersRes = await apiRequest('/api/admin/users');
-        if (usersRes.success) {
+        if (usersRes.success && usersRes.users) {
             document.getElementById('totalUsers').textContent = usersRes.users.length;
         }
     } catch (error) {
@@ -190,11 +197,11 @@ async function loadProjects() {
                                     <i class="bi bi-pencil-square"></i>
                                     <span class="prj-card-btn-label">ПРАВИТЬ</span>
                                 </div>
-                                <div class="prj-card-btn" onclick="showProjectDocs(${p.id})">
+                                 <div class="prj-card-btn" onclick="sharedShowProjectDocs(${p.id}, currentProjects)">
                                     <i class="bi bi-folder2-open"></i>
                                     <span class="prj-card-btn-label">DOCS</span>
                                 </div>
-                                <div class="prj-card-btn" onclick="showAIModal(${p.id})">
+                                <div class="prj-card-btn" onclick="sharedShowAIModal(${p.id}, currentProjects)">
                                     <i class="bi bi-stars"></i>
                                     <span class="prj-card-btn-label">ИИ</span>
                                 </div>
@@ -210,6 +217,7 @@ async function loadProjects() {
             html += `<div class="text-center mt-4 text-muted small">Архивных проектов: ${completedCount}</div>`;
         }
         container.innerHTML = html;
+        if (typeof AOS !== 'undefined') setTimeout(() => AOS.refresh(), 50);
     } else {
         container.innerHTML = '<div class="alert alert-danger">Ошибка загрузки: ' + (data.message || 'нет связи') + '</div>';
     }
@@ -280,45 +288,52 @@ function showLoading(containerId) {
 /** Загрузка заявок в админке */
 async function loadRequests() {
     const container = document.getElementById('requestsList');
-    showLoading('requestsList');
-    const data = await apiRequest('/api/manager/requests');
-    if (data.success) {
-        if (data.requests.length === 0) {
-            container.innerHTML = '<div class="text-center p-5 text-secondary">Новых заявок пока нет</div>';
-            return;
-        }
+    if (!container) return;
 
-        let html = `
-            <div class="table-responsive border border-secondary rounded overflow-hidden">
-                <table class="table table-dark table-hover mb-0">
-                    <thead class="table-dark" style="border-bottom: 2px solid var(--primary-color)">
-                        <tr>
-                            <th>ДАТА</th>
-                            <th>КЛИЕНТ</th>
-                            <th>ОРГАНИЗАЦИЯ</th>
-                            <th>ОПИСАНИЕ</th>
-                            <th>СТАТУС</th>
-                            <th>ДЕЙСТВИЕ</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-        data.requests.forEach(r => {
-            html += `
-                <tr class="align-middle">
-                    <td><small class="text-muted">${formatDateShort(r.created_at)}</small></td>
-                    <td class="fw-bold">${r.customer_name || r.id}</td>
-                    <td>${r.organization || '-'}</td>
-                    <td><div class="text-truncate" style="max-width:300px;">${r.description || '-'}</div></td>
-                    <td><span class="badge bg-warning text-dark">${r.status || 'pending'}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="reviewAdminRequest(${r.id})">ОТКРЫТЬ</button>
-                    </td>
-                </tr>`;
-        });
-        html += `</tbody></table></div>`;
-        container.innerHTML = html;
-    } else {
-        container.innerHTML = '<div class="alert alert-danger">Ошибка: ' + data.message + '</div>';
+    showLoading('requestsList');
+    try {
+        const data = await apiRequest('/api/manager/requests');
+        if (data.success) {
+            if (!data.requests || data.requests.length === 0) {
+                container.innerHTML = '<div class="text-center p-5 text-secondary">Новых заявок пока нет</div>';
+                return;
+            }
+
+            let html = `
+                <div class="table-responsive border border-secondary rounded overflow-hidden">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead class="table-dark" style="border-bottom: 2px solid var(--primary-color)">
+                            <tr>
+                                <th>ДАТА</th>
+                                <th>КЛИЕНТ</th>
+                                <th>ОРГАНИЗАЦИЯ</th>
+                                <th>ОПИСАНИЕ</th>
+                                <th>СТАТУС</th>
+                                <th>ДЕЙСТВИЕ</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            data.requests.forEach(r => {
+                html += `
+                    <tr class="align-middle">
+                        <td><small class="text-muted">${formatDateShort(r.created_at)}</small></td>
+                        <td class="fw-bold">${r.customer_name || r.id}</td>
+                        <td>${r.organization || '-'}</td>
+                        <td><div class="text-truncate" style="max-width:300px;">${r.description || '-'}</div></td>
+                        <td><span class="badge bg-warning text-dark">${r.status || 'pending'}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="reviewAdminRequest(${r.id})">ОТКРЫТЬ</button>
+                        </td>
+                    </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `<div class="alert alert-danger">Ошибка: ${data.message}</div>`;
+        }
+    } catch (error) {
+        console.error('Error loading requests:', error);
+        container.innerHTML = '<div class="alert alert-danger">Критическая ошибка загрузки заявок</div>';
     }
 }
 
@@ -388,9 +403,12 @@ async function loadUsers() {
                         <td>${statusBadge}</td>
                         <td>
                             ${user.is_verified === 0 ? `<button class="btn btn-sm btn-success me-1" onclick="verifyUser(${user.id})" title="Одобрить"><i class="bi bi-check-circle"></i></button>` : ''}
-                            <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})">
-                                ✏️ Изменить
-                            </button>
+                             <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})" title="Удалить пользователя">
+                                 <i class="bi bi-trash"></i>
+                             </button>
+                             <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})">
+                                 ✏️ Изменить
+                             </button>
                         </td>
                     </tr>
                 `;
@@ -475,6 +493,11 @@ function showAddUserModal() {
     const modal = new bootstrap.Modal(document.getElementById('addUserModal'));
     modal.show();
 
+    document.getElementById('stats-tab')?.addEventListener('shown.bs.tab', loadStats);
+    document.getElementById('trash-tab')?.addEventListener('shown.bs.tab', () => {
+        loadDeletedProjects();
+        loadDeletedUsers();
+    });
     document.getElementById('addUserForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -620,6 +643,17 @@ function editUser(userId) {
 // ВЕРИФИКАЦИЯ ПОЛЬЗОВАТЕЛЯ
 // =============================================================================
 
+async function deleteUser(userId) {
+    if (!confirm('Вы уверены, что хотите БЕЗВОЗВРАТНО (мягко) удалить этого пользователя? Он потеряет доступ.')) return;
+
+    const res = await apiRequest(`/api/admin/users/${userId}`, 'DELETE');
+    if (res.success) {
+        showSuccess('Пользователь успешно удален');
+        loadUsers();
+    } else {
+        showError(res.message || 'Ошибка удаления');
+    }
+}
 async function verifyUser(userId) {
     if (!confirm('Вы уверены, что хотите верифицировать (одобрить) этого пользователя? Он получит доступ к системе.')) {
         return;
@@ -635,5 +669,83 @@ async function verifyUser(userId) {
         }
     } catch (error) {
         showError('Ошибка сервера при верификации');
+    }
+}
+// =============================================================================
+// КОРЗИНА (УДАЛЁННЫЕ)
+// =============================================================================
+
+async function loadDeletedProjects() {
+    const list = document.getElementById('deletedProjectsList');
+    if (!list) return;
+
+    const data = await apiRequest('/api/manager/projects/deleted');
+    if (data.success && data.projects && data.projects.length > 0) {
+        list.innerHTML = data.projects.map(p => `
+            <div class="list-group-item bg-dark border-secondary text-white d-flex justify-content-between align-items-center py-3">
+                <div class="overflow-hidden">
+                    <div class="fw-bold text-danger text-truncate mb-1">${p.title}</div>
+                    <div class="small text-muted">ID: ${p.id} | Менеджер: ${p.manager_name || 'Не назначен'}</div>
+                </div>
+                <button class="btn btn-sm btn-outline-warning fw-bold ms-2" onclick="restoreProjectPrompt(${p.id})">
+                    <i class="bi bi-arrow-counterclockwise"></i> ВОССТАНОВИТЬ
+                </button>
+            </div>
+        `).join('');
+    } else {
+        list.innerHTML = '<div class="p-4 text-center text-muted">Удалённых проектов нет</div>';
+    }
+}
+
+async function loadDeletedUsers() {
+    const list = document.getElementById('deletedUsersList');
+    if (!list) return;
+
+    const data = await apiRequest('/api/admin/users/deleted');
+    if (data.success && data.users && data.users.length > 0) {
+        list.innerHTML = data.users.map(u => `
+            <div class="list-group-item bg-dark border-secondary text-white d-flex justify-content-between align-items-center py-3">
+                <div class="overflow-hidden">
+                    <div class="fw-bold mb-1">${u.full_name} (@${u.login})</div>
+                    <div class="small text-muted">Роль: ${u.role} | Регистрация: ${new Date(u.created_at).toLocaleDateString()}</div>
+                </div>
+                <button class="btn btn-sm btn-outline-success fw-bold ms-2" onclick="restoreUser(${u.id})">
+                    <i class="bi bi-person-check"></i> ВЕРНУТЬ
+                </button>
+            </div>
+        `).join('');
+    } else {
+        list.innerHTML = '<div class="p-4 text-center text-muted">Удалённых пользователей нет</div>';
+    }
+}
+
+async function restoreProjectPrompt(id) {
+    const code = prompt('Введите КОД ДОСТУПА проекта для его восстановления (только менеджер или админ с кодом):');
+    if (code === null) return;
+
+    if (code.length < 4) {
+        showError('Слишком короткий код!');
+        return;
+    }
+
+    const res = await apiRequest(`/api/manager/projects/${id}/restore`, 'POST', { accessCode: code });
+    if (res.success) {
+        showSuccess('✅ Проект успешно восстановлен!');
+        loadDeletedProjects();
+        loadProjects();
+    } else {
+        showError(res.message || 'Ошибка восстановления (неверный код?)');
+    }
+}
+
+async function restoreUser(id) {
+    if (!confirm('Восстановить этого пользователя?')) return;
+    const res = await apiRequest(`/api/admin/users/${id}/restore`, 'POST');
+    if (res.success) {
+        showSuccess('Пользователь успешно восстановлен');
+        loadDeletedUsers();
+        loadUsers();
+    } else {
+        showError(res.message);
     }
 }

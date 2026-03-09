@@ -1,4 +1,5 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
+const { uploadToSupabase } = require('../utils/supabaseStorage');
 const { z } = require('zod');
 
 const joinProjectSchema = z.object({
@@ -9,11 +10,11 @@ exports.joinProject = async (req, res, next) => {
     try {
         const parseResult = joinProjectSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
         }
 
         const { accessCode } = parseResult.data;
-        const project = await dbGet("SELECT * FROM projects WHERE access_code = ?", [accessCode]);
+        const project = await dbGet("SELECT * FROM projects WHERE access_code = ? AND is_deleted = 0", [accessCode]);
         if (!project) return res.status(404).json({ success: false, message: "Проект не найден" });
 
         if (project.pto_id && project.pto_id !== req.session.userId) {
@@ -34,7 +35,7 @@ exports.getProjects = async (req, res, next) => {
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              LEFT JOIN users uf ON p.foreman_id = uf.id
-             WHERE p.pto_id = ?
+             WHERE p.pto_id = ? AND p.is_deleted = 0
              ORDER BY p.created_at DESC`,
             [req.session.userId]
         );
@@ -52,16 +53,16 @@ exports.getProjectDetails = async (req, res, next) => {
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              LEFT JOIN users uf ON p.foreman_id = uf.id
-             WHERE p.id = ? AND p.pto_id = ?`,
+             WHERE p.id = ? AND p.pto_id = ? AND p.is_deleted = 0`,
             [projectId, req.session.userId]
         );
 
         if (!project) return res.status(403).json({ success: false, message: "Доступ запрещен" });
 
-        const stages = await dbAll("SELECT * FROM project_stages WHERE project_id = ? ORDER BY stage_number", [projectId]);
+        const stages = await dbAll("SELECT * FROM project_stages WHERE project_id = ? AND is_deleted = 0 ORDER BY stage_number", [projectId]);
         for (const stage of stages) {
             stage.photos = await dbAll("SELECT * FROM project_stage_photos WHERE stage_id = ?", [stage.id]);
-            stage.materials = await dbAll("SELECT * FROM project_materials WHERE stage_id = ?", [stage.id]);
+            stage.materials = await dbAll("SELECT * FROM project_materials WHERE stage_id = ? AND is_deleted = 0", [stage.id]);
         }
 
         const documents = await dbAll("SELECT * FROM project_documents WHERE project_id = ?", [projectId]);
@@ -75,7 +76,7 @@ exports.getProjectDetails = async (req, res, next) => {
 exports.uploadExecutiveDocuments = async (req, res, next) => {
     try {
         const projectId = z.coerce.number().parse(req.params.id);
-        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND pto_id = ?", [projectId, req.session.userId]);
+        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND pto_id = ? AND is_deleted = 0", [projectId, req.session.userId]);
 
         if (!project) return res.status(403).json({ success: false, message: "Доступ запрещен" });
 
@@ -85,9 +86,10 @@ exports.uploadExecutiveDocuments = async (req, res, next) => {
 
         for (const file of req.files) {
             const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            const cloudPath = await uploadToSupabase(file, 'projects/pto');
             await dbRun(
                 "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, 'executive', ?, ?, ?, ?)",
-                [projectId, fileName, file.path, req.session.userId, req.body.description || null]
+                [projectId, fileName, cloudPath, req.session.userId, req.body.description || null]
             );
         }
 

@@ -32,9 +32,7 @@
                 <span class="text-white small d-none d-md-inline">
                     <i class="bi bi-person-fill"></i> <span id="userName">Загрузка...</span>
                 </span>
-                <a href="#"
-                    onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');"
-                    class="btn btn-outline-light btn-sm fw-bold">ВЫЙТИ</a>
+                <a href="#" onclick="logout(event)" class="btn btn-outline-light btn-sm fw-bold">ВЫЙТИ</a>
             </div>
         </div>
     </nav>

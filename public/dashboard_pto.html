@@ -29,7 +29,7 @@
                 <div class="d-flex align-items-center text-white small">
                     <i class="bi bi-person-circle me-2"></i>
                     <span id="userName" class="me-3">...</span>
-                    <a href="#" onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');" class="btn btn-outline-light btn-sm fw-bold">ВЫЙТИ</a>
+                    <a href="#" onclick="logout(event)" class="btn btn-outline-light btn-sm fw-bold">ВЫЙТИ</a>
                 </div>
             </div>
         </div>

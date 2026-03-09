@@ -13,7 +13,7 @@ exports.getStats = async (req, res, next) => {
 
         // Получаем info партнёра с ref_code
         const partner = await dbGet(
-            'SELECT id, full_name, organization, ref_code, created_at FROM users WHERE id = ?',
+            'SELECT id, full_name, organization, ref_code, created_at FROM users WHERE id = ? AND is_deleted = 0',
             [partnerId]
         );
 
@@ -32,7 +32,7 @@ exports.getStats = async (req, res, next) => {
                     u.full_name, u.organization, u.created_at as user_since
              FROM referral_clients rc
              JOIN users u ON rc.referred_user_id = u.id
-             WHERE rc.partner_id = ?
+             WHERE rc.partner_id = ? AND u.is_deleted = 0
              ORDER BY rc.created_at DESC`,
             [partnerId]
         );
@@ -82,7 +82,7 @@ exports.requestPayout = async (req, res, next) => {
         const partnerId = req.session.userId;
         const parseResult = payoutRequestSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
         }
 
         const { amount, payment_details } = parseResult.data;

@@ -1,4 +1,5 @@
 const { dbGet, dbRun, dbAll } = require('../config/database');
+const { uploadToSupabase } = require('../utils/supabaseStorage');
 const fs = require('fs');
 const path = require('path');
 const pdfParse = require('pdf-parse');
@@ -45,10 +46,16 @@ const projectSchema = z.object({
     status: z.string().optional().default('lead')
 });
 
+const reviewPublicRequestSchema = z.object({
+    status: z.enum(['accepted', 'rejected', 'reviewed']),
+    notes: z.string().max(1000).optional().or(z.literal('')),
+    requestType: z.enum(['public', 'authenticated'])
+});
+
 exports.getStaff = async (req, res, next) => {
     try {
         const staff = await dbAll(
-            "SELECT id, full_name, role FROM users WHERE role IN ('foreman', 'supplier', 'pto') AND is_active = 1"
+            "SELECT id, full_name, role FROM users WHERE role IN ('foreman', 'supplier', 'pto') AND is_active = 1 AND is_deleted = 0"
         );
         res.json({ success: true, staff });
     } catch (error) {
@@ -60,7 +67,10 @@ exports.createProject = async (req, res, next) => {
     try {
         const parseResult = projectSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({
+                success: false,
+                message: parseResult.error.errors?.[0]?.message || "Ошибка валидации"
+            });
         }
 
         const data = parseResult.data;
@@ -69,66 +79,77 @@ exports.createProject = async (req, res, next) => {
 
         while (codeExists) {
             accessCode = generateProjectCode();
-            const existing = await dbGet("SELECT id FROM projects WHERE access_code = ?", [accessCode]);
+            const existing = await dbGet("SELECT id FROM projects WHERE access_code = ? AND is_deleted = 0", [accessCode]);
             codeExists = !!existing;
         }
 
         const stagesDeadline = formatDateForDB(addHours(new Date(), 72));
 
-        const result = await dbRun(
-            `INSERT INTO projects (
-                title, address, description, client_name, client_organization, access_code, 
-                status, stages_deadline, manager_id, foreman_id, supplier_id, pto_id, customer_id,
-                work_type, length_m, lead_source, offer_sum, visit_date, offer_sent_date, 
-                offer_valid_until, contract_date, advance_sum, advance_date, act_date, final_sum
-             )
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                data.title, data.address, data.description || null, data.clientName || null,
-                data.clientOrganization || null, accessCode, data.status || 'lead',
-                stagesDeadline, req.session.userId, data.foremanId || null,
-                data.supplierId || null, data.ptoId || null, data.customerId || null,
-                data.work_type, data.length_m || 0, data.lead_source || null,
-                data.offer_sum || null, data.visit_date || null, data.offer_sent_date || null,
-                data.offer_valid_until || null, data.contract_date || null,
-                data.advance_sum || null, data.advance_date || null, data.act_date || null,
-                data.final_sum || null
-            ]
-        );
+        // НАЧАЛО ТРАНЗАКЦИИ
+        await dbRun("BEGIN TRANSACTION");
 
-        const projectId = result.id;
+        try {
+            const result = await dbRun(
+                `INSERT INTO projects (
+                    title, address, description, client_name, client_organization, access_code, 
+                    status, stages_deadline, manager_id, foreman_id, supplier_id, pto_id, customer_id,
+                    work_type, length_m, lead_source, offer_sum, visit_date, offer_sent_date, 
+                    offer_valid_until, contract_date, advance_sum, advance_date, act_date, final_sum
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    data.title, data.address, data.description || null, data.clientName || null,
+                    data.clientOrganization || null, accessCode, data.status || 'lead',
+                    stagesDeadline, req.session.userId, data.foremanId || null,
+                    data.supplierId || null, data.ptoId || null, data.customerId || null,
+                    data.work_type, data.length_m || 0, data.lead_source || null,
+                    data.offer_sum || null, data.visit_date || null, data.offer_sent_date || null,
+                    data.offer_valid_until || null, data.contract_date || null,
+                    data.advance_sum || null, data.advance_date || null, data.act_date || null,
+                    data.final_sum || null
+                ]
+            );
 
-        if (data.requestId) {
-            const request = await dbGet("SELECT documents, customer_id FROM project_requests WHERE id = ?", [data.requestId]);
-            if (request && request.documents) {
-                const paths = request.documents.split(',');
-                for (const p of paths) {
-                    if (!p) continue;
-                    const fileName = p.split('/').pop() || 'document';
+            const projectId = result.id;
+
+            if (data.requestId) {
+                const request = await dbGet("SELECT documents, customer_id FROM project_requests WHERE id = ? AND is_deleted = 0", [data.requestId]);
+                if (request && request.documents) {
+                    const paths = request.documents.split(',');
+                    for (const p of paths) {
+                        if (!p) continue;
+                        const fileName = p.split('/').pop() || 'document';
+                        await dbRun(
+                            "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by) VALUES (?, 'initial', ?, ?, ?)",
+                            [projectId, fileName, p, request.customer_id || req.session.userId]
+                        );
+                    }
+                }
+
+                await dbRun(
+                    "UPDATE project_requests SET status = 'accepted', notes = 'Проект создан', reviewed_at = datetime('now'), project_id = ? WHERE id = ?",
+                    [projectId, data.requestId]
+                );
+            }
+
+            if (req.files && req.files.length > 0) {
+                for (const file of req.files) {
+                    const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+                    const cloudPath = await uploadToSupabase(file, 'projects/initial');
                     await dbRun(
                         "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by) VALUES (?, 'initial', ?, ?, ?)",
-                        [projectId, fileName, p, request.customer_id || req.session.userId]
+                        [projectId, fileName, cloudPath, req.session.userId]
                     );
                 }
             }
 
-            await dbRun(
-                "UPDATE project_requests SET status = 'accepted', notes = 'Проект создан', reviewed_at = datetime('now'), project_id = ? WHERE id = ?",
-                [projectId, data.requestId]
-            );
-        }
+            await dbRun("COMMIT");
+            res.json({ success: true, projectId, accessCode, message: "Проект успешно создан" });
 
-        if (req.files && req.files.length > 0) {
-            for (const file of req.files) {
-                const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
-                await dbRun(
-                    "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by) VALUES (?, 'initial', ?, ?, ?)",
-                    [projectId, fileName, file.path, req.session.userId]
-                );
-            }
+        } catch (err) {
+            await dbRun("ROLLBACK");
+            throw err;
         }
-
-        res.json({ success: true, projectId, accessCode, message: "Проект успешно создан" });
     } catch (error) {
         next(error);
     }
@@ -144,7 +165,7 @@ exports.aiAnalyze = async (req, res, next) => {
                 SELECT pd.file_path, pd.file_name, p.manager_id 
                 FROM project_documents pd
                 JOIN projects p ON pd.project_id = p.id
-                WHERE pd.id = ?
+                WHERE pd.id = ? AND p.is_deleted = 0
             `, [documentId]);
 
             if (!doc) return res.status(404).json({ success: false, message: "Документ не найден" });
@@ -195,7 +216,7 @@ exports.aiAnalyze = async (req, res, next) => {
             messages: apiMessages
         });
 
-        let jsonText = response.choices[0].message.content.trim();
+        let jsonText = (response.choices && response.choices[0]) ? response.choices[0].message.content.trim() : '{}';
         jsonText = jsonText.replace(/^\`\`\`json/i, '').replace(/\`\`\`$/i, '').trim();
 
         const aiData = JSON.parse(jsonText);
@@ -211,7 +232,7 @@ exports.applyAiEstimate = async (req, res, next) => {
         const { works, materials } = req.body;
 
         // Проверка прав (IDOR)
-        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND is_deleted = 0 AND (manager_id = ? OR ? = 'admin')",
             [projectId, req.session.userId, req.session.userRole]);
         if (!project) return res.status(403).json({ success: false, message: "Нет доступа к проекту" });
 
@@ -248,9 +269,10 @@ exports.getProjects = async (req, res, next) => {
                      LEFT JOIN users up ON p.pto_id = up.id
                      LEFT JOIN users uc ON p.customer_id = uc.id`;
         const params = [];
+        query += " WHERE p.is_deleted = 0";
 
         if (req.session.userRole !== 'admin') {
-            query += " WHERE p.manager_id = ?";
+            query += " AND p.manager_id = ?";
             params.push(req.session.userId);
         }
 
@@ -267,11 +289,11 @@ exports.updateProject = async (req, res, next) => {
         const projectId = z.coerce.number().parse(req.params.id);
         const parseResult = projectSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
         }
 
         const data = parseResult.data;
-        const oldProject = await dbGet("SELECT status, customer_id, title, manager_id FROM projects WHERE id = ?", [projectId]);
+        const oldProject = await dbGet("SELECT status, customer_id, title, manager_id FROM projects WHERE id = ? AND is_deleted = 0", [projectId]);
 
         if (!oldProject) return res.status(404).json({ success: false, message: "Проект не найден" });
 
@@ -322,7 +344,7 @@ exports.completeProject = async (req, res, next) => {
         const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
 
         // Check ownership
-        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND is_deleted = 0 AND (manager_id = ? OR ? = 'admin')",
             [projectId, req.session.userId, req.session.userRole]);
         if (!project) return res.status(403).json({ success: false, message: "Нет доступа" });
 
@@ -341,7 +363,7 @@ exports.completeProject = async (req, res, next) => {
 exports.getProjectDocuments = async (req, res, next) => {
     try {
         const projectId = z.coerce.number().parse(req.params.id);
-        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND is_deleted = 0 AND (manager_id = ? OR ? = 'admin')",
             [projectId, req.session.userId, req.session.userRole]);
         if (!project) return res.status(403).json({ success: false, message: "Нет доступа" });
 
@@ -357,14 +379,15 @@ exports.uploadProjectDocument = async (req, res, next) => {
         const projectId = z.coerce.number().parse(req.params.id);
         if (!req.file) return res.status(400).json({ success: false, message: "Файл не выбран" });
 
-        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND (manager_id = ? OR ? = 'admin')",
+        const project = await dbGet("SELECT id FROM projects WHERE id = ? AND is_deleted = 0 AND (manager_id = ? OR ? = 'admin')",
             [projectId, req.session.userId, req.session.userRole]);
         if (!project) return res.status(403).json({ success: false, message: "Нет доступа" });
 
         const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+        const cloudPath = await uploadToSupabase(req.file, 'projects/docs');
         await dbRun(
             "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?, ?)",
-            [projectId, req.body.docType || 'other', fileName, req.file.path, req.session.userId, req.body.description || '']
+            [projectId, req.body.docType || 'other', fileName, cloudPath, req.session.userId, req.body.description || '']
         );
 
         sendNotification(projectId, 'document', `Загружен новый документ: ${fileName}`);
@@ -379,7 +402,7 @@ exports.getRequests = async (req, res, next) => {
         const requests = await dbAll(`
             SELECT pr.id, pr.title, pr.description, pr.documents, pr.contact_info, pr.status, pr.created_at, 
                    u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
-            FROM project_requests pr JOIN users u ON pr.customer_id = u.id WHERE pr.status = 'pending'
+            FROM project_requests pr JOIN users u ON pr.customer_id = u.id WHERE pr.status = 'pending' AND pr.is_deleted = 0
             UNION ALL
             SELECT id, organization as title, description, documents, NULL as contact_info, status, created_at,
                    full_name as customer_name, email, phone, 'public' as request_type
@@ -398,7 +421,7 @@ exports.getRequestArchive = async (req, res, next) => {
             SELECT pr.id, pr.title, pr.description, pr.status, pr.created_at, pr.reviewed_at, pr.notes,
                    u.full_name as customer_name, u.email, u.phone, 'authenticated' as request_type
             FROM project_requests pr JOIN users u ON pr.customer_id = u.id 
-            WHERE pr.status IN ('accepted', 'rejected', 'reviewed')
+            WHERE pr.status IN ('accepted', 'rejected', 'reviewed') AND pr.is_deleted = 0
             UNION ALL
             SELECT id, organization as title, description, status, created_at, reviewed_at, notes,
                    full_name as customer_name, email, phone, 'public' as request_type
@@ -414,14 +437,78 @@ exports.getRequestArchive = async (req, res, next) => {
 exports.reviewRequest = async (req, res, next) => {
     try {
         const requestId = z.coerce.number().parse(req.params.id);
-        const { status, notes, requestType } = req.body;
+        const parseResult = reviewPublicRequestSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации' });
+        }
+
+        const { status, notes, requestType } = parseResult.data;
 
         if (requestType === 'public') {
-            await dbRun("UPDATE public_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes, requestId]);
+            await dbRun("UPDATE public_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes || null, requestId]);
         } else {
-            await dbRun("UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes, req.session.userId, requestId]);
+            await dbRun("UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes || null, req.session.userId, requestId]);
         }
         res.json({ success: true, message: "Заявка обработана" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.deleteProject = async (req, res, next) => {
+    try {
+        const projectId = z.coerce.number().parse(req.params.id);
+
+        // Сначала проверяем существование и права (IDOR)
+        const project = await dbGet("SELECT id, manager_id FROM projects WHERE id = ? AND is_deleted = 0", [projectId]);
+        if (!project) return res.status(404).json({ success: false, message: "Проект не найден" });
+
+        if (req.session.userRole !== 'admin' && project.manager_id !== req.session.userId) {
+            return res.status(403).json({ success: false, message: "Вы не имеете прав на удаление этого проекта" });
+        }
+
+        // Выполняем Soft Delete
+        await dbRun("UPDATE projects SET is_deleted = 1 WHERE id = ?", [projectId]);
+        res.json({ success: true, message: "Проект успешно перенесен в архив (Soft Delete)" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.getDeletedProjects = async (req, res, next) => {
+    try {
+        const query = req.session.userRole === 'admin'
+            ? "SELECT p.*, um.full_name as manager_name FROM projects p LEFT JOIN users um ON p.manager_id = um.id WHERE p.is_deleted = 1"
+            : "SELECT * FROM projects WHERE manager_id = ? AND is_deleted = 1";
+
+        const params = req.session.userRole === 'admin' ? [] : [req.session.userId];
+        const projects = await dbAll(query, params);
+        res.json({ success: true, projects });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.restoreProject = async (req, res, next) => {
+    try {
+        const projectId = z.coerce.number().parse(req.params.id);
+        const { accessCode } = z.object({ accessCode: z.string().min(4) }).parse(req.body);
+
+        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND is_deleted = 1", [projectId]);
+        if (!project) return res.status(404).json({ success: false, message: "Проект не найден в корзине" });
+
+        // Проверка прав (IDOR)
+        if (req.session.userRole !== 'admin' && project.manager_id !== req.session.userId) {
+            return res.status(403).json({ success: false, message: "Вы не можете восстановить чужой проект" });
+        }
+
+        // Проверка кода доступа
+        if (project.access_code !== accessCode) {
+            return res.status(400).json({ success: false, message: "Неверный код доступа. Восстановление отклонено." });
+        }
+
+        await dbRun("UPDATE projects SET is_deleted = 0 WHERE id = ?", [projectId]);
+        res.json({ success: true, message: "Проект успешно восстановлен!" });
     } catch (error) {
         next(error);
     }

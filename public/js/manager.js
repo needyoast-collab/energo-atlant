@@ -118,7 +118,7 @@ function renderProjects(projects) {
             : `<span class="badge border border-secondary text-secondary bg-transparent"><i class="bi bi-exclamation-triangle me-1"></i>Прораб не назначен</span>`;
 
         html += `
-            <div class="col-12 col-md-6 col-xl-4">
+            <div class="col-12 col-md-6 col-xl-4" data-aos="fade-up">
                 <div class="prj-card">
                     <div class="prj-card-header">
                          <div class="d-flex flex-column">
@@ -142,9 +142,12 @@ function renderProjects(projects) {
                     </div>
                     <div class="prj-card-body pt-0">
                         <div class="d-flex justify-content-between gap-2 mb-3">
-                            <button class="btn btn-sm btn-outline-warning flex-grow-1" onclick="editProject(${p.id})">
-                                <i class="bi bi-pencil-square"></i> ИЗМЕНИТЬ
-                            </button>
+                             <button class="btn btn-sm btn-outline-danger" onclick="deleteProject(${p.id})" title="Удалить проект">
+                                 <i class="bi bi-trash"></i>
+                             </button>
+                             <button class="btn btn-sm btn-outline-warning flex-grow-1" onclick="editProject(${p.id})">
+                                 <i class="bi bi-pencil-square"></i> ИЗМЕНИТЬ
+                             </button>
                             <button class="btn btn-sm btn-outline-info" onclick="showProjectDocs(${p.id})">
                                 <i class="bi bi-folder2-open"></i> DOCS
                             </button>
@@ -163,6 +166,7 @@ function renderProjects(projects) {
 
     html += '</div>';
     container.innerHTML = html;
+    if (typeof AOS !== 'undefined') setTimeout(() => AOS.refresh(), 50);
 
     // Если есть завершённые — показываем счётчик
     if (completed.length > 0) {
@@ -463,7 +467,7 @@ async function loadProjectDocsArray(projectId) {
             'executive': 'ИД'
         };
         return `
-        <a href="/${d.file_path}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center pb-2">
+        <a href="${sharedGetFileUrl(d.file_path)}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center pb-2">
             <div>
                 <span class="badge bg-secondary me-2">${typeNames[d.document_type] || d.document_type}</span>
                 <strong>${d.file_name}</strong>
@@ -768,11 +772,20 @@ async function editProject(id) {
 // =============================================================================
 
 async function loadRequests() {
-    const data = await apiRequest('/api/manager/requests');
-    if (data.success) {
-        currentRequests = data.requests;
-        renderRequests(data.requests);
-        updateBadge(data.requests.length);
+    const container = document.getElementById('requestsList');
+    try {
+        const data = await apiRequest('/api/manager/requests');
+        if (data.success) {
+            currentRequests = data.requests || [];
+            renderRequests(currentRequests);
+            const badge = document.getElementById('pendingBadge'); // Обновляем конкретный бейдж если он есть
+            if (badge) badge.textContent = currentRequests.length;
+            if (typeof updateBadge === 'function') updateBadge(currentRequests.length);
+        } else {
+            if (container) container.innerHTML = `<div class="alert alert-danger">Ошибка: ${data.message}</div>`;
+        }
+    } catch (e) {
+        if (container) container.innerHTML = `<div class="alert alert-danger">Критическая ошибка загрузки</div>`;
     }
 }
 
@@ -786,7 +799,7 @@ function renderRequests(requests) {
     }
 
     container.innerHTML = requests.map(r => `
-            <div class="card mb-3 shadow-sm border-start border-4 border-primary">
+            <div class="card mb-3 shadow-sm border-start border-4 border-primary" data-aos="fade-up">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -808,7 +821,7 @@ function renderRequests(requests) {
                         <strong class="small text-muted mb-1 d-block">📄 Прикрепленные файлы:</strong>
                         <div class="d-flex flex-wrap gap-2">
                             ${r.documents.split(',').map(doc => `
-                                <a href="/${doc.replace(/\\/g, '/')}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <a href="${sharedGetFileUrl(doc.replace(/\\/g, '/'))}" target="_blank" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-file-earmark-text"></i> Скачать файл
                                 </a>
                             `).join('')}
@@ -829,6 +842,7 @@ function renderRequests(requests) {
                     </div>
                 </div>
         </div>`).join('');
+    if (typeof AOS !== 'undefined') setTimeout(() => AOS.refresh(), 50);
 }
 
 function createProjectFromRequest(reqId) {
@@ -919,9 +933,10 @@ async function loadArchive() {
         <p class="mt-2 text-muted">Загрузка архива...</p>
     </div>`;
 
-    const [projData, reqData] = await Promise.all([
+    const [projData, reqData, delData] = await Promise.all([
         apiRequest('/api/manager/projects'),
-        apiRequest('/api/manager/requests/archive')
+        apiRequest('/api/manager/requests/archive'),
+        apiRequest('/api/manager/projects/deleted')
     ]);
 
     let html = '';
@@ -976,7 +991,51 @@ async function loadArchive() {
         html += '</div>';
     }
 
+    // Удалённые (Корзина) — с восстановлением по коду
+    const deletedProjects = delData.projects || [];
+    html += `<h5 class="border-bottom pb-2 mb-3 mt-4 text-danger"><i class="bi bi-trash"></i> Удалённые объекты (${deletedProjects.length})</h5>`;
+
+    if (deletedProjects.length === 0) {
+        html += '<p class="text-muted">Корзина пуста</p>';
+    } else {
+        html += '<div class="list-group">';
+        deletedProjects.forEach(p => {
+            html += `
+            <div class="list-group-item bg-dark border-danger text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong class="text-danger">${p.title}</strong>
+                        <br><small class="text-muted">Удалён: ${formatDateShort(p.updated_at || p.created_at)}</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-warning fw-bold" onclick="restoreProjectPrompt(${p.id})">
+                        <i class="bi bi-arrow-counterclockwise"></i> ВОССТАНОВИТЬ
+                    </button>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
     container.innerHTML = html;
+}
+
+async function restoreProjectPrompt(id) {
+    const code = prompt('Введите КОД ДОСТУПА проекта для его восстановления:');
+    if (code === null) return;
+
+    if (code.length < 4) {
+        showError('Слишком короткий код!');
+        return;
+    }
+
+    const res = await apiRequest(`/api/manager/projects/${id}/restore`, 'POST', { accessCode: code });
+    if (res.success) {
+        showSuccess('✅ Проект успешно восстановлен!');
+        await loadArchive();
+        await loadProjects();
+    } else {
+        showError(res.message || 'Ошибка восстановления');
+    }
 }
 
 // =============================================================================
@@ -1154,6 +1213,17 @@ function showManagerComposeModal() {
     modal.show();
 }
 
+async function deleteProject(id) {
+    if (!confirm('Вы уверены, что хотите удалить этот проект? Это действие нельзя отменить (мягкое удаление сохранится в БД).')) return;
+
+    const res = await apiRequest(`/api/manager/projects/${id}`, 'DELETE');
+    if (res.success) {
+        showSuccess('Проект успешно удален');
+        await loadProjects();
+    } else {
+        showError(res.message || 'Ошибка при удалении проекта');
+    }
+}
 async function sendManagerMessage(e) {
     e.preventDefault();
     const btn = document.getElementById('sendMsgBtn');

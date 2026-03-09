@@ -2,14 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
 const morgan = require('morgan');
 const xss = require('xss-clean');
+const rateLimit = require('express-rate-limit');
 
 const { requireAuth } = require('./middleware/auth');
-const { db } = require('./config/database');
+const { pool, dbRun } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,11 +22,11 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdn.jsdelivr.net", "unpkg.com"],
-            styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com"],
-            imgSrc: ["'self'", "data:", "blob:"],
-            fontSrc: ["'self'", "fonts.gstatic.com", "cdn.jsdelivr.net"],
-            connectSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdn.jsdelivr.net", "unpkg.com", "cdnjs.cloudflare.com", "code.jquery.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com", "cdnjs.cloudflare.com", "unpkg.com"],
+            imgSrc: ["'self'", "data:", "blob:", "images.unsplash.com", "res.cloudinary.com"],
+            fontSrc: ["'self'", "fonts.gstatic.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+            connectSrc: ["'self'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "unpkg.com"],
             objectSrc: ["'none'"],
             upgradeInsecureRequests: [],
         },
@@ -40,6 +42,17 @@ app.use(cors({
 app.use(compression()); // Сжатие всех ответов сервера
 app.use(xss()); // Базовая защита от XSS
 
+// === RATE LIMITING ===
+// Общий лимит для всех API запросов
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: "⚠️ Слишком много запросов. Пожалуйста, подождите 15 минут." }
+});
+app.use('/api/', globalLimiter);
+
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
@@ -48,12 +61,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
+    store: new pgSession({
+        pool: pool,
+        tableName: 'session'
+    }),
     secret: process.env.SESSION_SECRET || 'fallback-unsafe-secret-key', // Крайне важно переопределить в .env!
     resave: false,
     saveUninitialized: false,
     name: 'sessionid', // Смена имени куки по умолчанию для затруднения идентификации стека
     cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 часа
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней
         httpOnly: true, // Куки недоступны через JS
         secure: process.env.NODE_ENV === 'production', // Только HTTPS в продакшене
         sameSite: 'lax' // Защита от CSRF
@@ -134,14 +151,13 @@ app.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
     console.log('\n🛑 Остановка сервера...');
-    db.close((err) => {
-        if (err) {
-            console.error('Ошибка закрытия БД:', err);
-        } else {
-            console.log('💾 База данных отключена');
-        }
-        process.exit(0);
-    });
+    try {
+        await pool.end();
+        console.log('🐘 PostgreSQL: Пул соединений закрыт');
+    } catch (err) {
+        console.error('Ошибка закрытия пула БД:', err);
+    }
+    process.exit(0);
 });

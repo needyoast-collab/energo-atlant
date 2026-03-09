@@ -14,8 +14,8 @@ exports.getInbox = async (req, res, next) => {
         const messages = await dbAll(
             `SELECT m.*, u.full_name as sender_name, p.title as project_title
              FROM messages m
-             JOIN users u ON m.sender_id = u.id
-             LEFT JOIN projects p ON m.project_id = p.id
+             JOIN users u ON m.sender_id = u.id AND u.is_deleted = 0
+             LEFT JOIN projects p ON m.project_id = p.id AND (p.is_deleted = 0 OR p.is_deleted IS NULL)
              WHERE m.receiver_id = ?
              ORDER BY m.created_at DESC`,
             [req.session.userId]
@@ -31,8 +31,8 @@ exports.getSent = async (req, res, next) => {
         const messages = await dbAll(
             `SELECT m.*, u.full_name as receiver_name, p.title as project_title
              FROM messages m
-             JOIN users u ON m.receiver_id = u.id
-             LEFT JOIN projects p ON m.project_id = p.id
+             JOIN users u ON m.receiver_id = u.id AND u.is_deleted = 0
+             LEFT JOIN projects p ON m.project_id = p.id AND (p.is_deleted = 0 OR p.is_deleted IS NULL)
              WHERE m.sender_id = ?
              ORDER BY m.created_at DESC`,
             [req.session.userId]
@@ -47,7 +47,10 @@ exports.sendMessage = async (req, res, next) => {
     try {
         const parseResult = sendMessageSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({
+                success: false,
+                message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации'
+            });
         }
 
         const { receiver_id, project_id, subject, body } = parseResult.data;
@@ -68,7 +71,7 @@ exports.sendMessage = async (req, res, next) => {
         );
 
         // Прямое уведомление получателю
-        const sender = await dbGet('SELECT full_name FROM users WHERE id = ?', [req.session.userId]);
+        const sender = await dbGet('SELECT full_name FROM users WHERE id = ? AND is_deleted = 0', [req.session.userId]);
         await sendDirectNotification(
             receiver_id,
             project_id || null,

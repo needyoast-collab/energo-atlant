@@ -21,7 +21,7 @@ const errorHandler = (err, req, res, next) => {
         return res.status(400).json({
             success: false,
             message: 'Ошибка валидации данных',
-            errors: err.errors.map(e => ({ path: e.path.join('.'), message: e.message }))
+            errors: err.errors ? err.errors.map(e => ({ path: e.path.join('.'), message: e.message })) : []
         });
     }
 

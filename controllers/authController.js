@@ -20,8 +20,7 @@ const registerSchema = z.object({
         .regex(/[0-9]/, "Пароль должен содержать хотя бы одну цифру"),
     email: z.string().email("Неверный формат email").nullable().or(z.literal('')),
     phone: z.string()
-        .regex(/^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/, "Неверный формат телефона")
-        .nullable().or(z.literal('')),
+        .regex(/^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/, "Неверный формат телефона"),
     fullName: z.string().min(2, "ФИО слишком короткое").max(100),
     organization: z.string().max(100).optional().or(z.literal('')),
     refCode: z.string().optional()
@@ -34,14 +33,14 @@ exports.login = async (req, res) => {
         if (!parseResult.success) {
             return res.status(400).json({
                 success: false,
-                message: parseResult.error.errors[0].message
+                message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации'
             });
         }
         const { login, password } = parseResult.data;
 
         // 2. Поиск пользователя (защищенный поиск)
         const user = await dbGet(
-            "SELECT * FROM users WHERE (login = ? OR email = ? OR phone = ?) AND is_active = 1",
+            "SELECT * FROM users WHERE (login = ? OR email = ? OR phone = ?) AND is_active = 1 AND is_deleted = 0",
             [login, login, login]
         );
 
@@ -124,7 +123,7 @@ exports.register = async (req, res) => {
         if (!parseResult.success) {
             return res.status(400).json({
                 success: false,
-                message: parseResult.error.errors[0].message
+                message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации'
             });
         }
         const { login, password, email, phone, fullName, organization, refCode } = parseResult.data;
@@ -145,7 +144,7 @@ exports.register = async (req, res) => {
         // 3. Реферальная ссылка
         let partnerId = null;
         if (refCode) {
-            const partner = await dbGet("SELECT id FROM users WHERE ref_code = ? AND role = 'partner'", [refCode]);
+            const partner = await dbGet("SELECT id FROM users WHERE ref_code = ? AND role = 'partner' AND is_deleted = 0", [refCode]);
             if (partner) partnerId = partner.id;
         }
 
@@ -190,7 +189,7 @@ exports.getMe = async (req, res) => {
         if (!req.session.userId) return res.status(401).json({ success: false });
 
         const user = await dbGet(
-            "SELECT id, login, email, phone, role, full_name, organization FROM users WHERE id = ?",
+            "SELECT id, login, email, phone, role, full_name, organization FROM users WHERE id = ? AND is_deleted = 0",
             [req.session.userId]
         );
 

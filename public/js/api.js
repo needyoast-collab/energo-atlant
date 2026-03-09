@@ -9,7 +9,6 @@ async function apiRequest(url, method = 'GET', data = null) {
         headers: {}
     };
 
-    // Если данные не FormData, добавляем JSON заголовок
     if (data && !(data instanceof FormData)) {
         options.headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(data);
@@ -20,29 +19,76 @@ async function apiRequest(url, method = 'GET', data = null) {
     try {
         const response = await fetch(url, options);
 
-        // Если это экспорт файла (Excel)
-        if (response.headers.get('content-type')?.includes('spreadsheet')) {
+        // Обработка экспорта файлов
+        const contentType = response.headers.get('content-type');
+        if (contentType && (contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream'))) {
             return response.blob();
         }
 
-        const result = await response.json();
+        let result;
+        const text = await response.text();
+        try {
+            result = text ? JSON.parse(text) : {};
+        } catch (e) {
+            console.error('Failed to parse JSON response:', text);
+            if (!response.ok) {
+                return {
+                    success: false,
+                    message: `Ошибка сервера (${response.status})`,
+                    details: text.substring(0, 100)
+                };
+            }
+            return { success: false, message: 'Некорректный формат ответа от сервера' };
+        }
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: result.message || `Ошибка сервера (${response.status})`,
+                errors: result.errors
+            };
+        }
+
         return result;
     } catch (error) {
         console.error('API Error:', error);
-        showError('Ошибка соединения с сервером');
-        return { success: false, message: 'Ошибка сети' };
+        const isNetworkError = error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'));
+        return {
+            success: false,
+            message: isNetworkError ? 'Ошибка соединения с сервером' : (error.message || 'Ошибка сети')
+        };
     }
 }
 
 // Проверка авторизации
 async function checkAuth() {
-    const data = await apiRequest('/api/user/me');
-    if (!data.success) {
+    try {
+        const data = await apiRequest('/api/user/me');
+        if (!data.success) {
+            window.location.href = '/login.html';
+            return null;
+        }
+        return data.user;
+    } catch (e) {
         window.location.href = '/login.html';
         return null;
     }
-    return data.user;
 }
+
+async function logout(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!confirm('Вы точно хотите выйти?')) return;
+
+    // Сначала инициируем запрос на сервер, но не ждем его бесконечно
+    try {
+        apiRequest('/api/logout', 'POST').catch(err => console.warn('Logout request failed:', err));
+    } catch (err) { }
+
+    // В любом случае уходим на страницу входа
+    window.location.href = '/login.html';
+}
+
+window.logout = logout; // Делаем доступной везде
 
 
 // =============================================================================
@@ -53,8 +99,13 @@ function showSuccess(message) {
     showToast(message, 'success');
 }
 
-function showError(message) {
-    showToast(message, 'danger');
+function showError(message, errors = null) {
+    let fullMsg = message;
+    if (errors && Array.isArray(errors)) {
+        const errorList = errors.map(e => `<li>${e.message}</li>`).join('');
+        fullMsg = `${message}: <ul class="mb-0 mt-1" style="font-size: 0.85rem; padding-left: 1.2rem;">${errorList}</ul>`;
+    }
+    showToast(fullMsg, 'danger');
 }
 
 function showInfo(message) {

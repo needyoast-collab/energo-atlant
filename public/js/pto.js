@@ -179,11 +179,11 @@ function renderProjectDetails(project, stages, documents) {
             html += '<h6 class="mb-2">📋 Начальные документы:</h6><div class="list-group mb-3">';
             initialDocs.forEach(doc => {
                 html += `
-                    <a href="/${doc.file_path}" target="_blank" class="list-group-item list-group-item-action">
-                        📎 ${doc.file_name}
-                        <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
-                    </a>
-                `;
+                        <a href="${sharedGetFileUrl(doc.file_path)}" target="_blank" class="list-group-item list-group-item-action">
+                            📎 ${doc.file_name}
+                            <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
+                        </a>
+                    `;
             });
             html += '</div>';
         }
@@ -192,11 +192,11 @@ function renderProjectDetails(project, stages, documents) {
             html += '<h6 class="mb-2">✅ Исполнительная документация:</h6><div class="list-group mb-3">';
             executiveDocs.forEach(doc => {
                 html += `
-                    <a href="/${doc.file_path}" target="_blank" class="list-group-item list-group-item-action list-group-item-success">
-                        📎 ${doc.file_name}
-                        <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
-                    </a>
-                `;
+                        <a href="${sharedGetFileUrl(doc.file_path)}" target="_blank" class="list-group-item list-group-item-action list-group-item-success">
+                            📎 ${doc.file_name}
+                            <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
+                        </a>
+                    `;
             });
             html += '</div>';
         }
@@ -205,11 +205,11 @@ function renderProjectDetails(project, stages, documents) {
             html += '<h6 class="mb-2">📁 Другие документы:</h6><div class="list-group">';
             otherDocs.forEach(doc => {
                 html += `
-                    <a href="/${doc.file_path}" target="_blank" class="list-group-item list-group-item-action">
-                        📎 ${doc.file_name}
-                        <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
-                    </a>
-                `;
+                        <a href="${sharedGetFileUrl(doc.file_path)}" target="_blank" class="list-group-item list-group-item-action">
+                            📎 ${doc.file_name}
+                            <small class="text-muted float-end">${formatDate(doc.uploaded_at)}</small>
+                        </a>
+                    `;
             });
             html += '</div>';
         }
@@ -313,8 +313,8 @@ function renderPhotos(photos) {
     photos.forEach(photo => {
         html += `
             <div class="col-md-3 mb-3">
-                <a href="/${photo.file_path}" target="_blank" data-lightbox="stage-photos">
-                    <img src="/${photo.file_path}" class="img-thumbnail" alt="${photo.file_name}">
+                <a href="${sharedGetFileUrl(photo.file_path)}" target="_blank" data-lightbox="stage-photos">
+                    <img src="${sharedGetFileUrl(photo.file_path)}" class="img-thumbnail" alt="${photo.file_name}">
                 </a>
                 <small class="d-block text-muted text-center mt-1">
                     ${formatDateShort(photo.uploaded_at)}

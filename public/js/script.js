@@ -108,25 +108,25 @@ if (regBtn) {
             alert("Заполните ВСЕ поля!");
             return;
         }
-// 1. Регулярные выражения для проверки
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Проверка на @ и точку
-const phonePattern = /^\+?[78][0-9]{10}$/; // Начинается с +7/7/8 и содержит 11 цифр
+        // 1. Регулярные выражения для проверки
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Проверка на @ и точку
+        const phonePattern = /^\+?[78][0-9]{10}$/; // Начинается с +7/7/8 и содержит 11 цифр
 
-// 2. Сама проверка
-if (!emailPattern.test(email)) {
-    alert("Пожалуйста, введите корректный Email (например, user@mail.ru)");
-    return;
-}
+        // 2. Сама проверка
+        if (!emailPattern.test(email)) {
+            alert("Пожалуйста, введите корректный Email (например, user@mail.ru)");
+            return;
+        }
 
-if (!phonePattern.test(phone.replace(/\s/g, ''))) { // Убираем пробелы перед проверкой
-    alert("Введите телефон в формате +79001112233 (11 цифр)");
-    return;
-}
+        if (!phonePattern.test(phone.replace(/\s/g, ''))) { // Убираем пробелы перед проверкой
+            alert("Введите телефон в формате +79001112233 (11 цифр)");
+            return;
+        }
 
-if (password.length < 6) {
-    alert("Пароль должен быть не менее 6 символов");
-    return;
-}
+        if (password.length < 6) {
+            alert("Пароль должен быть не менее 6 символов");
+            return;
+        }
         // Отправка на сервер
         try {
             const response = await fetch('/api/register', {
@@ -144,7 +144,7 @@ if (password.length < 6) {
                 // Если пользователь уже есть
                 if (result.errorType === 'exists') {
                     if (confirm("Такой Email или Телефон уже есть. Хотите восстановить пароль?")) {
-                        window.location.href = "login.html"; 
+                        window.location.href = "login.html";
                     }
                 } else {
                     alert("Ошибка: " + result.message);
@@ -163,15 +163,14 @@ if (password.length < 6) {
 const logoutBtn = document.getElementById('logoutBtn');
 
 if (logoutBtn) {
-    console.log("Кнопка выхода активна");
-
-    // Используем 'click', но добавляем проверку
-    logoutBtn.addEventListener('click', function(e) {
-        console.log("Кнопка реально нажата!"); // Проверим в консоли при нажатии
-        
-        const confirmExit = confirm("Вы точно хотите выйти из системы?");
-        if (confirmExit) {
-            window.location.replace("index.html"); // replace лучше чем href, так как не дает вернуться назад кнопкой браузера
+    logoutBtn.addEventListener('click', (e) => {
+        if (typeof window.logout === 'function') {
+            window.logout(e);
+        } else {
+            console.warn('Global logout not found, fallback to simple confirm');
+            if (confirm('Вы точно хотите выйти?')) {
+                window.location.href = '/login.html';
+            }
         }
     });
 }
@@ -204,7 +203,7 @@ async function loadUserProfile() {
         if (data.success) {
             // Заменяем текст на логин из базы
             userNameElement.innerText = data.login;
-            
+
             // Если роль - админ, можно подсветить
             if (data.role === 'admin') {
                 document.querySelector('.user-profile span').innerText = 'Администратор системы';

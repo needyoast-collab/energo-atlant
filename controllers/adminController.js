@@ -24,7 +24,7 @@ const adminUpdateUserSchema = z.object({
 exports.getUsers = async (req, res, next) => {
     try {
         const users = await dbAll(
-            "SELECT id, login, email, phone, role, full_name, organization, is_active, is_verified, created_at FROM users ORDER BY id DESC"
+            "SELECT id, login, email, phone, role, full_name, organization, is_active, is_verified, created_at FROM users WHERE is_deleted = 0 ORDER BY id DESC"
         );
         res.json({ success: true, users });
     } catch (error) {
@@ -36,7 +36,10 @@ exports.createUser = async (req, res, next) => {
     try {
         const parseResult = adminCreateUserSchema.safeParse(req.body);
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({
+                success: false,
+                message: parseResult.error.errors?.[0]?.message || "Ошибка валидации"
+            });
         }
 
         const { login, password, email, phone, role, full_name, organization } = parseResult.data;
@@ -66,7 +69,10 @@ exports.updateUser = async (req, res, next) => {
         const parseResult = adminUpdateUserSchema.safeParse(req.body);
 
         if (!parseResult.success) {
-            return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+            return res.status(400).json({
+                success: false,
+                message: parseResult.error.errors?.[0]?.message || "Ошибка валидации"
+            });
         }
 
         const { full_name, role, is_active, is_verified, email, phone } = parseResult.data;
@@ -87,6 +93,38 @@ exports.verifyUser = async (req, res, next) => {
         const userId = z.string().or(z.number()).parse(req.params.id);
         await dbRun("UPDATE users SET is_verified = 1 WHERE id = ?", [userId]);
         res.json({ success: true, message: "Пользователь успешно верифицирован" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.deleteUser = async (req, res, next) => {
+    try {
+        const userId = z.coerce.number().parse(req.params.id);
+        // Заменяем DELETE на UPDATE для Soft Delete
+        await dbRun("UPDATE users SET is_deleted = 1, is_active = 0 WHERE id = ?", [userId]);
+        res.json({ success: true, message: "Пользователь удален (Soft Delete)" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.getDeletedUsers = async (req, res, next) => {
+    try {
+        const users = await dbAll(
+            "SELECT id, login, email, phone, role, full_name, organization, created_at FROM users WHERE is_deleted = 1 ORDER BY id DESC"
+        );
+        res.json({ success: true, users });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.restoreUser = async (req, res, next) => {
+    try {
+        const userId = z.coerce.number().parse(req.params.id);
+        await dbRun("UPDATE users SET is_deleted = 0, is_active = 1 WHERE id = ?", [userId]);
+        res.json({ success: true, message: "Пользователь восстановлен" });
     } catch (error) {
         next(error);
     }

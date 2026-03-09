@@ -1,12 +1,13 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
 const { sendDirectNotification } = require('../utils/helpers');
 const { z } = require('zod');
+const { uploadToSupabase } = require('../utils/supabaseStorage');
 
 // Схемы валидации
 const createRequestSchema = z.object({
     title: z.string().min(3, "Заголовок слишком короткий").max(200),
     description: z.string().min(10, "Описание должно быть подробным"),
-    contactInfo: z.string().optional()
+    contactInfo: z.string().min(10, "Укажите контактный телефон")
 });
 
 const joinProjectSchema = z.object({
@@ -19,10 +20,17 @@ const projectIdSchema = z.object({
 
 exports.createRequest = async (req, res, next) => {
     try {
+        console.log(' [DEBUG] Create Request Body:', req.body);
+
         const validated = createRequestSchema.parse(req.body);
         const { title, description, contactInfo } = validated;
 
-        const documentPaths = req.files ? req.files.map(f => f.path).join(',') : null;
+        let documentPaths = null;
+        if (req.files && req.files.length > 0) {
+            const uploadPromises = req.files.map(file => uploadToSupabase(file, 'requests'));
+            const uploadedPaths = await Promise.all(uploadPromises);
+            documentPaths = uploadedPaths.join(',');
+        }
 
         await dbRun(
             "INSERT INTO project_requests (customer_id, title, description, documents, contact_info) VALUES (?, ?, ?, ?, ?)",
@@ -33,7 +41,7 @@ exports.createRequest = async (req, res, next) => {
 
         // Уведомление менеджеров (опционально)
         try {
-            const managers = await dbAll("SELECT id FROM users WHERE role = 'manager' AND is_active = 1");
+            const managers = await dbAll("SELECT id FROM users WHERE role = 'manager' AND is_active = 1 AND is_deleted = 0");
             const notifMsg = `Новая заявка: "${title}" от ${req.session.userName}`;
             for (const mgr of managers) {
                 await sendDirectNotification(mgr.id, null, 'new_request', notifMsg);
@@ -48,6 +56,9 @@ exports.createRequest = async (req, res, next) => {
         });
 
     } catch (error) {
+        if (error.name === 'ZodError') {
+            console.warn(' [VALIDATION ERROR] createRequest:', JSON.stringify(error.errors, null, 2));
+        }
         next(error);
     }
 };
@@ -57,7 +68,7 @@ exports.joinProject = async (req, res, next) => {
         const { accessCode } = joinProjectSchema.parse(req.body);
 
         const project = await dbGet(
-            "SELECT id, title, address, customer_id FROM projects WHERE access_code = ?",
+            "SELECT id, title, address, customer_id FROM projects WHERE access_code = ? AND is_deleted = 0",
             [accessCode]
         );
 
@@ -100,7 +111,7 @@ exports.getProjects = async (req, res, next) => {
                     (SELECT COUNT(*) FROM notifications n WHERE n.project_id = p.id AND n.user_id = ? AND n.is_read = 0) as unread_count
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
-             WHERE p.customer_id = ?
+             WHERE p.customer_id = ? AND p.is_deleted = 0
              ORDER BY p.created_at DESC`,
             [userId, userId]
         );
@@ -123,7 +134,7 @@ exports.getProjectDetails = async (req, res, next) => {
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              LEFT JOIN users uf ON p.foreman_id = uf.id
-             WHERE p.id = ? AND p.customer_id = ?`,
+             WHERE p.id = ? AND p.customer_id = ? AND p.is_deleted = 0`,
             [id, userId]
         );
 
@@ -132,7 +143,7 @@ exports.getProjectDetails = async (req, res, next) => {
         }
 
         const stages = await dbAll(
-            "SELECT * FROM project_stages WHERE project_id = ? ORDER BY stage_number",
+            "SELECT * FROM project_stages WHERE project_id = ? AND is_deleted = 0 ORDER BY stage_number",
             [id]
         );
 
@@ -152,7 +163,7 @@ exports.getProjectDetails = async (req, res, next) => {
             `SELECT pm.*, ps.name as stage_name, ps.stage_number
              FROM project_materials pm
              JOIN project_stages ps ON pm.stage_id = ps.id
-             WHERE ps.project_id = ?
+             WHERE ps.project_id = ? AND ps.is_deleted = 0 AND pm.is_deleted = 0
              ORDER BY ps.stage_number, pm.id`,
             [id]
         );
@@ -173,7 +184,7 @@ exports.getProjectDetails = async (req, res, next) => {
 exports.getRequests = async (req, res, next) => {
     try {
         const requests = await dbAll(
-            "SELECT id, title, description, status, created_at, notes FROM project_requests WHERE customer_id = ? ORDER BY created_at DESC",
+            "SELECT id, title, description, status, created_at, notes FROM project_requests WHERE customer_id = ? AND is_deleted = 0 ORDER BY created_at DESC",
             [req.session.userId]
         );
 

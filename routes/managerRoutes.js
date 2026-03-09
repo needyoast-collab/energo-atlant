@@ -12,6 +12,9 @@ router.post('/ai-analyze', upload.single('document'), managerController.aiAnalyz
 router.post('/projects/:id/apply-ai-estimate', managerController.applyAiEstimate);
 router.get('/projects', managerController.getProjects);
 router.put('/projects/:id', managerController.updateProject);
+router.delete('/projects/:id', managerController.deleteProject);
+router.get('/projects/deleted', managerController.getDeletedProjects);
+router.post('/projects/:id/restore', managerController.restoreProject);
 router.put('/projects/:id/complete', upload.single('act'), managerController.completeProject);
 router.get('/projects/:id/documents', managerController.getProjectDocuments);
 router.post('/projects/:id/documents', upload.single('document'), managerController.uploadProjectDocument);

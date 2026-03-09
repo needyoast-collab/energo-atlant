@@ -7,6 +7,7 @@
     <title>Кабинет администратора - ЭнергоАтлант</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
 
@@ -34,9 +35,9 @@
                         </span>
                     </li>
                     <li class="nav-item">
-                        <a href="#"
-                            onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');"
-                            class="btn btn-outline-light btn-sm rounded-0">ВЫХОД</a>
+                        <a href="#" onclick="logout(event)" class="btn btn-outline-danger btn-sm fw-bold">
+                            ВЫЙТИ
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -68,6 +69,11 @@
                         class="list-group-item list-group-item-action rounded-0 text-white text-uppercase border-0 mb-2 py-3"
                         style="background-color: transparent; font-size: 0.8rem; letter-spacing: 0.1em;">
                         <i class="bi bi-bar-chart-line me-2"></i> СТАТИСТИКА
+                    </a>
+                    <a href="#trash"
+                        class="list-group-item list-group-item-action rounded-0 text-white text-uppercase border-0 mb-2 py-3"
+                        style="background-color: transparent; font-size: 0.8rem; letter-spacing: 0.1em;">
+                        <i class="bi bi-trash me-2"></i> КОРЗИНА
                     </a>
                 </div>
             </div>
@@ -139,6 +145,12 @@
                             👥 Пользователи
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-danger" id="trash-tab" data-bs-toggle="tab" data-bs-target="#trash"
+                            type="button">
+                            <i class="bi bi-trash"></i> Корзина
+                        </button>
+                    </li>
                 </ul>
 
                 <div class="tab-content" id="myTabContent">
@@ -189,6 +201,45 @@
                                     <span class="visually-hidden">Загрузка...</span>
                                 </div>
                                 <p class="mt-2 text-muted">Загрузка пользователей...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Корзина -->
+                    <div class="tab-pane fade" id="trash" role="tabpanel">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h4 class="text-danger"><i class="bi bi-trash"></i> Корзина удалённых объектов</h4>
+                        </div>
+                        <div class="row g-4">
+                            <!-- Блок удалённых проектов -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-secondary h-100">
+                                    <div
+                                        class="card-header border-secondary d-flex justify-content-between align-items-center">
+                                        <span class="text-white fw-bold">ОБЪЕКТЫ</span>
+                                        <button class="btn btn-sm btn-outline-light"
+                                            onclick="loadDeletedProjects()">🔄</button>
+                                    </div>
+                                    <div class="card-body p-0" id="deletedProjectsList"
+                                        style="max-height: 400px; overflow-y: auto;">
+                                        <div class="text-center p-4 text-muted">Загрузка...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Блок удалённых пользователей -->
+                            <div class="col-md-6">
+                                <div class="card bg-dark border-secondary h-100">
+                                    <div
+                                        class="card-header border-secondary d-flex justify-content-between align-items-center">
+                                        <span class="text-white fw-bold">ПОЛЬЗОВАТЕЛИ</span>
+                                        <button class="btn btn-sm btn-outline-light"
+                                            onclick="loadDeletedUsers()">🔄</button>
+                                    </div>
+                                    <div class="card-body p-0" id="deletedUsersList"
+                                        style="max-height: 400px; overflow-y: auto;">
+                                        <div class="text-center p-4 text-muted">Загрузка...</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -295,6 +346,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/shared.js"></script>
     <script src="/js/admin.js"></script>
