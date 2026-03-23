@@ -71,115 +71,17 @@
     <!-- Добавляем нужные скрипты -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/api.js"></script>
-    <script src="/js/script.js"></script>
+    <script src="/js/shared.js"></script>
     <script src="/js/pto.js"></script>
-    
+    <script src="/js/spa-router.js"></script>
     <script>
-        // Добавляем обработчик для кнопки добавления проекта
-        document.addEventListener('DOMContentLoaded', () => {
-            const joinProjectBtn = document.getElementById('joinProjectBtn');
-            if (joinProjectBtn) {
-                joinProjectBtn.addEventListener('click', joinProject);
+        function initPage() {
+            if (typeof loadAllProjects === 'function') {
+                loadAllProjects();
             }
-            
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log('КЛИК ПО ВЫХОДУ!');
-                    console.log('Начинаю процесс выхода...');
-                    console.log('Текущий URL:', window.location.href);
-                    
-                    // Упрощенный выход без confirm для теста
-                    console.log('Перенаправление на /login.html');
-                    
-                    // Пробуем разные способы
-                    try {
-                        window.location.href = '/login.html';
-                        console.log('Способ 1: window.location.href выполнен');
-                    } catch (e) {
-                        console.log('Способ 1 не сработал:', e);
-                    }
-                    
-                    // Запасной способ через 100мс
-                    setTimeout(() => {
-                        console.log('Запасной способ: window.location.replace');
-                        window.location.replace('/login.html');
-                    }, 100);
-                });
-                console.log('✅ Logout кнопка настроена в DOMContentLoaded');
-            } else {
-                console.log('❌ Logout кнопка не найдена в DOMContentLoaded');
-            }
-        });
-        
-        // ДОПОЛНИТЕЛЬНЫЙ ОБРАБОТЧИК ЧЕРЕЗ INTERVAL
-        (function() {
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            function tryAddLogoutHandler() {
-                const logoutBtn = document.getElementById('logoutBtn');
-                if (logoutBtn && !logoutBtn.hasAttribute('data-logout-handler')) {
-                    logoutBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        console.log('КЛИК ПО ВЫХОДУ (INTERVAL)!');
-                        console.log('Начинаю процесс выхода...');
-                        console.log('Текущий URL:', window.location.href);
-                        
-                        // Упрощенный выход без confirm для теста
-                        console.log('Перенаправление на /login.html');
-                        
-                        // Пробуем разные способы
-                        try {
-                            window.location.href = '/login.html';
-                            console.log('Способ 1: window.location.href выполнен');
-                        } catch (e) {
-                            console.log('Способ 1 не сработал:', e);
-                        }
-                        
-                        // Запасной способ через 100мс
-                        setTimeout(() => {
-                            console.log('Запасной способ: window.location.replace');
-                            window.location.replace('/login.html');
-                        }, 100);
-                    });
-                    logoutBtn.setAttribute('data-logout-handler', 'true');
-                    console.log('✅ Logout кнопка настроена через setInterval');
-                    return true;
-                }
-                return false;
-            }
-            
-            // Пробуем сразу
-            if (tryAddLogoutHandler()) return;
-            
-            // Пробуем каждые 500мс
-            const interval = setInterval(() => {
-                attempts++;
-                if (tryAddLogoutHandler() || attempts >= maxAttempts) {
-                    clearInterval(interval);
-                    if (attempts >= maxAttempts) {
-                        console.log('❌ Не удалось найти logout кнопку за ' + maxAttempts + ' попыток');
-                    }
-                }
-            }, 500);
-        })();
-        
-        // САМЫЙ ПРОСТОЙ ОБРАБОТЧИК
-        window.addEventListener('load', function() {
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn && !logoutBtn.hasAttribute('data-logout-handler')) {
-                logoutBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log('КЛИК ПО ВЫХОДУ (WINDOW.LOAD)!');
-                    console.log('Перенаправление на /login.html');
-                    window.location.href = '/login.html';
-                });
-                console.log('✅ Logout кнопка настроена через window.load');
-            }
-        });
+            console.log('🎯 PTO страница инициализирована');
+        }
+        document.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
-
 </html>
