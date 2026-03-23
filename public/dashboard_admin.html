@@ -1,14 +1,23 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" style="background-color:#050505;color-scheme:dark">
+
 
 <head>
+    <style>/* critical-dark-bg */html,body{background-color:#050505 !important;color-scheme:dark}</style>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#050505">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кабинет администратора - ЭнергоАтлант</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/spa.css" rel="stylesheet">    <script>/* page-transition-script */document.documentElement.style.opacity="0";document.documentElement.style.transition="opacity 0.2s ease";window.addEventListener("load",function(){document.documentElement.style.opacity="1";});</script>
 </head>
 
 <body>
@@ -35,7 +44,7 @@
                         </span>
                     </li>
                     <li class="nav-item">
-                        <a href="#" onclick="logout(event)" class="btn btn-outline-danger btn-sm fw-bold">
+                        <a href="#" id="logoutBtn" class="btn btn-outline-danger btn-sm fw-bold">
                             ВЫЙТИ
                         </a>
                     </li>
@@ -159,7 +168,7 @@
                         <div class="d-flex justify-content-between mb-3">
                             <h4>Все проекты системы</h4>
                             <div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="loadProjects()">
+                                <button class="btn btn-sm btn-outline-primary" id="refreshProjectsBtn">
                                     🔄 Обновить
                                 </button>
                             </div>
@@ -191,7 +200,7 @@
                     <div class="tab-pane fade" id="users" role="tabpanel">
                         <div class="d-flex justify-content-between mb-3">
                             <h4>Управление пользователями</h4>
-                            <button class="btn btn-sm btn-success" onclick="showAddUserModal()">
+                            <button class="btn btn-sm btn-success" id="addUserBtn">
                                 ➕ Добавить пользователя
                             </button>
                         </div>
@@ -218,7 +227,7 @@
                                         class="card-header border-secondary d-flex justify-content-between align-items-center">
                                         <span class="text-white fw-bold">ОБЪЕКТЫ</span>
                                         <button class="btn btn-sm btn-outline-light"
-                                            onclick="loadDeletedProjects()">🔄</button>
+                                            id="refreshDeletedProjectsBtn">🔄</button>
                                     </div>
                                     <div class="card-body p-0" id="deletedProjectsList"
                                         style="max-height: 400px; overflow-y: auto;">
@@ -233,7 +242,7 @@
                                         class="card-header border-secondary d-flex justify-content-between align-items-center">
                                         <span class="text-white fw-bold">ПОЛЬЗОВАТЕЛИ</span>
                                         <button class="btn btn-sm btn-outline-light"
-                                            onclick="loadDeletedUsers()">🔄</button>
+                                            id="refreshDeletedUsersBtn">🔄</button>
                                     </div>
                                     <div class="card-body p-0" id="deletedUsersList"
                                         style="max-height: 400px; overflow-y: auto;">
@@ -350,6 +359,135 @@
     <script src="/js/api.js"></script>
     <script src="/js/shared.js"></script>
     <script src="/js/admin.js"></script>
-</body>
+    <script>
+        // Надежный обработчик для кнопки выхода
+        function initLogoutButton() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (confirm('Вы точно хотите выйти?')) {
+                        window.location.href = '/login.html';
+                    }
+                });
+                console.log('✅ Logout кнопка инициализирована');
+            } else {
+                console.log('❌ Logout кнопка не найдена');
+            }
+        }
+        
+        // Инициализация после загрузки DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLogoutButton);
+        } else {
+            initLogoutButton();
+        }
+    </script>
+    
+    <!-- САМЫЙ ПРОСТОЙ ОБРАБОТЧИК -->
+    <script>
+        // Ждем полной загрузки страницы
+        window.addEventListener('load', function() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('КЛИК ПО ВЫХОДУ!');
+                    if (confirm('Вы точно хотите выйти?')) {
+                        console.log('Переход на login.html');
+                        window.location.href = '/login.html';
+                    }
+                });
+                console.log('✅ Logout кнопка настроена через window.load');
+            } else {
+                console.log('❌ Logout кнопка не найдена');
+            }
+        });
+    </script>
+    
+    <!-- САМЫЙ ПРОСТОЙ ОБРАБОТЧИК -->
+    <script>
+        // Ждем полной загрузки страницы
+        window.addEventListener('load', function() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn && !logoutBtn.hasAttribute('data-logout-handler')) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('КЛИК ПО ВЫХОДУ!');
+                    console.log('Начинаю процесс выхода...');
+                    console.log('Текущий URL:', window.location.href);
+                    
+                    // Упрощенный выход без confirm для теста
+                    console.log('Перенаправление на /login.html');
+                    
+                    // Пробуем разные способы
+                    try {
+                        window.location.href = '/login.html';
+                        console.log('Способ 1: window.location.href выполнен');
+                    } catch (e) {
+                        console.log('Способ 1 не сработал:', e);
+                    }
+                    
+                    // Запасной способ через 100мс
+                    setTimeout(() => {
+                        console.log('Запасной способ: window.location.replace');
+                        window.location.replace('/login.html');
+                    }, 100);
+                });
+                logoutBtn.setAttribute('data-logout-handler', 'true');
+                console.log('✅ Logout кнопка настроена через window.load');
+            } else if (!logoutBtn) {
+                console.log('❌ Logout кнопка не найдена');
+            } else {
+                console.log('✅ Logout кнопка уже настроена');
+            }
+        });
+    </script>
+    
+    <!-- ДОПОЛНИТЕЛЬНЫЙ ОБРАБОТЧИК ЧЕРЕЗ INTERVAL -->
+    <script>
+        // Пробуем добавить обработчик несколько раз
+        (function() {
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            function tryAddLogoutHandler() {
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    // Проверяем, нет ли уже обработчика
+                    if (!logoutBtn.hasAttribute('data-logout-handler')) {
+                        logoutBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            console.log('КЛИК ПО ВЫХОДУ (INTERVAL)!');
+                            if (confirm('Вы точно хотите выйти?')) {
+                                console.log('Переход на login.html (INTERVAL)');
+                                window.location.href = '/login.html';
+                            }
+                        });
+                        logoutBtn.setAttribute('data-logout-handler', 'true');
+                        console.log('✅ Logout кнопка настроена через setInterval');
+                        return true; // Успех, прекращаем попытки
+                    }
+                }
+                return false; // Неудача, продолжаем попытки
+            }
+            
+            // Пробуем сразу
+            if (tryAddLogoutHandler()) {
+                return; // Уже успешно добавлено
+            }
+            
+            // Пробуем каждые 500мс
+            const interval = setInterval(() => {
+                attempts++;
+                if (tryAddLogoutHandler() || attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    if (attempts >= maxAttempts) {
+                        console.log('❌ Не удалось найти logout кнопку за ' + maxAttempts + ' попыток');
+                    }
+                }
+            }, 500);
+        })();
+    </script>
 
 </html>

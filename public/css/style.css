@@ -2,7 +2,7 @@
    ЭнергоАтлант - Индустриальный Дизайн (Aterenergo Style)
    ============================================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* Шрифты подключены через <link> в HTML, не через @import (быстрее, не блокирует рендер) */
 
 /* Основные переменные (Industrial Dark Palette + Neon Cyberpunk) */
 :root {

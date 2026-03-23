@@ -21,5 +21,6 @@ router.post('/projects/:id/documents', upload.single('document'), managerControl
 router.get('/requests', managerController.getRequests);
 router.get('/requests/archive', managerController.getRequestArchive);
 router.put('/requests/:id', managerController.reviewRequest);
+router.put('/requests/:id/review', managerController.reviewRequest); // Алиас для старых версий JS
 
 module.exports = router;

@@ -1,8 +1,16 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" style="background-color:#050505;color-scheme:dark">
+
 
 <head>
+    <style>/* critical-dark-bg */html,body{background-color:#050505 !important;color-scheme:dark}</style>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#050505">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ЭнергоАтлант - Проектирование и Строительство Энергообъектов</title>
     <meta name="description"
@@ -235,6 +243,7 @@
             }
         }
     </style>
+    <script>/* page-transition-script */document.documentElement.style.opacity="0";document.documentElement.style.transition="opacity 0.2s ease";window.addEventListener("load",function(){document.documentElement.style.opacity="1";});</script>
 </head>
 
 <body>
@@ -278,6 +287,15 @@
 
     <!-- Главный экран (Hero) -->
     <section class="hero-section" id="heroBlock">
+        <div id="heroVideoContainer"></div>
+        <script>
+            // Строго синхронная вставка при рендере, чтобы избежать "моргания/перезагрузки" видео
+            if (window.innerWidth > 768) {
+                document.getElementById('heroVideoContainer').innerHTML = 
+                    '<video class="hero-video" autoplay loop muted playsinline webkit-playsinline>' +
+                    '<source src="/img/hero_video.mp4?v=4" type="video/mp4"></video>';
+            }
+        </script>
         <div class="hero-overlay"></div>
         <div class="container">
             <div class="row min-vh-100 align-items-center pb-5">
@@ -601,24 +619,7 @@
             }
         });
     </script>
-    <script>
-        // Добавляем видео только для ПК, чтобы не перегружать телефоны тяжелым видео-файлом
-        document.addEventListener("DOMContentLoaded", function () {
-            if (window.innerWidth > 768) {
-                const heroBlock = document.getElementById('heroBlock');
-                if (heroBlock) {
-                    const video = document.createElement('video');
-                    video.autoplay = true;
-                    video.muted = true;
-                    video.loop = true;
-                    video.playsInline = true;
-                    video.className = 'hero-video';
-                    video.innerHTML = '<source src="/img/hero_video.mp4?v=4" type="video/mp4">';
-                    heroBlock.insertBefore(video, heroBlock.firstChild);
-                }
-            }
-        });
-    </script>
+
 
     <script>
         // Функция для маски телефона
@@ -661,9 +662,9 @@
             const alert = document.getElementById('heroRequestAlert');
             const fd = new FormData(e.target);
 
-            // Валидация телефона (напр. +7 (999) 999-99-99)
-            const phoneStr = fd.get('phone');
-            if (!/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/.test(phoneStr)) {
+            // Упрощенная проверка: наличие цифр (минимум 10)
+            const phoneStr = fd.get('phone').replace(/\D/g, '');
+            if (phoneStr.length < 10) {
                 alert.className = 'alert alert-danger rounded-0 mb-4 border-0 bg-danger bg-opacity-25 text-white';
                 alert.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>Введите корректный номер телефона';
                 alert.classList.remove('d-none');

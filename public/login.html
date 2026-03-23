@@ -1,8 +1,16 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" style="background-color:#050505;color-scheme:dark">
+
 
 <head>
+    <style>/* critical-dark-bg */html,body{background-color:#050505 !important;color-scheme:dark}</style>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#050505">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход - ЭнергоАтлант</title>
     <!-- Подключаем Bootstrap 5 -->
@@ -11,7 +19,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Наши кастомные премиум стили -->
     <link href="/css/style.css" rel="stylesheet">
-    <!-- AOS Animation Library -->
+    <link href="/css/spa.css" rel="stylesheet">    <!-- AOS Animation Library -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <style>
         .login-container {
@@ -72,6 +80,7 @@
             border: 1px solid var(--border-color);
         }
     </style>
+    <script>/* page-transition-script */document.documentElement.style.opacity="0";document.documentElement.style.transition="opacity 0.2s ease";window.addEventListener("load",function(){document.documentElement.style.opacity="1";});</script>
 </head>
 
 <body>
@@ -114,7 +123,7 @@
                             Запомнить меня
                         </label>
                     </div>
-                    <a href="#" class="text-white text-decoration-none small transition"
+                    <a href="#" id="forgotPasswordLink" class="text-white text-decoration-none small transition"
                         style="font-size: 0.85rem;">Забыли пароль?</a>
                 </div>
 
@@ -133,17 +142,47 @@
                 </div>
             </form>
 
-            <div class="text-center mt-4">
-                <small class="text-muted d-flex flex-column align-items-center gap-1" style="font-size: 0.7rem;">
-                    <span class="text-uppercase" style="letter-spacing: 0.1em;">Демо-доступ:</span>
-                    <span class="mt-1 border px-3 py-2" style="border-color: var(--border-color) !important;">
-                        admin / admin123
-                    </span>
-                </small>
+
+        </div>
+    </div>
+
+    <!-- Модальное окно восстановления пароля -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="forgotPasswordModalLabel">Восстановление пароля</h5>
+                    <button type="button" id="closeModalBtn" class="btn-close btn-close-white"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Введите ваш email для восстановления пароля. Мы отправим вам инструкции по
+                        восстановлению доступа.</p>
+
+                    <form id="forgotPasswordForm">
+                        <div class="mb-3">
+                            <label for="resetEmail" class="form-label">Email адрес</label>
+                            <input type="email" class="form-control bg-dark text-white border-secondary" id="resetEmail"
+                                placeholder="your@email.com" required>
+                            <small class="text-muted">Укажите email, который вы использовали при регистрации</small>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="sendResetBtn">
+                                📧 Отправить инструкции
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                Отмена
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
         // Init AOS
@@ -219,6 +258,75 @@
             alertBox.innerHTML = `<i class="bi ${icon}"></i> ${message}`;
             alertBox.classList.remove('d-none');
         }
+
+        // Обработчик для "Забыли пароль"
+        // Обработчик для "Забыли пароль"
+        document.addEventListener('DOMContentLoaded', () => {
+            const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+
+            if (forgotPasswordLink) {
+                forgotPasswordLink.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (typeof bootstrap === 'undefined') {
+                        showAlert('Модуль временно недоступен', 'warning');
+                        return;
+                    }
+
+                    const modalElement = document.getElementById('forgotPasswordModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                });
+            }
+
+            // Обработка отправки формы восстановления
+            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+            if (forgotPasswordForm) {
+                forgotPasswordForm.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    const email = document.getElementById('resetEmail').value.trim();
+                    const sendBtn = document.getElementById('sendResetBtn');
+
+                    if (!email) {
+                        showAlert('Введите email', 'warning');
+                        return;
+                    }
+
+                    sendBtn.disabled = true;
+                    sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Отправка...';
+
+                    try {
+                        const response = await fetch('/api/public/request', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fullName: "Восстановление пароля",
+                                phone: "+70000000000",
+                                email: email,
+                                description: "Запрос на восстановление пароля: " + email
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            showAlert('Инструкции отправлены на ваш email', 'success');
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+                            if (modal) modal.hide();
+                            forgotPasswordForm.reset();
+                        } else {
+                            showAlert(data.message || 'Ошибка', 'danger');
+                        }
+                    } catch (err) {
+                        showAlert('Сетевая ошибка', 'danger');
+                    } finally {
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = '📧 Отправить инструкции';
+                    }
+                });
+            }
+        });
     </script>
 </body>
 

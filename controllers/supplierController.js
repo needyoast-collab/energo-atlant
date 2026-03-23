@@ -8,10 +8,10 @@ const joinProjectSchema = z.object({
 
 const proposeMaterialSchema = z.object({
     stageId: z.coerce.number().positive(),
-    materialName: z.string().min(2).max(200),
-    unit: z.string().max(20).optional().default('шт'),
+    materialName: z.string().trim().min(2).max(200),
+    unit: z.string().trim().max(20).optional().default('шт'),
     quantity: z.coerce.number().positive(),
-    notes: z.string().max(500).optional().or(z.literal(''))
+    notes: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(500).optional())
 });
 
 exports.joinProject = async (req, res, next) => {
@@ -188,7 +188,7 @@ exports.getMaterialRequests = async (req, res, next) => {
 
 const updateMaterialStatusSchema = z.object({
     status: z.enum(['ordered', 'delivered', 'rejected']),
-    notes: z.string().max(500).optional().or(z.literal(''))
+    notes: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(500).optional())
 });
 
 exports.updateMaterialRequestStatus = async (req, res, next) => {
@@ -215,19 +215,21 @@ exports.updateMaterialRequestStatus = async (req, res, next) => {
 
         if (status === 'delivered') {
             const stage = await dbGet('SELECT id FROM project_stages WHERE project_id = ? AND is_deleted = 0 ORDER BY stage_number LIMIT 1', [request.project_id]);
-            if (stage) {
-                const exists = await dbGet('SELECT id FROM project_materials WHERE stage_id = ? AND material_name = ? AND is_deleted = 0', [stage.id, request.material_name]);
-                if (exists) {
-                    await dbRun(
-                        `UPDATE project_materials SET quantity_received = quantity_received + ?, is_received = 1, received_at = datetime('now') WHERE id = ?`,
-                        [request.quantity, exists.id]
-                    );
-                } else {
-                    await dbRun(
-                        `INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned, quantity_received, is_received, received_at) VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`,
-                        [stage.id, request.material_name, request.unit, request.quantity, request.quantity]
-                    );
-                }
+            if (!stage) {
+                return res.status(400).json({ success: false, message: 'У проекта нет этапов, некуда доставить материал' });
+            }
+            
+            const exists = await dbGet('SELECT id FROM project_materials WHERE stage_id = ? AND material_name = ? AND is_deleted = 0', [stage.id, request.material_name]);
+            if (exists) {
+                await dbRun(
+                    `UPDATE project_materials SET quantity_received = quantity_received + ?, is_received = 1, received_at = datetime('now') WHERE id = ?`,
+                    [request.quantity, exists.id]
+                );
+            } else {
+                await dbRun(
+                    `INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned, quantity_received, is_received, received_at) VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`,
+                    [stage.id, request.material_name, request.unit, request.quantity, request.quantity]
+                );
             }
             await dbRun(`UPDATE material_requests SET status = 'delivered', delivered_at = datetime('now'), notes = ? WHERE id = ?`, [notes || null, requestId]);
         } else {
@@ -257,7 +259,7 @@ exports.confirmMaterialDelivery = async (req, res, next) => {
             return res.status(403).json({ success: false, message: 'Доступ запрещён' });
         }
 
-        await dbRun(`UPDATE project_materials SET quantity_received = ?, is_received = 1, received_at = datetime('now') WHERE id = ?`, [quantityReceived, materialId]);
+        await dbRun(`UPDATE project_materials SET quantity_received = quantity_received + ?, is_received = 1, received_at = datetime('now') WHERE id = ?`, [quantityReceived, materialId]);
         res.json({ success: true, message: 'Поступление на склад зафиксировано' });
     } catch (error) {
         next(error);

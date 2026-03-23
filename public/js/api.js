@@ -95,6 +95,26 @@ window.logout = logout; // Делаем доступной везде
 // УВЕДОМЛЕНИЯ
 // =============================================================================
 
+// Отметить уведомление как прочитанное и скрыть плашку
+async function markNotificationAsRead(id) {
+    try {
+        await apiRequest(`/api/notifications/${id}/read`, 'POST');
+
+        // Удаляем плашку уведомления из DOM
+        const notificationElement = document.querySelector(`[data-notification-id="${id}"]`);
+        if (notificationElement) {
+            notificationElement.remove();
+        }
+
+        // Обновляем счетчик уведомлений
+        if (window.loadNotifications) {
+            window.loadNotifications();
+        }
+    } catch (error) {
+        console.error('Ошибка при отметке уведомления как прочитанного:', error);
+    }
+}
+
 function showSuccess(message) {
     showToast(message, 'success');
 }
@@ -310,3 +330,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// =============================================================================
+// ПЛАВНЫЕ ПЕРЕХОДЫ МЕЖДУ СТРАНИЦАМИ (устраняет мигание)
+// =============================================================================
+(function() {
+    // Плавное исчезновение при уходе со страницы (появление обрабатывается инлайн-скриптом в <head> или прелоадером)
+
+    // Плавное исчезновение при уходе со страницы
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        // Пропускаем: якоря, javascript:, внешние ссылки, target=_blank
+        if (
+            href.startsWith('#') ||
+            href.startsWith('javascript') ||
+            href.startsWith('mailto') ||
+            href.startsWith('tel') ||
+            link.target === '_blank' ||
+            link.hasAttribute('download') ||
+            (href.startsWith('http') && !href.startsWith(window.location.origin))
+        ) return;
+
+        e.preventDefault();
+        document.documentElement.style.opacity = '0';
+        setTimeout(function() {
+            window.location.href = href;
+        }, 200);
+    });
+})();

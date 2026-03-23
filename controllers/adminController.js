@@ -3,13 +3,13 @@ const argon2 = require('argon2');
 const { z } = require('zod');
 
 const adminCreateUserSchema = z.object({
-    login: z.string().min(3, "Логин должен быть от 3 символов").max(50),
-    password: z.string().min(6, "Пароль должен быть от 6 символов"),
+    login: z.string().trim().min(3, "Логин должен быть от 3 символа").max(50),
+    password: z.string().min(6, "Пароль должен быть от 6 символов").max(100),
     role: z.enum(['admin', 'manager', 'foreman', 'supplier', 'pto', 'customer', 'partner']),
-    full_name: z.string().min(2, "ФИО слишком короткое").max(100),
-    email: z.string().email("Неверный формат email").optional().or(z.literal('')),
-    phone: z.string().regex(/^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/, "Неверный формат телефона").optional().or(z.literal('')),
-    organization: z.string().max(100).optional().or(z.literal(''))
+    full_name: z.string().trim().min(2, "ФИО слишком короткое").max(100),
+    email: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().email("Неверный формат email").optional()),
+    phone: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().regex(/^[\+]?[78][\s\-()]*\d{3}[\s\-()]*\d{3}[\s\-()]*\d{2}[\s\-()]*\d{2}$/, "Неверный формат телефона").optional()),
+    organization: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(100).optional()),
 });
 
 const adminUpdateUserSchema = z.object({
@@ -17,8 +17,9 @@ const adminUpdateUserSchema = z.object({
     role: z.enum(['admin', 'manager', 'foreman', 'supplier', 'pto', 'customer', 'partner']),
     is_active: z.number().int().min(0).max(1).optional(),
     is_verified: z.number().int().min(0).max(1).optional(),
-    email: z.string().email("Неверный формат email").optional().or(z.literal('')),
-    phone: z.string().optional().or(z.literal(''))
+    email: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().email("Неверный формат email").optional()),
+    phone: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().optional()),
+    password: z.string().min(4, "Пароль слишком короткий").optional() // Опциональное обновление пароля
 });
 
 exports.getUsers = async (req, res, next) => {
@@ -44,9 +45,19 @@ exports.createUser = async (req, res, next) => {
 
         const { login, password, email, phone, role, full_name, organization } = parseResult.data;
 
-        const existingUser = await dbGet("SELECT id FROM users WHERE login = ?", [login]);
+        // Проверка уникальности по login, email и phone
+        const existingUser = await dbGet("SELECT id, login, email, phone FROM users WHERE (login = ? OR email = ? OR phone = ?) AND is_deleted = 0", 
+            [login, email || null, phone || null]);
         if (existingUser) {
-            return res.status(400).json({ success: false, message: "Пользователь с таким логином уже существует" });
+            if (existingUser.login === login) {
+                return res.status(400).json({ success: false, message: "Пользователь с таким логином уже существует" });
+            }
+            if (existingUser.email === email) {
+                return res.status(400).json({ success: false, message: "Пользователь с таким email уже существует" });
+            }
+            if (existingUser.phone === phone) {
+                return res.status(400).json({ success: false, message: "Пользователь с таким телефоном уже существует" });
+            }
         }
 
         const hashedPassword = await argon2.hash(password);
@@ -65,7 +76,7 @@ exports.createUser = async (req, res, next) => {
 
 exports.updateUser = async (req, res, next) => {
     try {
-        const userId = req.params.id;
+        const userId = z.coerce.number().parse(req.params.id);
         const parseResult = adminUpdateUserSchema.safeParse(req.body);
 
         if (!parseResult.success) {
@@ -75,12 +86,21 @@ exports.updateUser = async (req, res, next) => {
             });
         }
 
-        const { full_name, role, is_active, is_verified, email, phone } = parseResult.data;
+        const { full_name, role, is_active, is_verified, email, phone, password } = parseResult.data;
 
-        await dbRun(
-            "UPDATE users SET full_name = ?, role = ?, is_active = ?, is_verified = ?, email = ?, phone = ? WHERE id = ?",
-            [full_name, role, is_active ?? 1, is_verified ?? 1, email || null, phone || null, userId]
-        );
+        // Если передан пароль - хешируем его
+        let updateFields = "full_name = ?, role = ?, is_active = ?, is_verified = ?, email = ?, phone = ?";
+        let updateValues = [full_name, role, is_active ?? 1, is_verified ?? 1, email || null, phone || null];
+        
+        if (password) {
+            const hashedPassword = await argon2.hash(password);
+            updateFields += ", password = ?";
+            updateValues.push(hashedPassword);
+        }
+        
+        updateValues.push(userId);
+
+        await dbRun(`UPDATE users SET ${updateFields} WHERE id = ?`, updateValues);
 
         res.json({ success: true, message: "Данные пользователя обновлены" });
     } catch (error) {
@@ -90,7 +110,7 @@ exports.updateUser = async (req, res, next) => {
 
 exports.verifyUser = async (req, res, next) => {
     try {
-        const userId = z.string().or(z.number()).parse(req.params.id);
+        const userId = z.coerce.number().parse(req.params.id);
         await dbRun("UPDATE users SET is_verified = 1 WHERE id = ?", [userId]);
         res.json({ success: true, message: "Пользователь успешно верифицирован" });
     } catch (error) {

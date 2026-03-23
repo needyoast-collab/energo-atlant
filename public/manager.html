@@ -124,7 +124,7 @@
         <nav>
             <a href="#" class="active"><i class="fas fa-tools"></i> Управление</a>
             <a href="cabinet.html"><i class="fas fa-chart-pie"></i> Мой Кабинет</a>
-            <a href="#" onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href = '/login.html');" style="color: #f85149; margin-top: 50px;"><i class="fas fa-sign-out-alt"></i> Выйти</a>
+            <a href="#" id="logoutBtn" style="color: #f85149; margin-top: 50px;"><i class="fas fa-sign-out-alt"></i> Выйти</a>
         </nav>
     </aside>
 
@@ -135,28 +135,36 @@
             <h3><i class="fas fa-key"></i> Приглашения</h3>
             <div style="display: flex; align-items: center;">
                 <div id="codeDisplay" class="code-display">----</div>
-                <button class="btn" onclick="generateNewCode()"><i class="fas fa-sync-alt"></i> Создать код</button>
+                <button class="btn" id="generateCodeBtn"><i class="fas fa-sync-alt"></i> Создать код</button>
             </div>
             <p style="margin-top: 10px; font-size: 0.9rem; color: #8b949e;">Отправьте этот код клиенту для регистрации.</p>
         </div>
 
         <div class="card">
             <h3><i class="fas fa-hard-hat"></i> Создать новый объект</h3>
-            <form id="createProjectForm" onsubmit="createProject(event)">
+            <form id="createProjectForm">
                 <div class="project-form-grid">
                     <div>
-                        <label>Название объекта</label>
+                        <label>Название объекта *</label>
                         <input type="text" id="p-title" placeholder="Напр: ПС Северная-2" required>
                     </div>
                     <div>
-                        <label>Клиент (Владелец)</label>
-                        <select id="p-user" required>
-                            <option value="">Загрузка клиентов...</option>
-                        </select>
+                        <label>Адрес объекта *</label>
+                        <input type="text" id="p-address" placeholder="г. Москва, ул..." required>
+                    </div>
+                    <div>
+                        <label>Тип работ *</label>
+                        <input type="text" id="p-work-type" placeholder="Напр: Строительство, Ремонт..." required>
+                    </div>
+                    <div>
+                        <label>Протяжённость *</label>
+                        <input type="text" id="p-length" placeholder="Напр: 100м, 5км..." required>
                     </div>
                     <div class="full-width">
-                        <label>Адрес проведения работ</label>
-                        <input type="text" id="p-address" placeholder="г. Москва, ул..." required>
+                        <label>Клиент (Владелец)</label>
+                        <select id="p-user">
+                            <option value="">Выберите клиента...</option>
+                        </select>
                     </div>
                     <div class="full-width">
                         <label>Описание работ</label>
@@ -201,8 +209,9 @@
                     </tbody>
             </table>
         </div>
-    </main>
+    </div>
 
+    <script src="/js/api.js"></script>
     <script>
         // --- 1. ГЕНЕРАТОР ---
         async function generateNewCode() {
@@ -230,7 +239,7 @@
                     <td><b>${u.login}</b></td>
                     <td>${u.email}<br><small>${u.phone}</small></td>
                     <td>${u.role}</td>
-                    <td>${u.role !== 'admin' ? `<button class="btn-del" onclick="deleteUser(${u.id})">Удалить</button>` : '-'}</td>
+                    <td>${u.role !== 'admin' ? `<button class="btn-del" data-id="${u.id}">Удалить</button>` : '-'}</td>
                 </tr>
             `).join('');
 
@@ -266,7 +275,7 @@
                         </div>
                         <small>${p.progress}%</small>
                     </td>
-                    <td><button class="btn-del" onclick="deleteProject(${p.id})"><i class="fas fa-trash"></i></button></td>
+                    <td><button class="btn-del" data-id="${p.id}"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('');
         }
@@ -274,29 +283,125 @@
         // --- 3. ДЕЙСТВИЯ ---
         async function createProject(e) {
             e.preventDefault();
-            const user_id = document.getElementById('p-user').value;
             const title = document.getElementById('p-title').value;
             const address = document.getElementById('p-address').value;
+            const workType = document.getElementById('p-work-type').value;
+            const length = document.getElementById('p-length').value;
+            const user_id = document.getElementById('p-user').value;
             const description = document.getElementById('p-desc').value;
 
-            if(!user_id) return alert("Выберите клиента из списка!");
+            console.log('Валидация формы проекта:');
+            console.log('title:', title);
+            console.log('address:', address);
+            console.log('workType:', workType);
+            console.log('length:', length);
 
-            const res = await fetch('/api/projects', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id, title, address, description,
-                    status: 'working',
-                    progress: 0
-                })
-            });
+            // Проверка 4 обязательных полей (минимум 1 символ)
+            if(!title || title.trim().length < 1) {
+                alert("Введите название объекта (минимум 1 символ)!");
+                document.getElementById('p-title').focus();
+                return;
+            }
 
-            if(res.ok) {
+            if(!address || address.trim().length < 1) {
+                alert("Введите адрес объекта (минимум 1 символ)!");
+                document.getElementById('p-address').focus();
+                return;
+            }
+
+            if(!workType || workType.trim().length < 1) {
+                alert("Введите тип работ (минимум 1 символ)!");
+                document.getElementById('p-work-type').focus();
+                return;
+            }
+
+            if(!length || length.trim().length < 1) {
+                alert("Введите протяжённость (минимум 1 символ)!");
+                document.getElementById('p-length').focus();
+                return;
+            }
+
+            console.log('Валидация пройдена, отправка данных...');
+
+            // Используем apiRequest как в manager.js
+            const projectData = {
+                title: title,
+                address: address,
+                work_type: workType,
+                length_m: length
+            };
+            
+            if (user_id) projectData.user_id = user_id;
+            if (description) projectData.description = description;
+            
+            console.log('=== ПОЛНАЯ ДИАГНОСТИКА ЗАПРОСА ===');
+            console.log('1. Данные для отправки:', JSON.stringify(projectData, null, 2));
+            console.log('2. URL: /api/manager/projects');
+            console.log('3. Method: POST');
+            console.log('4. Content-Type: application/json');
+            console.log('5. Проверяем apiRequest функцию:', typeof apiRequest);
+            
+            // Пробуем прямой fetch для сравнения
+            console.log('=== ТЕСТ ПРЯМОГО FETCH ===');
+            try {
+                const directResponse = await fetch('/api/manager/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(projectData)
+                });
+                
+                console.log('Прямой fetch статус:', directResponse.status);
+                console.log('Прямой fetch.statusText:', directResponse.statusText);
+                
+                const directText = await directResponse.text();
+                console.log('Прямой fetch ответ (текст):', directText);
+                
+                if (directResponse.ok) {
+                    console.log('✅ Прямой fetch сработал!');
+                    alert('✅ Проект создан через прямой fetch!');
+                    e.target.reset();
+                    loadProjects();
+                    return;
+                } else {
+                    console.log('❌ Прямой fetch тоже не сработал');
+                }
+            } catch (e) {
+                console.log('Ошибка прямого fetch:', e);
+            }
+            
+            console.log('=== ПРОБУЕМ APIREQUEST ===');
+            const res = await apiRequest('/api/manager/projects', 'POST', projectData);
+            
+            console.log('=== ДЕТАЛЬНЫЙ ОТВЕТ API ===');
+            console.log('Полный ответ apiRequest:', JSON.stringify(res, null, 2));
+            console.log('success:', res.success);
+            console.log('message:', res.message);
+            console.log('errors:', res.errors);
+            console.log('data:', res.data);
+            
+            // apiRequest возвращает объект с полями success, data, message
+            if(res.success) {
+                console.log('✅ Проект успешно создан!');
+                console.log('Данные проекта:', res.data);
+                
                 // Очистка формы и обновление таблицы
                 e.target.reset();
                 loadProjects();
+                
+                alert('✅ Проект успешно создан!');
             } else {
-                alert("Ошибка при создании");
+                console.log('❌ Ошибка создания проекта:');
+                console.log('Сообщение:', res.message);
+                console.log('Ошибки:', res.errors);
+                
+                let errorMsg = res.message || 'Неизвестная ошибка';
+                if (res.errors && Object.keys(res.errors).length > 0) {
+                    errorMsg += '\nДетали:\n' + Object.entries(res.errors)
+                        .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+                        .join('\n');
+                }
+                
+                alert("❌ Ошибка при создании проекта:\n" + errorMsg);
             }
         }
 
@@ -316,6 +421,133 @@
 
         // Старт
         loadAll();
+        
+        // Добавляем обработчики событий
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('КЛИК ПО ВЫХОДУ!');
+                    console.log('Начинаю процесс выхода...');
+                    console.log('Текущий URL:', window.location.href);
+                    
+                    // Упрощенный выход без confirm для теста
+                    console.log('Перенаправление на /login.html');
+                    
+                    // Пробуем разные способы
+                    try {
+                        window.location.href = '/login.html';
+                        console.log('Способ 1: window.location.href выполнен');
+                    } catch (e) {
+                        console.log('Способ 1 не сработал:', e);
+                    }
+                    
+                    // Запасной способ через 100мс
+                    setTimeout(() => {
+                        console.log('Запасной способ: window.location.replace');
+                        window.location.replace('/login.html');
+                    }, 100);
+                });
+                console.log('✅ Logout кнопка настроена в DOMContentLoaded');
+            } else {
+                console.log('❌ Logout кнопка не найдена в DOMContentLoaded');
+            }
+        });
+        
+        // ДОПОЛНИТЕЛЬНЫЙ ОБРАБОТЧИК ЧЕРЕЗ INTERVAL
+        (function() {
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            function tryAddLogoutHandler() {
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn && !logoutBtn.hasAttribute('data-logout-handler')) {
+                    logoutBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('КЛИК ПО ВЫХОДУ (INTERVAL)!');
+                        console.log('Начинаю процесс выхода...');
+                        console.log('Текущий URL:', window.location.href);
+                        
+                        // Упрощенный выход без confirm для теста
+                        console.log('Перенаправление на /login.html');
+                        
+                        // Пробуем разные способы
+                        try {
+                            window.location.href = '/login.html';
+                            console.log('Способ 1: window.location.href выполнен');
+                        } catch (e) {
+                            console.log('Способ 1 не сработал:', e);
+                        }
+                        
+                        // Запасной способ через 100мс
+                        setTimeout(() => {
+                            console.log('Запасной способ: window.location.replace');
+                            window.location.replace('/login.html');
+                        }, 100);
+                    });
+                    logoutBtn.setAttribute('data-logout-handler', 'true');
+                    console.log('✅ Logout кнопка настроена через setInterval');
+                    return true;
+                }
+                return false;
+            }
+            
+            // Пробуем сразу
+            if (tryAddLogoutHandler()) return;
+            
+            // Пробуем каждые 500мс
+            const interval = setInterval(() => {
+                attempts++;
+                if (tryAddLogoutHandler() || attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    if (attempts >= maxAttempts) {
+                        console.log('❌ Не удалось найти logout кнопку за ' + maxAttempts + ' попыток');
+                    }
+                }
+            }, 500);
+        })();
+        
+        // САМЫЙ ПРОСТОЙ ОБРАБОТЧИК
+        window.addEventListener('load', function() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn && !logoutBtn.hasAttribute('data-logout-handler')) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('КЛИК ПО ВЫХОДУ (WINDOW.LOAD)!');
+                    console.log('Перенаправление на /login.html');
+                    window.location.href = '/login.html';
+                });
+                console.log('✅ Logout кнопка настроена через window.load');
+            }
+        });
+        
+        // Другие обработчики
+        document.addEventListener('DOMContentLoaded', () => {
+            const generateCodeBtn = document.getElementById('generateCodeBtn');
+            if (generateCodeBtn) {
+                generateCodeBtn.addEventListener('click', generateNewCode);
+            }
+            
+            const createProjectForm = document.getElementById('createProjectForm');
+            if (createProjectForm) {
+                createProjectForm.addEventListener('submit', createProject);
+            }
+            
+            // Делегированный обработчик для кнопок удаления
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('btn-del')) {
+                    const id = parseInt(e.target.dataset.id);
+                    if (id) {
+                        if (e.target.textContent.includes('Удалить')) {
+                            deleteUser(id);
+                        } else {
+                            deleteProject(id);
+                        }
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>

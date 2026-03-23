@@ -1,6 +1,6 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
 const { uploadToSupabase } = require('../utils/supabaseStorage');
-const { sendNotification, sendDirectNotification } = require('../utils/helpers');
+const { sendNotification, sendDirectNotification, getSafeFileName } = require('../utils/helpers');
 const { z } = require('zod');
 
 // Схемы валидации
@@ -126,13 +126,13 @@ exports.getProjectDetails = async (req, res, next) => {
                 [stage.id]
             );
             stage.photos = await dbAll(
-                "SELECT id, file_name, file_path, uploaded_at FROM project_stage_photos WHERE stage_id = ?",
+                "SELECT id, file_name, file_path, uploaded_at FROM project_stage_photos WHERE stage_id = ? AND is_deleted = 0",
                 [stage.id]
             );
         }
 
         const documents = await dbAll(
-            "SELECT id, file_name, file_path, document_type, uploaded_at FROM project_documents WHERE project_id = ?",
+            "SELECT id, file_name, file_path, document_type, uploaded_at FROM project_documents WHERE project_id = ? AND is_deleted = 0",
             [id]
         );
 
@@ -248,7 +248,7 @@ exports.uploadStagePhotos = async (req, res, next) => {
         }
 
         for (const file of req.files) {
-            const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            const fileName = getSafeFileName(file);
             const cloudPath = await uploadToSupabase(file, 'projects/photos');
             await dbRun(
                 "INSERT INTO project_stage_photos (stage_id, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?)",

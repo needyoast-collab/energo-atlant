@@ -160,20 +160,8 @@ if (regBtn) {
 // ==========================================
 // 4. ВЫХОД ИЗ СИСТЕМЫ (LOGOUT)
 // ==========================================
-const logoutBtn = document.getElementById('logoutBtn');
-
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', (e) => {
-        if (typeof window.logout === 'function') {
-            window.logout(e);
-        } else {
-            console.warn('Global logout not found, fallback to simple confirm');
-            if (confirm('Вы точно хотите выйти?')) {
-                window.location.href = '/login.html';
-            }
-        }
-    });
-}
+// Логика перенесена в api.js для централизованного управления.
+// Старый обработчик удален во избежание конфликтов.
 // ==========================================
 // 5. АНИМАЦИЯ В КАБИНЕТЕ (ПРОГРЕСС-БАРЫ)
 // ==========================================

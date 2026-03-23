@@ -5,9 +5,10 @@ const { uploadToSupabase } = require('../utils/supabaseStorage');
 
 // Схемы валидации
 const createRequestSchema = z.object({
-    title: z.string().min(3, "Заголовок слишком короткий").max(200),
-    description: z.string().min(10, "Описание должно быть подробным"),
-    contactInfo: z.string().min(10, "Укажите контактный телефон")
+    title: z.string().trim().min(3, "Заголовок слишком короткий").max(200),
+    description: z.preprocess(val => (val === '' || val === null) ? undefined : val,
+        z.string().min(10, "Описание должно быть подробным").optional()),
+    contactInfo: z.string().trim().min(10, "Укажите контактный телефон")
 });
 
 const joinProjectSchema = z.object({

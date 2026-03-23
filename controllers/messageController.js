@@ -1,11 +1,11 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
-const { sendDirectNotification } = require('../utils/helpers');
+const { sendDirectNotification, getSafeFileName } = require('../utils/helpers');
 const { z } = require('zod');
 
 const sendMessageSchema = z.object({
     receiver_id: z.coerce.number().positive("Укажите получателя"),
     project_id: z.coerce.number().positive().optional().nullable(),
-    subject: z.string().max(200).optional().or(z.literal('')),
+    subject: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(200).optional()),
     body: z.string().min(1, "Введите текст сообщения").max(2000)
 });
 
@@ -58,7 +58,7 @@ exports.sendMessage = async (req, res, next) => {
         let attachmentsString = null;
         if (req.files && req.files.length > 0) {
             const filesData = req.files.map(f => ({
-                originalName: Buffer.from(f.originalname, 'latin1').toString('utf8'),
+                originalName: getSafeFileName(f),
                 filename: f.filename,
                 size: f.size
             }));

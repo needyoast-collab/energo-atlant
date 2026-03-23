@@ -1,5 +1,6 @@
 const { dbGet, dbRun, dbAll } = require('../config/database');
 const { uploadToSupabase } = require('../utils/supabaseStorage');
+const { getSafeFileName } = require('../utils/helpers');
 const fs = require('fs');
 const path = require('path');
 const pdfParse = require('pdf-parse');
@@ -21,34 +22,34 @@ const { z } = require('zod');
 
 // Схемы валидации Zod
 const projectSchema = z.object({
-    title: z.string().min(3, "Название слишком короткое").max(200),
-    address: z.string().min(5, "Адрес слишком короткий").max(300),
-    description: z.string().max(1000).optional().or(z.literal('')),
-    clientName: z.string().max(100).optional().or(z.literal('')),
-    clientOrganization: z.string().max(100).optional().or(z.literal('')),
-    foremanId: z.number().int().positive().optional().nullable(),
-    supplierId: z.number().int().positive().optional().nullable(),
-    ptoId: z.number().int().positive().optional().nullable(),
-    customerId: z.number().int().positive().optional().nullable(),
-    requestId: z.number().int().positive().optional().nullable(),
-    work_type: z.string().min(2, "Укажите тип работ").max(200),
-    length_m: z.coerce.number().min(0, "Протяженность не может быть отрицательной"),
-    lead_source: z.string().max(100).optional().nullable(),
+    title: z.string().trim().min(3, "Название слишком короткое").max(200),
+    address: z.string().trim().min(5, "Адрес слишком короткий").max(300),
+    description: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(1000).optional()),
+    clientName: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(100).optional()),
+    clientOrganization: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(100).optional()),
+    foremanId: z.preprocess(val => val ? Number(val) : null, z.number().int().positive().nullable().optional()),
+    supplierId: z.preprocess(val => val ? Number(val) : null, z.number().int().positive().nullable().optional()),
+    ptoId: z.preprocess(val => val ? Number(val) : null, z.number().int().positive().nullable().optional()),
+    customerId: z.preprocess(val => val ? Number(val) : null, z.number().int().positive().nullable().optional()),
+    requestId: z.preprocess(val => val ? Number(val) : null, z.number().int().positive().nullable().optional()),
+    work_type: z.string().trim().min(2, "Укажите тип работ").max(200),
+    length_m: z.coerce.number().min(0, "Протяженность не может быть отрицательной").optional().default(0),
+    lead_source: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(100).optional()),
     offer_sum: z.coerce.number().optional().nullable(),
-    visit_date: z.string().datetime().optional().nullable().or(z.literal('')),
-    offer_sent_date: z.string().date().optional().nullable().or(z.literal('')),
-    offer_valid_until: z.string().date().optional().nullable().or(z.literal('')),
-    contract_date: z.string().date().optional().nullable().or(z.literal('')),
+    visit_date: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().optional()),
+    offer_sent_date: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().optional()),
+    offer_valid_until: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().optional()),
+    contract_date: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().optional()),
     advance_sum: z.coerce.number().optional().nullable(),
-    advance_date: z.string().date().optional().nullable().or(z.literal('')),
-    act_date: z.string().date().optional().nullable().or(z.literal('')),
+    advance_date: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().optional()),
+    act_date: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().optional()),
     final_sum: z.coerce.number().optional().nullable(),
     status: z.string().optional().default('lead')
 });
 
 const reviewPublicRequestSchema = z.object({
     status: z.enum(['accepted', 'rejected', 'reviewed']),
-    notes: z.string().max(1000).optional().or(z.literal('')),
+    notes: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(1000).optional()),
     requestType: z.enum(['public', 'authenticated'])
 });
 
@@ -127,14 +128,14 @@ exports.createProject = async (req, res, next) => {
                 }
 
                 await dbRun(
-                    "UPDATE project_requests SET status = 'accepted', notes = 'Проект создан', reviewed_at = datetime('now'), project_id = ? WHERE id = ?",
+                    "UPDATE project_requests SET status = 'accepted', notes = 'Проект создан', reviewed_at = CURRENT_TIMESTAMP, project_id = $1 WHERE id = $2",
                     [projectId, data.requestId]
                 );
             }
 
             if (req.files && req.files.length > 0) {
                 for (const file of req.files) {
-                    const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+                    const fileName = getSafeFileName(file);
                     const cloudPath = await uploadToSupabase(file, 'projects/initial');
                     await dbRun(
                         "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by) VALUES (?, 'initial', ?, ?, ?)",
@@ -199,14 +200,40 @@ exports.aiAnalyze = async (req, res, next) => {
 
         let apiMessages = [];
         if (isPdf) {
-            const pdfData = await pdfParse(fs.readFileSync(filePath));
+            let pdfData;
+            if (filePath.startsWith('http') || filePath.startsWith('https')) {
+                // Supabase URL - скачиваем файл
+                const response = await fetch(filePath);
+                if (!response.ok) {
+                    return res.status(400).json({ success: false, message: "Не удалось скачать файл из хранилища" });
+                }
+                const buffer = await response.arrayBuffer();
+                pdfData = await pdfParse(Buffer.from(buffer));
+            } else {
+                // Локальный файл
+                pdfData = await pdfParse(fs.readFileSync(filePath));
+            }
+
             const pdfText = pdfData.text.replace(/\s+/g, ' ').trim();
             if (!pdfText || pdfText.length < 10) {
                 return res.status(400).json({ success: false, message: "Не удалось извлечь текст из PDF." });
             }
             apiMessages = [{ role: "user", content: prompt + "\n\nТекст:\n" + pdfText.substring(0, 15000) }];
         } else {
-            const fileData = fs.readFileSync(filePath);
+            let fileData;
+            if (filePath.startsWith('http') || filePath.startsWith('https')) {
+                // Supabase URL - скачиваем файл
+                const response = await fetch(filePath);
+                if (!response.ok) {
+                    return res.status(400).json({ success: false, message: "Не удалось скачать файл из хранилища" });
+                }
+                const buffer = await response.arrayBuffer();
+                fileData = Buffer.from(buffer);
+            } else {
+                // Локальный файл
+                fileData = fs.readFileSync(filePath);
+            }
+
             const dataUrl = `data:${mimeType};base64,${fileData.toString("base64")}`;
             apiMessages = [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image_url", image_url: { url: dataUrl } }] }];
         }
@@ -229,7 +256,17 @@ exports.aiAnalyze = async (req, res, next) => {
 exports.applyAiEstimate = async (req, res, next) => {
     try {
         const projectId = z.coerce.number().parse(req.params.id);
-        const { works, materials } = req.body;
+
+        // Строгая валидация материалов
+        const materialsSchema = z.object({
+            materials: z.array(z.object({
+                name: z.string().min(1, "Название материала обязательно"),
+                unit: z.string().optional().default("шт"),
+                quantity: z.coerce.number().positive("Количество должно быть положительным")
+            })).optional().default([])
+        });
+
+        const { materials } = materialsSchema.parse(req.body);
 
         // Проверка прав (IDOR)
         const project = await dbGet("SELECT id FROM projects WHERE id = ? AND is_deleted = 0 AND (manager_id = ? OR ? = 'admin')",
@@ -242,14 +279,12 @@ exports.applyAiEstimate = async (req, res, next) => {
         );
         const stageId = stageRes.id;
 
-        if (Array.isArray(materials)) {
+        if (Array.isArray(materials) && materials.length > 0) {
             for (const mat of materials) {
-                if (mat.name) {
-                    await dbRun(
-                        "INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned) VALUES (?, ?, ?, ?)",
-                        [stageId, mat.name, mat.unit || 'шт', mat.quantity || 0]
-                    );
-                }
+                await dbRun(
+                    "INSERT INTO project_materials (stage_id, material_name, unit, quantity_planned) VALUES (?, ?, ?, ?)",
+                    [stageId, mat.name, mat.unit || 'шт', mat.quantity]
+                );
             }
         }
 
@@ -341,7 +376,7 @@ exports.completeProject = async (req, res, next) => {
         if (!req.file) return res.status(400).json({ success: false, message: "Загрузите Акт" });
 
         const smsCode = z.string().min(4).parse(req.body.smsCode);
-        const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+        const fileName = getSafeFileName(req.file);
 
         // Check ownership
         const project = await dbGet("SELECT id FROM projects WHERE id = ? AND is_deleted = 0 AND (manager_id = ? OR ? = 'admin')",
@@ -383,7 +418,7 @@ exports.uploadProjectDocument = async (req, res, next) => {
             [projectId, req.session.userId, req.session.userRole]);
         if (!project) return res.status(403).json({ success: false, message: "Нет доступа" });
 
-        const fileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+        const fileName = getSafeFileName(req.file);
         const cloudPath = await uploadToSupabase(req.file, 'projects/docs');
         await dbRun(
             "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, ?, ?, ?, ?, ?)",
@@ -445,9 +480,9 @@ exports.reviewRequest = async (req, res, next) => {
         const { status, notes, requestType } = parseResult.data;
 
         if (requestType === 'public') {
-            await dbRun("UPDATE public_requests SET status = ?, notes = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes || null, requestId]);
+            await dbRun("UPDATE public_requests SET status = $1, notes = $2, reviewed_at = CURRENT_TIMESTAMP WHERE id = $3", [status, notes || null, requestId]);
         } else {
-            await dbRun("UPDATE project_requests SET status = ?, notes = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?", [status, notes || null, req.session.userId, requestId]);
+            await dbRun("UPDATE project_requests SET status = $1, notes = $2, reviewer_id = $3, reviewed_at = CURRENT_TIMESTAMP WHERE id = $4", [status, notes || null, req.session.userId, requestId]);
         }
         res.json({ success: true, message: "Заявка обработана" });
     } catch (error) {

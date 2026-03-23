@@ -77,7 +77,6 @@ app.use(session({
     }
 }));
 
-
 app.use(express.static(path.join(__dirname, 'public')));
 // УДАЛЕНО: app.use('/uploads', ...) - папка теперь защищена и доступ только через API
 

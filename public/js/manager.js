@@ -122,7 +122,7 @@ function renderProjects(projects) {
                 <div class="prj-card">
                     <div class="prj-card-header">
                          <div class="d-flex flex-column">
-                            <h5 class="prj-card-title mb-1" onclick="editProject(${p.id})" title="${p.title}">${p.title}</h5>
+                            <h5 class="prj-card-title mb-1" data-action="edit" data-id="${p.id}" title="${p.title}" style="cursor: pointer;">${p.title}</h5>
                             <small class="text-muted"><i class="bi bi-hash"></i> ${p.id}</small>
                          </div>
                          ${getStatusBadge(p.status)}
@@ -142,20 +142,18 @@ function renderProjects(projects) {
                     </div>
                     <div class="prj-card-body pt-0">
                         <div class="d-flex justify-content-between gap-2 mb-3">
-                             <button class="btn btn-sm btn-outline-danger" onclick="deleteProject(${p.id})" title="Удалить проект">
-                                 <i class="bi bi-trash"></i>
-                             </button>
-                             <button class="btn btn-sm btn-outline-warning flex-grow-1" onclick="editProject(${p.id})">
+
+                             <button class="btn btn-sm btn-outline-warning flex-grow-1" data-action="edit" data-id="${p.id}">
                                  <i class="bi bi-pencil-square"></i> ИЗМЕНИТЬ
                              </button>
-                            <button class="btn btn-sm btn-outline-info" onclick="showProjectDocs(${p.id})">
+                            <button class="btn btn-sm btn-outline-info" data-action="docs" data-id="${p.id}">
                                 <i class="bi bi-folder2-open"></i> DOCS
                             </button>
-                            <button class="btn btn-sm btn-ai-glow" onclick="showAIModal(${p.id})">
+                            <button class="btn btn-sm btn-ai-glow" data-action="ai" data-id="${p.id}">
                                 <i class="bi bi-stars"></i> ✨ ИИ
                             </button>
                         </div>
-                        <button class="btn btn-sm btn-success w-100 py-2 fw-bold" onclick="showCompleteProjectModal(${p.id})">
+                        <button class="btn btn-sm btn-success w-100 py-2 fw-bold" data-action="complete" data-id="${p.id}">
                              <i class="bi bi-check2-square"></i> ЗАВЕРШИТЬ ПРОЕКТ
                         </button>
                     </div>
@@ -173,7 +171,7 @@ function renderProjects(projects) {
         container.insertAdjacentHTML('beforeend', `
             <div class="p-3 text-muted small border-top">
                 Завершённых проектов: ${completed.length} — 
-                <a href="#" onclick="document.getElementById('archive-tab').click(); return false;">
+                <a href="#" data-action="archive" style="text-decoration: underline; cursor: pointer;">
                     посмотреть в архиве
                 </a>
             </div>`);
@@ -225,7 +223,7 @@ function renderFunnel(projects) {
                     </div>
                     <div class="card-body p-2 rounded" style="background-color: var(--bg-surface); min-height: 50vh;">
                         ${stageProjects.map(p => `
-                            <div class="card border-0 shadow-sm mb-2 shadow-hover bg-dark" style="cursor: pointer; border-left: 4px solid var(--bs-${stage.color}) !important" onclick="editProject(${p.id})">
+                            <div class="card border-0 shadow-sm mb-2 shadow-hover bg-dark" style="cursor: pointer; border-left: 4px solid var(--bs-${stage.color}) !important" data-action="edit" data-id="${p.id}">
                                 <div class="card-body p-3">
                                     <div class="d-flex justify-content-between mb-1">
                                         <small class="text-muted">#${p.id}</small>
@@ -289,7 +287,7 @@ function showCompleteProjectModal(projectId) {
                                 </label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" id="smsCode" placeholder="Код из СМС (например 1234)" required>
-                                    <button class="btn btn-outline-warning" type="button" onclick="alert('Код 1234 отправлен на номер заказчика')">Запросить СМС</button>
+                                    <button class="btn btn-outline-warning" type="button" data-action="sms">Запросить СМС</button>
                                 </div>
                                 <small class="text-muted">Для демо введите любой код, например 1234</small>
                             </div>
@@ -830,13 +828,13 @@ function renderRequests(requests) {
                     ` : ''}
 
                     <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-primary btn-sm" onclick="createProjectFromRequest(${r.id})">
+                        <button class="btn btn-primary btn-sm" data-action="create-project" data-id="${r.id}" data-type="${r.request_type}">
                             <i class="bi bi-folder-plus"></i> Создать проект
                         </button>
-                        <button class="btn btn-outline-success btn-sm" onclick="acceptRequest(${r.id})">
+                        <button class="btn btn-outline-success btn-sm" data-action="accept-request" data-id="${r.id}" data-type="${r.request_type}">
                             ✔️ Принять в архив
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="rejectRequest(${r.id})">
+                        <button class="btn btn-outline-danger btn-sm" data-action="reject-request" data-id="${r.id}" data-type="${r.request_type}">
                             ✖️ Отклонить
                         </button>
                     </div>
@@ -845,8 +843,8 @@ function renderRequests(requests) {
     if (typeof AOS !== 'undefined') setTimeout(() => AOS.refresh(), 50);
 }
 
-function createProjectFromRequest(reqId) {
-    const req = currentRequests.find(r => r.id === reqId);
+function createProjectFromRequest(reqId, requestType) {
+    const req = currentRequests.find(r => r.id === reqId && r.request_type === requestType);
     if (!req) return;
 
     const modal = new bootstrap.Modal(document.getElementById('createProjectModal'));
@@ -869,18 +867,19 @@ function createProjectFromRequest(reqId) {
     }, 300);
 }
 
-async function acceptRequest(id) {
+async function acceptRequest(id, requestType) {
     if (!confirm('Принять заявку и отправить в архив?')) return;
 
-    const req = currentRequests.find(r => r.id === id);
+    const req = currentRequests.find(r => r.id === id && r.request_type === requestType);
     if (!req) return;
 
-    // ИСПРАВЛЕН ПУТЬ АПИ (Убрано /review)
-    const res = await apiRequest(`/api/manager/requests/${id}`, 'PUT', {
+    const url = `/api/manager/requests/${id}`;
+    const payload = {
         status: 'accepted',
         notes: 'Заявка принята менеджером',
         requestType: req.request_type
-    });
+    };
+    const res = await apiRequest(url, 'PUT', payload);
 
     if (res.success) {
         showSuccess('Заявка принята и отправлена в архив');
@@ -890,19 +889,20 @@ async function acceptRequest(id) {
     }
 }
 
-async function rejectRequest(id) {
+async function rejectRequest(id, requestType) {
     const reason = prompt('Укажите причину отказа:');
     if (reason === null) return; // Нажал Отмена
 
-    const req = currentRequests.find(r => r.id === id);
+    const req = currentRequests.find(r => r.id === id && r.request_type === requestType);
     if (!req) return;
 
-    // ИСПРАВЛЕН ПУТЬ АПИ (Убрано /review)
-    const res = await apiRequest(`/api/manager/requests/${id}`, 'PUT', {
+    const url = `/api/manager/requests/${id}`;
+    const payload = {
         status: 'rejected',
         notes: reason || 'Отклонено менеджером',
         requestType: req.request_type
-    });
+    };
+    const res = await apiRequest(url, 'PUT', payload);
 
     if (res.success) {
         showSuccess('Заявка отклонена');
@@ -1007,7 +1007,7 @@ async function loadArchive() {
                         <strong class="text-danger">${p.title}</strong>
                         <br><small class="text-muted">Удалён: ${formatDateShort(p.updated_at || p.created_at)}</small>
                     </div>
-                    <button class="btn btn-sm btn-outline-warning fw-bold" onclick="restoreProjectPrompt(${p.id})">
+                    <button class="btn btn-sm btn-outline-warning fw-bold" data-action="restore" data-id="${p.id}">
                         <i class="bi bi-arrow-counterclockwise"></i> ВОССТАНОВИТЬ
                     </button>
                 </div>
@@ -1144,8 +1144,9 @@ async function loadManagerNotifications() {
     await sharedLoadNotifications({
         badgeId: 'mgrNotifBadge',
         listId: 'mgrNotifList',
-        persistentListId: 'persistentNotifList',
-        persistentContainerId: 'persistentNotifications',
+        // Отключаем persistent уведомления - оставляем только в колокольчике
+        // persistentListId: 'persistentNotifList',
+        // persistentContainerId: 'persistentNotifications',
         onMarkRead: 'markManagerNotifRead'
     });
 }
@@ -1169,8 +1170,16 @@ function markManagerNotifRead(id, projectId, type) {
 }
 
 function showManagerComposeModal() {
+    console.log('🔍 showManagerComposeModal called');
+    console.log('📊 currentProjects:', currentProjects);
+
     const select = document.getElementById('composeReceiver');
-    if (!select) return;
+    console.log('🎯 composeReceiver element:', select);
+
+    if (!select) {
+        console.error('❌ composeReceiver element not found!');
+        return;
+    }
 
     select.innerHTML = '<option value="">Выберите заказчика...</option>';
 
@@ -1184,6 +1193,8 @@ function showManagerComposeModal() {
                 clients.get(p.customer_id).projects.push({ id: p.id, title: p.title });
             }
         });
+
+        console.log('👥 Clients map:', clients);
 
         if (clients.size > 0) {
             clients.forEach((data, customerId) => {
@@ -1209,9 +1220,15 @@ function showManagerComposeModal() {
 
     document.getElementById('composeSubject').value = '';
     document.getElementById('composeBody').value = '';
+
+    console.log('🎬 Opening modal...');
     const modal = new bootstrap.Modal(document.getElementById('composeMessageModal'));
     modal.show();
 }
+
+// Делаем функции глобально доступными
+window.showManagerComposeModal = showManagerComposeModal;
+window.sendManagerMessage = sendManagerMessage;
 
 async function deleteProject(id) {
     if (!confirm('Вы уверены, что хотите удалить этот проект? Это действие нельзя отменить (мягкое удаление сохранится в БД).')) return;
@@ -1279,3 +1296,97 @@ async function sendManagerMessage(e) {
     }
     if (btn) btn.disabled = false;
 }
+
+// Делаем функции глобально доступными
+window.showManagerComposeModal = showManagerComposeModal;
+window.sendManagerMessage = sendManagerMessage;
+window.composeManagerReply = composeManagerReply;
+
+// Добавляем обработчики событий
+const closeDocsModalBtn = document.getElementById('closeDocsModalBtn');
+if (closeDocsModalBtn) {
+    closeDocsModalBtn.addEventListener('click', window.closeDocsModal);
+}
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.logout === 'function') {
+            window.logout(e);
+        } else {
+            if (confirm('Вы точно хотите выйти?')) {
+                window.location.href = '/login.html';
+            }
+        }
+    });
+}
+
+const composeBtn = document.getElementById('composeMessageBtn');
+if (composeBtn) {
+    composeBtn.addEventListener('click', showManagerComposeModal);
+}
+
+const composeForm = document.getElementById('composeMessageForm');
+if (composeForm) {
+    composeForm.addEventListener('submit', sendManagerMessage);
+}
+
+const markAllReadBtn = document.getElementById('markAllReadBtn');
+if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', window.markAllNotificationsRead);
+}
+
+const msgReplyBtn = document.getElementById('msgReplyBtn');
+if (msgReplyBtn) {
+    msgReplyBtn.addEventListener('click', window.composeManagerReply);
+}
+
+// Делегированный обработчик для всех data-action элементов
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+
+    const action = target.dataset.action;
+    const idStr = target.dataset.id;
+    const id = idStr ? parseInt(idStr) : null;
+    const requestType = target.dataset.type || null;
+
+    switch (action) {
+        case 'edit':
+            if (id !== null) editProject(id);
+            break;
+        case 'delete':
+            if (id !== null) deleteProject(id);
+            break;
+        case 'docs':
+            if (id !== null) showProjectDocs(id);
+            break;
+        case 'ai':
+            if (id !== null) showAIModal(id);
+            break;
+        case 'complete':
+            if (id !== null) showCompleteProjectModal(id);
+            break;
+        case 'archive':
+            document.getElementById('archive-tab').click();
+            break;
+        case 'sms':
+            alert('Код 1234 отправлен на номер заказчика');
+            break;
+        case 'create-project':
+            if (id !== null) createProjectFromRequest(id, requestType);
+            break;
+        case 'accept-request':
+            if (id !== null) acceptRequest(id, requestType);
+            else console.error('No ID for accept-request');
+            break;
+        case 'reject-request':
+            if (id !== null) rejectRequest(id, requestType);
+            else console.error('No ID for reject-request');
+            break;
+        case 'restore':
+            if (id !== null) restoreProjectPrompt(id);
+            break;
+    }
+});

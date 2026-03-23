@@ -18,11 +18,11 @@ const registerSchema = z.object({
         .min(8, "Пароль должен быть от 8 символов")
         .regex(/[A-Z]/, "Пароль должен содержать хотя бы одну заглавную букву")
         .regex(/[0-9]/, "Пароль должен содержать хотя бы одну цифру"),
-    email: z.string().email("Неверный формат email").nullable().or(z.literal('')),
+    email: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().email("Неверный формат email").optional()),
     phone: z.string()
-        .regex(/^[\+]?[78][-\s\(]?\d{3}[-\s\)]?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/, "Неверный формат телефона"),
-    fullName: z.string().min(2, "ФИО слишком короткое").max(100),
-    organization: z.string().max(100).optional().or(z.literal('')),
+        .regex(/^[\+]?[78][\s\-()]*\d{3}[\s\-()]*\d{3}[\s\-()]*\d{2}[\s\-()]*\d{2}$/, "Неверный формат телефона"),
+    fullName: z.string().trim().min(2, "ФИО слишком короткое").max(100),
+    organization: z.preprocess(val => (val === '' || val === null) ? undefined : val, z.string().max(100).optional()),
     refCode: z.string().optional()
 }).strict();
 
@@ -196,5 +196,248 @@ exports.getMe = async (req, res) => {
         res.json({ success: true, user: user ? sanitizeUser(user) : null });
     } catch (error) {
         res.status(500).json({ success: false });
+    }
+};
+
+exports.registerPartner = async (req, res) => {
+    try {
+        // 1. Валидация (используем ту же схему, что и для обычной регистрации)
+        const parseResult = registerSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({
+                success: false,
+                message: parseResult.error.errors?.[0]?.message || 'Ошибка валидации'
+            });
+        }
+        const { login, password, email, phone, fullName, organization, refCode } = parseResult.data;
+
+        // 2. Проверка уникальности
+        const existing = await dbGet(
+            "SELECT id FROM users WHERE login = ? OR (email IS NOT NULL AND email != '' AND email = ?) OR (phone IS NOT NULL AND phone != '' AND phone = ?)",
+            [login, email, phone]
+        );
+
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                message: "Пользователь с такими данными уже зарегистрирован"
+            });
+        }
+
+        // 3. Генерация реферального кода для партнера
+        const refCodeGenerated = generateRefCode();
+
+        // 4. Хеширование Argon2id
+        const hashedPassword = await argon2.hash(password, {
+            type: argon2.argon2id,
+            memoryCost: 2 ** 16, // 64MB
+            timeCost: 3,
+            parallelism: 1
+        });
+
+        // 5. Сохранение партнера с ролью 'partner'
+        const userRes = await dbRun(
+            "INSERT INTO users (login, password, email, phone, full_name, organization, role, is_verified, ref_code) VALUES (?, ?, ?, ?, ?, ?, 'partner', 0, ?)",
+            [login, hashedPassword, email, phone, fullName, organization, refCodeGenerated]
+        );
+
+        console.log(`🤝 Зарегистрирован новый партнер: ${login} (Код: ${refCodeGenerated})`);
+
+        res.json({ 
+            success: true, 
+            message: "Регистрация партнера успешна. Ваш реферальный код: " + refCodeGenerated,
+            refCode: refCodeGenerated
+        });
+
+    } catch (error) {
+        console.error('Ошибка регистрации партнера:', error.message);
+        res.status(500).json({
+            success: false,
+            message: "Ошибка сервера"
+        });
+    }
+};
+
+// Вспомогательная функция для генерации реферального кода
+function generateRefCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+exports.changePassword = async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Требуется авторизация" });
+        }
+
+        const { oldPassword, newPassword } = req.body;
+
+        // Валидация
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: "Старый и новый пароли обязательны" });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ success: false, message: "Новый пароль должен содержать минимум 8 символов" });
+        }
+
+        if (!/[A-Z]/.test(newPassword)) {
+            return res.status(400).json({ success: false, message: "Новый пароль должен содержать хотя бы одну заглавную букву" });
+        }
+
+        if (!/[0-9]/.test(newPassword)) {
+            return res.status(400).json({ success: false, message: "Новый пароль должен содержать хотя бы одну цифру" });
+        }
+
+        // Получаем пользователя
+        const user = await dbGet("SELECT password FROM users WHERE id = ? AND is_deleted = 0", [userId]);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Пользователь не найден" });
+        }
+
+        // Проверяем старый пароль
+        let passwordMatch = false;
+        try {
+            passwordMatch = await argon2.verify(user.password, oldPassword);
+        } catch (err) {
+            console.error('Ошибка верификации старого пароля:', err.message);
+            return res.status(500).json({ success: false, message: "Ошибка проверки пароля" });
+        }
+
+        if (!passwordMatch) {
+            return res.status(400).json({ success: false, message: "Неверный старый пароль" });
+        }
+
+        // Хешируем новый пароль
+        const hashedNewPassword = await argon2.hash(newPassword, {
+            type: argon2.argon2id,
+            memoryCost: 2 ** 16,
+            timeCost: 3,
+            parallelism: 1
+        });
+
+        // Обновляем пароль
+        await dbRun("UPDATE users SET password = ? WHERE id = ?", [hashedNewPassword, userId]);
+
+        console.log(`🔐 Пароль изменен для пользователя ID: ${userId}`);
+
+        res.json({ success: true, message: "Пароль успешно изменен" });
+
+    } catch (error) {
+        console.error('Ошибка смены пароля:', error.message);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+};
+
+// Запрос на сброс пароля
+exports.requestPasswordReset = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email обязателен" });
+        }
+
+        // Проверяем существование пользователя
+        const user = await dbGet("SELECT id FROM users WHERE email = ? AND is_deleted = 0", [email]);
+        if (!user) {
+            // Не сообщаем о существовании пользователя (защита)
+            return res.json({ success: true, message: "Если email зарегистрирован, инструкция отправлена" });
+        }
+
+        // Генерируем 6-значный код
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 минут
+
+        // Удаляем старые запросы
+        await dbRun("DELETE FROM password_resets WHERE email = ? OR expires_at < datetime('now')", [email]);
+
+        // Сохраняем новый запрос
+        await dbRun(
+            "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)",
+            [email, resetCode, expiresAt.toISOString()]
+        );
+
+        // Имитация отправки email
+        console.log("📧 Имитация отправки email для сброса пароля:");
+        console.log(`   Email: ${email}`);
+        console.log(`   Код: ${resetCode}`);
+        console.log(`   Истекает: ${expiresAt.toLocaleString('ru-RU')}`);
+
+        res.json({ 
+            success: true, 
+            message: "Код для сброса пароля отправлен на email (проверьте консоль сервера)" 
+        });
+
+    } catch (error) {
+        console.error('Ошибка запроса сброса пароля:', error.message);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
+    }
+};
+
+// Подтверждение сброса пароля
+exports.confirmPasswordReset = async (req, res) => {
+    try {
+        const { email, token, newPassword } = req.body;
+
+        if (!email || !token || !newPassword) {
+            return res.status(400).json({ success: false, message: "Все поля обязательны" });
+        }
+
+        // Валидация нового пароля
+        if (newPassword.length < 8) {
+            return res.status(400).json({ success: false, message: "Пароль должен содержать минимум 8 символов" });
+        }
+
+        if (!/[A-Z]/.test(newPassword)) {
+            return res.status(400).json({ success: false, message: "Пароль должен содержать хотя бы одну заглавную букву" });
+        }
+
+        if (!/[0-9]/.test(newPassword)) {
+            return res.status(400).json({ success: false, message: "Пароль должен содержать хотя бы одну цифру" });
+        }
+
+        // Проверяем токен
+        const reset = await dbGet(
+            "SELECT * FROM password_resets WHERE email = ? AND token = ? AND expires_at > datetime('now') AND is_used = 0",
+            [email, token]
+        );
+
+        if (!reset) {
+            return res.status(400).json({ success: false, message: "Неверный код или срок действия истек" });
+        }
+
+        // Получаем пользователя
+        const user = await dbGet("SELECT id FROM users WHERE email = ? AND is_deleted = 0", [email]);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "Пользователь не найден" });
+        }
+
+        // Хешируем новый пароль
+        const hashedPassword = await argon2.hash(newPassword, {
+            type: argon2.argon2id,
+            memoryCost: 2 ** 16,
+            timeCost: 3,
+            parallelism: 1
+        });
+
+        // Обновляем пароль
+        await dbRun("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, user.id]);
+
+        // Помечаем токен как использованный
+        await dbRun("UPDATE password_resets SET is_used = 1 WHERE id = ?", [reset.id]);
+
+        console.log(`🔐 Пароль сброшен для пользователя ID: ${user.id} (Email: ${email})`);
+
+        res.json({ success: true, message: "Пароль успешно изменен" });
+
+    } catch (error) {
+        console.error('Ошибка подтверждения сброса пароля:', error.message);
+        res.status(500).json({ success: false, message: "Ошибка сервера" });
     }
 };

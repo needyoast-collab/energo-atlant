@@ -46,9 +46,12 @@ async function sharedLoadNotifications(config) {
             if (persistentContainer) persistentContainer.classList.remove('d-none');
             persistentList.innerHTML = data.notifications.filter(n => !n.is_read).map(n => {
                 const ic = iconMap[n.type] || { icon: 'bi-bell', color: '#6c757d' };
-                const clickHandler = `sharedMarkNotificationRead(${n.id}, ${n.project_id || 'null'}, '${n.type}', '${config.onMarkRead || ''}')`;
                 return `
-                    <button class="list-group-item list-group-item-action bg-dark text-white border-0 py-2" onclick="${clickHandler}">
+                    <button class="list-group-item list-group-item-action bg-dark text-white border-0 py-2 notification-item" 
+                            data-notif-id="${n.id}" 
+                            data-project-id="${n.project_id || 'null'}" 
+                            data-type="${n.type}" 
+                            data-on-mark-read="${config.onMarkRead || ''}">
                         <div class="d-flex align-items-center">
                             <i class="bi ${ic.icon} me-3 fs-5" style="color:${ic.color}"></i>
                             <div class="flex-grow-1 overflow-hidden">
@@ -78,8 +81,12 @@ async function sharedLoadNotifications(config) {
 
         return `
             <li class="notification-item ${isUnread ? 'unread' : ''}" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <a class="dropdown-item text-wrap py-2" 
-                   href="#" onclick="${clickHandler}; return false;">
+                <a class="dropdown-item text-wrap py-2 notification-link" 
+                   href="#" 
+                   data-notif-id="${n.id}" 
+                   data-project-id="${n.project_id || 'null'}" 
+                   data-type="${n.type}" 
+                   data-on-mark-read="${config.onMarkRead || ''}">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <div class="d-flex align-items-center">
                             <i class="bi ${ic.icon} me-2" style="color:${ic.color}"></i>
@@ -103,6 +110,9 @@ async function markAllNotificationsRead() {
     await apiRequest('/api/notifications/read-all', 'POST');
     if (window.loadNotifications) window.loadNotifications();
 }
+
+// Делаем функцию глобально доступной
+window.markAllNotificationsRead = markAllNotificationsRead;
 
 async function sharedMarkNotificationRead(notifId, projectId, type, callbackName) {
     // Отметим на сервере
@@ -180,10 +190,10 @@ function sharedRenderMessages(messages, container, type, clickHandlerName) {
         const clickHandler = clickHandlerName ? `${clickHandlerName}(${m.id}, '${type}', this)` : `sharedViewMessage(${m.id}, '${type}', this)`;
 
         return `
-            <div class="card bg-dark border-secondary mb-2 overflow-hidden" 
-                 style="cursor: pointer; transition: 0.2s; border: 1px solid var(--border-color) !important;" 
-                 onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="this.style.borderColor='var(--border-color)'"
-                 onclick="${clickHandler}">
+            <div class="card bg-dark border-secondary mb-2 overflow-hidden message-card" 
+                 data-message-id="${m.id}" 
+                 data-type="${type}" 
+                 data-click-handler="${clickHandlerName || 'sharedViewMessage'}">
                 <div class="card-body p-2 p-md-3 shadow-none">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <div class="text-truncate fw-bold text-white small" style="max-width: 75%;">
@@ -407,7 +417,9 @@ async function sharedLoadProjectDocsArray(projectId) {
                     <a href="${secureUrl}" target="_blank" class="text-info text-decoration-none">${d.file_name}</a>
                     <div class="small text-muted">${new Date(d.uploaded_at).toLocaleString()}</div>
                 </div>
-                <button class="btn btn-sm btn-outline-danger" onclick="sharedDeleteProjectDoc(${projectId}, ${d.id})">
+                <button class="btn btn-sm btn-outline-danger delete-doc-btn" 
+                        data-project-id="${projectId}" 
+                        data-doc-id="${d.id}">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
@@ -686,3 +698,74 @@ async function sharedEditProject(project, onSuccess) {
 
 // Экспортируем в глобальный scope для вызова из admin.js
 window.sharedEditProject = sharedEditProject;
+
+// Делегированные обработчики для уведомлений и документов
+document.addEventListener('click', (e) => {
+    // Обработка ссылок уведомлений (Dropdown)
+    const notifLink = e.target.closest('.notification-link');
+    if (notifLink) {
+        e.preventDefault();
+        const notifId = notifLink.dataset.notifId;
+        const projectId = notifLink.dataset.projectId === 'null' ? null : parseInt(notifLink.dataset.projectId);
+        const type = notifLink.dataset.type;
+        const onMarkRead = notifLink.dataset.onMarkRead;
+
+        if (notifId) {
+            sharedMarkNotificationRead(parseInt(notifId), projectId, type, onMarkRead);
+        }
+        return;
+    }
+
+    // Обработка уведомлений (Persistent List)
+    const notifItem = e.target.closest('.notification-item');
+    if (notifItem && notifItem.dataset.notifId) {
+        const notifId = notifItem.dataset.notifId;
+        const projectId = notifItem.dataset.projectId === 'null' ? null : parseInt(notifItem.dataset.projectId);
+        const type = notifItem.dataset.type;
+        const onMarkRead = notifItem.dataset.onMarkRead;
+
+        if (notifId) {
+            sharedMarkNotificationRead(parseInt(notifId), projectId, type, onMarkRead);
+        }
+        return;
+    }
+
+    // Обработка сообщений
+    const messageCard = e.target.closest('.message-card');
+    if (messageCard) {
+        const messageId = messageCard.dataset.messageId;
+        const type = messageCard.dataset.type;
+        const clickHandler = messageCard.dataset.clickHandler;
+
+        if (messageId && window[clickHandler]) {
+            window[clickHandler](parseInt(messageId), type, messageCard);
+        }
+        return;
+    }
+
+    // Обработка удаления документов
+    const deleteBtn = e.target.closest('.delete-doc-btn');
+    if (deleteBtn) {
+        const projectId = parseInt(deleteBtn.dataset.projectId);
+        const docId = parseInt(deleteBtn.dataset.docId);
+
+        if (projectId && docId) {
+            sharedDeleteProjectDoc(projectId, docId);
+        }
+        return;
+    }
+});
+
+// Добавляем стили для hover эффектов вместо onmouseover
+const style = document.createElement('style');
+style.textContent = `
+    .message-card {
+        cursor: pointer;
+        transition: 0.2s;
+        border: 1px solid var(--border-color) !important;
+    }
+    .message-card:hover {
+        border-color: var(--primary-color) !important;
+    }
+`;
+document.head.appendChild(style);

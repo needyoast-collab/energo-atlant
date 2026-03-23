@@ -73,6 +73,12 @@ async function sendDirectNotification(userId, projectId, type, message) {
     }
 }
 
+// Безопасное получение имени файла (исправление кодировки)
+const getSafeFileName = (file) => {
+    if (!file || !file.originalname) return 'unknown_file';
+    return Buffer.from(file.originalname, 'latin1').toString('utf8');
+};
+
 module.exports = {
     generateProjectCode,
     addHours,
@@ -82,5 +88,6 @@ module.exports = {
     isValidPhone,
     sanitizeUser,
     sendNotification,
-    sendDirectNotification
+    sendDirectNotification,
+    getSafeFileName
 };

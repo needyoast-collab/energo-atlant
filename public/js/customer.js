@@ -138,9 +138,9 @@ function renderProjects(projects) {
                 </div>
 
                 <div class="prj-card-body">
-                    <h5 class="prj-card-title mb-3" onclick="viewProject(${p.id})" title="${safeTitle}">${p.title || 'Без названия'}</h5>
+                    <h5 class="prj-card-title mb-3" data-action="view-project" data-id="${p.id}" title="${safeTitle}" style="cursor: pointer;">${p.title || 'Без названия'}</h5>
 
-                    <div class="prj-progress-container mb-3" onclick="viewProject(${p.id})">
+                    <div class="prj-progress-container mb-3" data-action="view-project" data-id="${p.id}" style="cursor: pointer;">
                         <div style="width: ${progress}%; background: ${progressColor}; height: 100%; transition: width 0.5s ease;"></div>
                     </div>
 
@@ -150,11 +150,11 @@ function renderProjects(projects) {
                     </div>
 
                     <div class="prj-card-actions">
-                        <div class="prj-card-btn" onclick="event.stopPropagation(); viewDocuments(${p.id}, '${safeTitle}')">
+                        <div class="prj-card-btn" data-action="view-documents" data-id="${p.id}" data-title="${safeTitle}">
                             <i class="bi bi-file-earmark-text"></i>
                             <span class="prj-card-btn-label">Документы</span>
                         </div>
-                        <div class="prj-card-btn" onclick="viewProject(${p.id})">
+                        <div class="prj-card-btn" data-action="view-project" data-id="${p.id}">
                             <i class="bi bi-laptop"></i>
                             <span class="prj-card-btn-label">Детали</span>
                         </div>
@@ -476,8 +476,9 @@ async function loadRequests() {
     container.innerHTML = `<div class="list-group">${data.requests.map(r => {
         const st = statusMap[r.status] || { label: r.status, cls: 'secondary' };
         return `
-            <div class="list-group-item list-group-item-action" style="cursor:pointer;"
-                 onclick='viewRequest(${JSON.stringify(r)})'>
+            <div class="list-group-item list-group-item-action request-item" style="cursor:pointer;"
+                 data-action="view-request" 
+                 data-request='${JSON.stringify(r).replace(/'/g, '&apos;')}'>
                 <div class="d-flex justify-content-between align-items-center">
                     <h6 class="mb-1 fw-bold">${r.title || 'Заявка #' + r.id}</h6>
                     <span class="badge bg-${st.cls}">${st.label}</span>
@@ -634,7 +635,7 @@ function markNotificationRead(notifId, projectId, type) {
 
     if (projectId) {
         if (type === 'document') {
-            const projTitle = document.querySelector(`[onclick="viewProject(${projectId})"]`)?.getAttribute('title') || 'Документы';
+            const projTitle = document.querySelector(`[data-action="view-project"][data-id="${projectId}"]`)?.getAttribute('title') || 'Документы';
             viewDocuments(projectId, projTitle);
         } else {
             viewProject(projectId);
@@ -688,7 +689,17 @@ function composeReply() {
 }
 
 function showComposeModal() {
+    console.log('🔍 showComposeModal called');
+    console.log('📊 window.customerProjects:', window.customerProjects);
+    
     const select = document.getElementById('composeReceiver');
+    console.log('🎯 composeReceiver element:', select);
+    
+    if (!select) {
+        console.error('❌ composeReceiver element not found!');
+        return;
+    }
+    
     select.innerHTML = '<option value="">Выберите проект/менеджера...</option>';
 
     if (window.customerProjects && window.customerProjects.length > 0) {
@@ -701,6 +712,8 @@ function showComposeModal() {
                 managers.get(p.manager_id).projects.push({ id: p.id, title: p.title });
             }
         });
+
+        console.log('👥 Managers map:', managers);
 
         managers.forEach((data, managerId) => {
             const optgroup = document.createElement('optgroup');
@@ -721,9 +734,14 @@ function showComposeModal() {
 
     document.getElementById('composeSubject').value = '';
     document.getElementById('composeBody').value = '';
+    
+    console.log('🎬 Opening modal...');
     const modal = new bootstrap.Modal(document.getElementById('composeMessageModal'));
     modal.show();
 }
+
+// Делаем функцию глобально доступной
+window.showComposeModal = showComposeModal;
 
 async function sendMessage(e) {
     e.preventDefault();
@@ -773,3 +791,79 @@ async function sendMessage(e) {
     }
     btn.disabled = false;
 }
+
+// Делаем функции глобально доступными
+window.showComposeModal = showComposeModal;
+window.sendMessage = sendMessage;
+window.joinProject = joinProject;
+window.composeReply = composeReply;
+window.closeDocsModal = closeDocsModal;
+
+const composeBtn = document.getElementById('composeMessageBtn');
+if (composeBtn) {
+    composeBtn.addEventListener('click', window.showComposeModal);
+}
+
+const composeForm = document.getElementById('composeMessageForm');
+if (composeForm) {
+    composeForm.addEventListener('submit', window.sendMessage);
+}
+
+const markAllReadBtn = document.getElementById('markAllReadBtn');
+if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', window.markAllNotificationsRead);
+}
+
+const joinProjectBtn = document.getElementById('joinProjectBtn');
+if (joinProjectBtn) {
+    joinProjectBtn.addEventListener('click', window.joinProject);
+}
+
+const msgReplyBtn = document.getElementById('msgReplyBtn');
+if (msgReplyBtn) {
+    msgReplyBtn.addEventListener('click', window.composeReply);
+}
+
+const closeDocsModalBtn = document.getElementById('closeDocsModalBtn');
+if (closeDocsModalBtn) {
+    closeDocsModalBtn.addEventListener('click', window.closeDocsModal);
+}
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.logout === 'function') {
+            window.logout(e);
+        } else {
+            if (confirm('Вы точно хотите выйти?')) {
+                window.location.href = '/login.html';
+            }
+        }
+    });
+}
+
+// Делегированный обработчик для data-action элементов
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    
+    const action = target.dataset.action;
+    const id = target.dataset.id ? parseInt(target.dataset.id) : null;
+    const title = target.dataset.title;
+    
+    switch (action) {
+        case 'view-project':
+            if (id) viewProject(id);
+            break;
+        case 'view-documents':
+            if (id && title) viewDocuments(id, title);
+            break;
+        case 'view-request':
+            const requestData = target.dataset.request;
+            if (requestData) {
+                viewRequest(JSON.parse(requestData.replace(/&apos;/g, "'")));
+            }
+            break;
+    }
+});

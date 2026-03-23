@@ -1,5 +1,6 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
 const { uploadToSupabase } = require('../utils/supabaseStorage');
+const { getSafeFileName } = require('../utils/helpers');
 const { z } = require('zod');
 
 const joinProjectSchema = z.object({
@@ -53,19 +54,19 @@ exports.getProjectDetails = async (req, res, next) => {
              FROM projects p
              LEFT JOIN users um ON p.manager_id = um.id
              LEFT JOIN users uf ON p.foreman_id = uf.id
-             WHERE p.id = ? AND p.pto_id = ? AND p.is_deleted = 0`,
-            [projectId, req.session.userId]
+             WHERE p.id = ? AND (p.pto_id = ? OR ? = 'admin') AND p.is_deleted = 0`,
+            [projectId, req.session.userId, req.session.userRole]
         );
 
         if (!project) return res.status(403).json({ success: false, message: "Доступ запрещен" });
 
         const stages = await dbAll("SELECT * FROM project_stages WHERE project_id = ? AND is_deleted = 0 ORDER BY stage_number", [projectId]);
         for (const stage of stages) {
-            stage.photos = await dbAll("SELECT * FROM project_stage_photos WHERE stage_id = ?", [stage.id]);
+            stage.photos = await dbAll("SELECT * FROM project_stage_photos WHERE stage_id = ? AND is_deleted = 0", [stage.id]);
             stage.materials = await dbAll("SELECT * FROM project_materials WHERE stage_id = ? AND is_deleted = 0", [stage.id]);
         }
 
-        const documents = await dbAll("SELECT * FROM project_documents WHERE project_id = ?", [projectId]);
+        const documents = await dbAll("SELECT * FROM project_documents WHERE project_id = ? AND is_deleted = 0", [projectId]);
 
         res.json({ success: true, project, stages, documents });
     } catch (error) {
@@ -76,7 +77,7 @@ exports.getProjectDetails = async (req, res, next) => {
 exports.uploadExecutiveDocuments = async (req, res, next) => {
     try {
         const projectId = z.coerce.number().parse(req.params.id);
-        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND pto_id = ? AND is_deleted = 0", [projectId, req.session.userId]);
+        const project = await dbGet("SELECT * FROM projects WHERE id = ? AND (pto_id = ? OR ? = 'admin') AND is_deleted = 0", [projectId, req.session.userId, req.session.userRole]);
 
         if (!project) return res.status(403).json({ success: false, message: "Доступ запрещен" });
 
@@ -85,7 +86,7 @@ exports.uploadExecutiveDocuments = async (req, res, next) => {
         }
 
         for (const file of req.files) {
-            const fileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+            const fileName = getSafeFileName(file);
             const cloudPath = await uploadToSupabase(file, 'projects/pto');
             await dbRun(
                 "INSERT INTO project_documents (project_id, document_type, file_name, file_path, uploaded_by, description) VALUES (?, 'executive', ?, ?, ?, ?)",

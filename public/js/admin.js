@@ -173,7 +173,7 @@ async function loadProjects() {
                     <div class="prj-card">
                         <div class="prj-card-header">
                              <div class="d-flex flex-column">
-                                <h5 class="prj-card-title mb-1" onclick="editProject(${p.id})" title="${p.title}">${p.title}</h5>
+                                <h5 class="prj-card-title mb-1" data-action="edit-project" data-id="${p.id}" title="${p.title}" style="cursor: pointer;">${p.title}</h5>
                                 <small class="text-muted"><i class="bi bi-hash"></i> ${p.id}</small>
                              </div>
                              ${getStatusBadge(p.status)}
@@ -193,17 +193,17 @@ async function loadProjects() {
                         </div>
                         <div class="prj-card-body pt-0 mt-auto">
                             <div class="d-flex justify-content-between gap-2">
-                                <div class="prj-card-btn" onclick="editProject(${p.id})">
+                                <div class="prj-card-btn" data-action="edit-project" data-id="${p.id}">
                                     <i class="bi bi-pencil-square"></i>
                                     <span class="prj-card-btn-label">ПРАВИТЬ</span>
                                 </div>
-                                 <div class="prj-card-btn" onclick="sharedShowProjectDocs(${p.id}, currentProjects)">
+                                 <div class="prj-card-btn" data-action="show-docs" data-id="${p.id}">
                                     <i class="bi bi-folder2-open"></i>
                                     <span class="prj-card-btn-label">DOCS</span>
                                 </div>
-                                <div class="prj-card-btn" onclick="sharedShowAIModal(${p.id}, currentProjects)">
+                                <div class="prj-card-btn" data-action="show-ai" data-id="${p.id}">
                                     <i class="bi bi-stars"></i>
-                                    <span class="prj-card-btn-label">ИИ</span>
+                                    <span class="prj-card-btn-label">✨ ИИ</span>
                                 </div>
                             </div>
                         </div>
@@ -322,7 +322,7 @@ async function loadRequests() {
                         <td><div class="text-truncate" style="max-width:300px;">${r.description || '-'}</div></td>
                         <td><span class="badge bg-warning text-dark">${r.status || 'pending'}</span></td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="reviewAdminRequest(${r.id})">ОТКРЫТЬ</button>
+                            <button class="btn btn-sm btn-outline-primary" data-action="review-request" data-id="${r.id}">ОТКРЫТЬ</button>
                         </td>
                     </tr>`;
             });
@@ -402,12 +402,12 @@ async function loadUsers() {
                         <td>${roleNames[user.role] || user.role}</td>
                         <td>${statusBadge}</td>
                         <td>
-                            ${user.is_verified === 0 ? `<button class="btn btn-sm btn-success me-1" onclick="verifyUser(${user.id})" title="Одобрить"><i class="bi bi-check-circle"></i></button>` : ''}
-                             <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})" title="Удалить пользователя">
+                            ${user.is_verified === 0 ? `<button class="btn btn-sm btn-success me-1" data-action="verify-user" data-id="${user.id}" title="Одобрить"><i class="bi bi-check-circle"></i></button>` : ''}
+                             <button class="btn btn-sm btn-outline-danger" data-action="delete-user" data-id="${user.id}" title="Удалить пользователя">
                                  <i class="bi bi-trash"></i>
                              </button>
-                             <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})">
-                                 ✏️ Изменить
+                             <button class="btn btn-sm btn-outline-primary" data-action="edit-user" data-id="${user.id}">
+                                 <i class="bi bi-pencil"></i>
                              </button>
                         </td>
                     </tr>
@@ -687,7 +687,7 @@ async function loadDeletedProjects() {
                     <div class="fw-bold text-danger text-truncate mb-1">${p.title}</div>
                     <div class="small text-muted">ID: ${p.id} | Менеджер: ${p.manager_name || 'Не назначен'}</div>
                 </div>
-                <button class="btn btn-sm btn-outline-warning fw-bold ms-2" onclick="restoreProjectPrompt(${p.id})">
+                <button class="btn btn-sm btn-outline-warning fw-bold ms-2" data-action="restore-project" data-id="${p.id}">
                     <i class="bi bi-arrow-counterclockwise"></i> ВОССТАНОВИТЬ
                 </button>
             </div>
@@ -709,7 +709,7 @@ async function loadDeletedUsers() {
                     <div class="fw-bold mb-1">${u.full_name} (@${u.login})</div>
                     <div class="small text-muted">Роль: ${u.role} | Регистрация: ${new Date(u.created_at).toLocaleDateString()}</div>
                 </div>
-                <button class="btn btn-sm btn-outline-success fw-bold ms-2" onclick="restoreUser(${u.id})">
+                <button class="btn btn-sm btn-outline-success fw-bold ms-2" data-action="restore-user" data-id="${u.id}">
                     <i class="bi bi-person-check"></i> ВЕРНУТЬ
                 </button>
             </div>
@@ -749,3 +749,77 @@ async function restoreUser(id) {
         showError(res.message);
     }
 }
+
+// Добавляем обработчики событий
+const refreshProjectsBtn = document.getElementById('refreshProjectsBtn');
+if (refreshProjectsBtn) {
+    refreshProjectsBtn.addEventListener('click', loadProjects);
+}
+
+const addUserBtn = document.getElementById('addUserBtn');
+if (addUserBtn) {
+    addUserBtn.addEventListener('click', showAddUserModal);
+}
+
+const refreshDeletedProjectsBtn = document.getElementById('refreshDeletedProjectsBtn');
+if (refreshDeletedProjectsBtn) {
+    refreshDeletedProjectsBtn.addEventListener('click', loadDeletedProjects);
+}
+
+const refreshDeletedUsersBtn = document.getElementById('refreshDeletedUsersBtn');
+if (refreshDeletedUsersBtn) {
+    refreshDeletedUsersBtn.addEventListener('click', loadDeletedUsers);
+}
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.logout === 'function') {
+            window.logout(e);
+        } else {
+            if (confirm('Вы точно хотите выйти?')) {
+                window.location.href = '/login.html';
+            }
+        }
+    });
+}
+
+// Делегированный обработчик для data-action элементов
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    
+    const action = target.dataset.action;
+    const id = target.dataset.id ? parseInt(target.dataset.id) : null;
+    
+    switch (action) {
+        case 'edit-project':
+            if (id) editProject(id);
+            break;
+        case 'show-docs':
+            if (id) sharedShowProjectDocs(id, currentProjects);
+            break;
+        case 'show-ai':
+            if (id) sharedShowAIModal(id, currentProjects);
+            break;
+        case 'review-request':
+            if (id) reviewAdminRequest(id);
+            break;
+        case 'verify-user':
+            if (id) verifyUser(id);
+            break;
+        case 'delete-user':
+            if (id) deleteUser(id);
+            break;
+        case 'edit-user':
+            if (id) editUser(id);
+            break;
+        case 'restore-project':
+            if (id) restoreProjectPrompt(id);
+            break;
+        case 'restore-user':
+            if (id) restoreUser(id);
+            break;
+    }
+});

@@ -1,8 +1,16 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" style="background-color:#050505;color-scheme:dark">
+
 
 <head>
+    <style>/* critical-dark-bg */html,body{background-color:#050505 !important;color-scheme:dark}</style>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#050505">
     <title>Личный кабинет | ЭнергоАтлант</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -294,6 +302,7 @@
             color: white;
         }
     </style>
+    <script>/* page-transition-script */document.documentElement.style.opacity="0";document.documentElement.style.transition="opacity 0.2s ease";window.addEventListener("load",function(){document.documentElement.style.opacity="1";});</script>
 </head>
 
 <body class="dashboard-body">
@@ -308,7 +317,7 @@
             </div>
 
             <div style="padding: 20px;">
-                <a href="#" onclick="logout(event)" class="sidebar-menu logout-link"
+                <a href="#" id="logoutBtn" class="sidebar-menu logout-link"
                     style="display:block; text-align:center; padding:10px; border-radius:8px; text-decoration:none;">
                     <i class="fas fa-sign-out-alt"></i> Выход
                 </a>
@@ -330,7 +339,7 @@
                 <div style="display:flex; gap:10px;">
                     <input type="text" id="projectCodeInput" placeholder="Например: PRJ-7788"
                         style="padding:10px; flex:1; background:#111; border:1px solid #444; color:white;">
-                    <button onclick="claimProject()"
+                    <button id="claimProjectBtn"
                         style="padding:10px 20px; background:#ff9800; border:none; color:white; cursor:pointer;">ОК</button>
                 </div>
             </div>
@@ -438,7 +447,7 @@
                             <span class="stats-label">Новых фото</span>
                             <span class="stats-value">${p.photo_count || 0}</span>
                         </div>
-                        <div class="stats-box" onclick="viewDocuments(${p.id}, '${p.title.replace(/'/g, "\\'")}')">
+                        <div class="stats-box" data-action="view-documents" data-id="${p.id}" data-title="${p.title.replace(/'/g, "\\'")}" style="cursor: pointer;">
                             <i class="fas fa-file-alt stats-icon"></i>
                             <span class="stats-label">Документация</span>
                             <span class="stats-value">ОТКРЫТЬ</span>
@@ -552,12 +561,133 @@
 
         // Запуск при загрузке
         initCabinet();
+        
+        // Добавляем обработчики событий
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('КЛИК ПО ВЫХОДУ!');
+                    console.log('Начинаю процесс выхода...');
+                    console.log('Текущий URL:', window.location.href);
+                    
+                    // Упрощенный выход без confirm для теста
+                    console.log('Перенаправление на /login.html');
+                    
+                    // Пробуем разные способы
+                    try {
+                        window.location.href = '/login.html';
+                        console.log('Способ 1: window.location.href выполнен');
+                    } catch (e) {
+                        console.log('Способ 1 не сработал:', e);
+                    }
+                    
+                    // Запасной способ через 100мс
+                    setTimeout(() => {
+                        console.log('Запасной способ: window.location.replace');
+                        window.location.replace('/login.html');
+                    }, 100);
+                });
+                console.log('✅ Logout кнопка настроена в DOMContentLoaded');
+            } else {
+                console.log('❌ Logout кнопка не найдена в DOMContentLoaded');
+            }
+            
+            (function() {
+                let attempts = 0;
+                const maxAttempts = 10;
+                
+                function tryAddLogoutHandler() {
+                    const logoutBtn = document.getElementById('logoutBtn');
+                    if (logoutBtn && !logoutBtn.hasAttribute('data-logout-handler')) {
+                        logoutBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            console.log('КЛИК ПО ВЫХОДУ (INTERVAL)!');
+                            console.log('Начинаю процесс выхода...');
+                            console.log('Текущий URL:', window.location.href);
+                            
+                            // Упрощенный выход без confirm для теста
+                            console.log('Перенаправление на /login.html');
+                            
+                            // Пробуем разные способы
+                            try {
+                                window.location.href = '/login.html';
+                                console.log('Способ 1: window.location.href выполнен');
+                            } catch (e) {
+                                console.log('Способ 1 не сработал:', e);
+                            }
+                            
+                            // Запасной способ через 100мс
+                            setTimeout(() => {
+                                console.log('Запасной способ: window.location.replace');
+                                window.location.replace('/login.html');
+                            }, 100);
+                        });
+                        logoutBtn.setAttribute('data-logout-handler', 'true');
+                        console.log('✅ Logout кнопка настроена через setInterval');
+                        return true;
+                    }
+                    return false;
+                }
+                
+                // Пробуем сразу
+                if (tryAddLogoutHandler()) return;
+                
+                // Пробуем каждые 500мс
+                const interval = setInterval(() => {
+                    attempts++;
+                    if (tryAddLogoutHandler() || attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        if (attempts >= maxAttempts) {
+                            console.log('❌ Не удалось найти logout кнопку за ' + maxAttempts + ' попыток');
+                        }
+                    }
+                }, 500);
+            })();
+            
+            // САМЫЙ ПРОСТОЙ ОБРАБОТЧИК
+            window.addEventListener('load', function() {
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn && !logoutBtn.hasAttribute('data-logout-handler')) {
+                    logoutBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('КЛИК ПО ВЫХОДУ (WINDOW.LOAD)!');
+                        console.log('Перенаправление на /login.html');
+                        window.location.href = '/login.html';
+                    });
+                    console.log('✅ Logout кнопка настроена через window.load');
+                }
+            });    
+            
+            const claimProjectBtn = document.getElementById('claimProjectBtn');
+            if (claimProjectBtn) {
+                claimProjectBtn.addEventListener('click', claimProject);
+            }
+            
+            const closeDocsModalBtn = document.getElementById('closeDocsModalBtn');
+            if (closeDocsModalBtn) {
+                closeDocsModalBtn.addEventListener('click', closeDocsModal);
+            }
+            
+            // Делегированный обработчик для stats-box
+            document.addEventListener('click', (e) => {
+                const target = e.target.closest('.stats-box');
+                if (target && target.dataset.action === 'view-documents') {
+                    const id = target.dataset.id;
+                    const title = target.dataset.title;
+                    if (id && title) {
+                        viewDocuments(parseInt(id), title);
+                    }
+                }
+            });
+        });
     </script>
     <div id="docsModal" class="custom-modal">
         <div class="modal-content-box">
             <div class="modal-header-box">
                 <h3 style="margin:0; font-size:1.1rem; color:#fff;" id="modalProjectTitle">Проект</h3>
-                <button class="close-btn" onclick="closeDocsModal()">&times;</button>
+                <button class="close-btn" id="closeDocsModalBtn">&times;</button>
             </div>
             <div class="modal-body-box" id="modalDocsBody">
                 <!-- Контент загрузится через JS -->
