@@ -1,5 +1,5 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
-const { uploadToSupabase } = require('../utils/supabaseStorage');
+const { uploadToStorage: uploadToSupabase } = require('../utils/s3Storage');
 const { sendNotification, sendDirectNotification, getSafeFileName } = require('../utils/helpers');
 const { z } = require('zod');
 

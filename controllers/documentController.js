@@ -1,5 +1,5 @@
 const { dbGet } = require('../config/database');
-const { getSignedUrl } = require('../utils/supabaseStorage');
+const { getPresignedUrl: getSignedUrl } = require('../utils/s3Storage');
 const path = require('path');
 const fs = require('fs');
 

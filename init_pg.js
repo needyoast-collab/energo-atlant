@@ -10,6 +10,7 @@ async function initializePostgres() {
         database: process.env.PGDATABASE,
         password: process.env.PGPASSWORD,
         port: process.env.PGPORT,
+        ssl: process.env.PGSSLROOTCERT ? { rejectUnauthorized: true, ca: fs.readFileSync(process.env.PGSSLROOTCERT).toString() } : false,
     });
 
     try {

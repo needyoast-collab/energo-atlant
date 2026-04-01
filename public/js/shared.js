@@ -6,7 +6,6 @@
 
 // Глобальное состояние для сообщения
 let currentSharedViewedMessage = null;
-
 /**
  * Инициализация уведомлений
  * @param {Object} config - { badgeId, listId, onMarkRead }
@@ -241,7 +240,6 @@ async function sharedViewMessage(id, type, cardElement) {
     const partner = cardElement.querySelector('.msg-partner').textContent;
     const date = cardElement.querySelector('.msg-date').textContent;
     const body = cardElement.querySelector('.msg-body').innerHTML;
-
     document.getElementById('msgDetailSubject').textContent = subject;
     document.getElementById('msgDetailDate').textContent = date;
 

@@ -102,7 +102,7 @@
             border-color: var(--primary-color);
         }
     </style>
-    <script>/* page-transition-script */document.documentElement.style.opacity="0";document.documentElement.style.transition="opacity 0.2s ease";window.addEventListener("load",function(){document.documentElement.style.opacity="1";});</script>
+    
 </head>
 
 <body>
@@ -284,19 +284,6 @@
 
         document.addEventListener('DOMContentLoaded', animateCounters);
 
-        // Умный прелоадер: скрываем либо по полной загрузке, либо принудительно через 1.2 сек
-        function hidePreloader() {
-            const preloader = document.getElementById('preloader');
-            if (preloader && !preloader.classList.contains('preloader-hidden')) {
-                preloader.classList.add('preloader-hidden');
-            }
-        }
-
-        // Если страница и все картинки загрузились быстро
-        window.addEventListener('load', hidePreloader);
-
-        // Страховочный таймер (на случай медленных внешних ресурсов)
-        setTimeout(hidePreloader, 1200);
     </script>
     <!-- Глобальная кнопка Позвонить -->
     <div class="float-btn-container">
@@ -305,6 +292,14 @@
         </a>
     </div>
 
+    <script>
+        window.addEventListener("load", function () {
+            setTimeout(function () {
+                var p = document.getElementById("preloader");
+                if (p) p.classList.add("preloader-hidden");
+            }, 500);
+        });
+    </script>
 </body>
 
 </html>

@@ -16,6 +16,7 @@ const { pool, dbRun } = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
 // === MIDDLEWARE ===
 // Helmet для защиты HTTP-заголовков
 app.use(helmet({

@@ -1,5 +1,5 @@
 const { dbGet, dbRun, dbAll } = require('../config/database');
-const { uploadToSupabase } = require('../utils/supabaseStorage');
+const { uploadToStorage: uploadToSupabase } = require('../utils/s3Storage');
 const { getSafeFileName } = require('../utils/helpers');
 const fs = require('fs');
 const path = require('path');
@@ -176,9 +176,20 @@ exports.aiAnalyze = async (req, res, next) => {
                 return res.status(403).json({ success: false, message: "Нет доступа к этому документу" });
             }
 
-            filePath = path.join(process.cwd(), doc.file_path);
             originalName = doc.file_name;
             mimeType = originalName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg';
+
+            if (doc.file_path.startsWith('uploads/')) {
+                // Legacy локальный файл
+                filePath = path.join(process.cwd(), doc.file_path);
+            } else {
+                // Файл в облачном хранилище — получаем presigned URL для скачивания
+                const { getPresignedUrl } = require('../utils/s3Storage');
+                filePath = await getPresignedUrl(doc.file_path, 300);
+                if (!filePath) {
+                    return res.status(500).json({ success: false, message: "Не удалось получить доступ к файлу" });
+                }
+            }
         } else if (req.file) {
             filePath = req.file.path;
             originalName = req.file.originalname;

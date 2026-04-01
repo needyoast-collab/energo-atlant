@@ -17,8 +17,9 @@
   "author": "ЭнергоАтлант",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1019.0",
+    "@aws-sdk/s3-request-presigner": "^3.1019.0",
     "@google/generative-ai": "^0.24.1",
-    "@supabase/supabase-js": "^2.98.0",
     "argon2": "^0.44.0",
     "bcrypt": "^5.1.1",
     "compression": "^1.8.1",

@@ -40,7 +40,7 @@
             margin-bottom: 1rem;
         }
     </style>
-    <script>/* page-transition-script */document.documentElement.style.opacity="0";document.documentElement.style.transition="opacity 0.2s ease";window.addEventListener("load",function(){document.documentElement.style.opacity="1";});</script>
+    
 </head>
 
 <body>
@@ -235,13 +235,6 @@
         // Init AOS
         AOS.init({ once: true });
 
-        // Прелоадер
-        window.addEventListener('load', function () {
-            setTimeout(function () {
-                document.getElementById('preloader').classList.add('preloader-hidden');
-            }, 500);
-        });
-
         // Простая маска для телефона
         function setupPhoneMask(id) {
             const input = document.getElementById(id);
@@ -329,6 +322,14 @@
         </a>
     </div>
 
+    <script>
+        window.addEventListener("load", function () {
+            setTimeout(function () {
+                var p = document.getElementById("preloader");
+                if (p) p.classList.add("preloader-hidden");
+            }, 500);
+        });
+    </script>
 </body>
 
 </html>

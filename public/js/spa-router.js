@@ -31,9 +31,6 @@ class EnergoAtlantSPA {
             this.loadPage(window.location.pathname, false);
         });
 
-        // Загружаем текущую страницу
-        this.loadPage(this.currentPath, false);
-        
         // Предзагрузка популярных страниц
         this.prefetchPopularPages();
     }
@@ -74,10 +71,12 @@ class EnergoAtlantSPA {
     }
 
     isInternalLink(link) {
-        return link.hostname === window.location.hostname && 
+        return link.hostname === window.location.hostname &&
                !link.hasAttribute('target') &&
                !link.hasAttribute('download') &&
-               link.href !== window.location.href;
+               link.href !== window.location.href &&
+               !link.hash && // не перехватываем хэш-ссылки (#tab, #section)
+               link.pathname !== window.location.pathname; // не перехватываем ссылки на ту же страницу
     }
 
     async navigate(url) {
@@ -158,31 +157,9 @@ class EnergoAtlantSPA {
                            document.querySelector('.container');
         
         if (newMain && currentMain) {
-            // Плавная замена контента
-            currentMain.style.transition = 'opacity 0.2s ease';
-            currentMain.style.opacity = '0';
-            
-            setTimeout(() => {
-                // Сохраняем текущий скролл
-                const scrollY = window.scrollY;
-                
-                // Заменяем контент
-                currentMain.innerHTML = newMain.innerHTML;
-                
-                // Восстанавливаем скролл
-                window.scrollTo(0, scrollY);
-                
-                // Плавно показываем новый контент
-                currentMain.style.opacity = '1';
-                
-                // Инициализируем скрипты новой страницы
-                this.initPageScripts();
-                
-                // Обновляем активные ссылки в меню
-                this.updateActiveMenu();
-                
-                console.log('✅ Страница загружена:', this.currentPath);
-            }, 200);
+            currentMain.innerHTML = newMain.innerHTML;
+            this.initPageScripts();
+            this.updateActiveMenu();
         }
     }
 

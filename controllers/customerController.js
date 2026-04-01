@@ -1,7 +1,7 @@
 const { dbGet, dbAll, dbRun } = require('../config/database');
 const { sendDirectNotification } = require('../utils/helpers');
 const { z } = require('zod');
-const { uploadToSupabase } = require('../utils/supabaseStorage');
+const { uploadToStorage: uploadToSupabase } = require('../utils/s3Storage');
 
 // Схемы валидации
 const createRequestSchema = z.object({
